@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/router";
+import { useEffect } from "react";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -9,6 +10,16 @@ const supabase = createClient(
 export default function Dashboard() {
   const router = useRouter();
 
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        router.push("/");
+      }
+    };
+    checkUser();
+  }, []);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push("/");
@@ -17,7 +28,6 @@ export default function Dashboard() {
   return (
     <div style={{ display: "flex", height: "100vh" }}>
       
-      {/* Sidebar */}
       <div style={{
         width: "250px",
         background: "#111",
@@ -35,11 +45,11 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* Main Content */}
       <div style={{ flex: 1, padding: "40px" }}>
-        <h1>Welcome to your Operating System</h1>
-        <p>This is your command center.</p>
+        <h1>Welcome 🎉</h1>
+        <p>You are now inside your Operating System.</p>
       </div>
+
     </div>
   );
 }
