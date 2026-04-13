@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/router";
 
@@ -8,59 +8,34 @@ const supabase = createClient(
 );
 
 export default function Home() {
-  const [email, setEmail] = useState("");
   const router = useRouter();
 
   useEffect(() => {
-    const getSession = async () => {
+    const checkUser = async () => {
       const { data } = await supabase.auth.getSession();
-
       if (data.session) {
         router.push("/dashboard");
       }
     };
 
-    getSession();
-
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (session) {
-          router.push("/dashboard");
-        }
-      }
-    );
-
-    return () => {
-      listener.subscription.unsubscribe();
-    };
+    checkUser();
   }, []);
 
-  const handleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
+  const handleGoogleLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
       options: {
-        emailRedirectTo: window.location.origin,
+        redirectTo: window.location.origin,
       },
     });
-
-    if (error) {
-      alert(error.message);
-    } else {
-      alert("Check your email for login link!");
-    }
   };
 
   return (
     <div style={{ padding: 40 }}>
       <h1>NL Operating System</h1>
-
-      <input
-        placeholder="Enter email"
-        onChange={(e) => setEmail(e.target.value)}
-        style={{ padding: 10, marginRight: 10 }}
-      />
-
-      <button onClick={handleLogin}>Login</button>
+      <button onClick={handleGoogleLogin}>
+        Login with Google
+      </button>
     </div>
   );
 }
