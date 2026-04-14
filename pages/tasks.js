@@ -50,9 +50,15 @@ export default function Tasks() {
 
       <ul>
         {tasks.map((task) => (
-          <li key={task.id}>{task.content}</li>
+         <li key={task.id} style={{ display: "flex", gap: "10px" }}>
+  {task.content}
+  <button onClick={() => deleteTask(task.id)}>❌</button>
+</li>
         ))}
       </ul>
     </div>
-  );
+  );const deleteTask = async (id) => {
+  await supabase.from("Task List").delete().eq("id", id);
+  fetchTasks();
+};
 }
