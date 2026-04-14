@@ -1,385 +1,236 @@
-import { createClient } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
-
-export default function Tasks() {
+export default function TasksPage() {
   const [tasks, setTasks] = useState([]);
-  const [habits, setHabits] = useState([]);
+  const [habits, setHabits] = useState([
+    { id: 1, name: "Wake up", completed: false },
+    { id: 2, name: "Workout", completed: false },
+    { id: 3, name: "Read", completed: false },
+  ]);
 
   const [newTask, setNewTask] = useState("");
-  const [assignee, setAssignee] = useState("Mark");
+  const [assigned, setAssigned] = useState("Mark");
   const [urgency, setUrgency] = useState("Medium");
   const [dueDate, setDueDate] = useState("");
+  const [hideCompleted, setHideCompleted] = useState(false);
 
-  const [showCompleted, setShowCompleted] = useState(true);
-  const [dragIndex, setDragIndex] = useState(null);
-
-  useEffect(() => {
-    fetchTasks();
-    fetchHabits();
-  }, []);
-
-  // ================= FETCH =================
-
-  const fetchTasks = async () => {
-    const { data } = await supabase
-      .from("Task List")
-      .select("*")
-      .order("order", { ascending: true });
-
-    if (data) setTasks(data);
-  };
-
-  const fetchHabits = async () => {
-    const { data } = await supabase.from("habits").select("*");
-    if (data) setHabits(data);
-  };
-
-  // ================= TASKS =================
-
-  const addTask = async () => {
+  // ADD TASK
+  const addTask = () => {
     if (!newTask) return;
 
-    const user = (await supabase.auth.getUser()).data.user;
+    const task = {
+      id: Date.now(),
+      content: newTask,
+      assigned_to: assigned,
+      urgency,
+      due_date: dueDate,
+      is_complete: false,
+    };
 
-    await supabase.from("Task List").insert([
-      {
-        content: newTask,
-        user_id: user.id,
-        is_complete: false,
-        assigned_to: assignee,
-        urgency,
-        due_date: dueDate || null,
-        order: tasks.length,
-      },
-    ]);
-
+    setTasks([task, ...tasks]);
     setNewTask("");
     setDueDate("");
-    fetchTasks();
   };
 
-  const toggleComplete = async (task) => {
-    await supabase
-      .from("Task List")
-      .update({ is_complete: !task.is_complete })
-      .eq("id", task.id);
-
-    fetchTasks();
+  // TOGGLE TASK
+  const toggleTask = (id) => {
+    setTasks(
+      tasks.map((t) =>
+        t.id === id ? { ...t, is_complete: !t.is_complete } : t
+      )
+    );
   };
 
-  const deleteTask = async (id) => {
-    await supabase.from("Task List").delete().eq("id", id);
-    fetchTasks();
+  // DELETE TASK
+  const deleteTask = (id) => {
+    setTasks(tasks.filter((t) => t.id !== id));
   };
 
-  // ================= DRAG =================
-
-  const handleDragStart = (index) => setDragIndex(index);
-
-  const handleDrop = async (index) => {
-    if (dragIndex === null) return;
-
-    const updated = [...tasks];
-    const dragged = updated[dragIndex];
-
-    updated.splice(dragIndex, 1);
-    updated.splice(index, 0, dragged);
-
-    setTasks(updated);
-    setDragIndex(null);
-
-    for (let i = 0; i < updated.length; i++) {
-      await supabase
-        .from("Task List")
-        .update({ order: i })
-        .eq("id", updated[i].id);
-    }
-
-    fetchTasks();
+  // TOGGLE HABIT
+  const toggleHabit = (id) => {
+    setHabits(
+      habits.map((h) =>
+        h.id === id ? { ...h, completed: !h.completed } : h
+      )
+    );
   };
-
-  // ================= HABITS =================
-
-  const toggleHabit = async (habit) => {
-    await supabase
-      .from("habits")
-      .update({ completed: !habit.completed })
-      .eq("id", habit.id);
-
-    fetchHabits();
-  };
-
-  const completedHabits = habits.filter(h => h.completed).length;
-  const habitProgress = habits.length
-    ? (completedHabits / habits.length) * 100
-    : 0;
-
-  // ================= UI =================
 
   return (
-    <div style={styles.page}>
-
+    <div className="min-h-screen bg-[#f7f8fa] p-8">
+      
       {/* HEADER */}
-      <div style={styles.header}>
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 style={styles.title}>Daily OS</h1>
-          <p style={styles.subtitle}>Focused execution for today</p>
+          <h1 className="text-2xl font-semibold text-gray-900">Daily OS</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Focused execution for today
+          </p>
         </div>
 
-        <button style={styles.pillBtn} onClick={() => setShowCompleted(!showCompleted)}>
-          {showCompleted ? "Hide Completed" : "Show Completed"}
+        <button
+          onClick={() => setHideCompleted(!hideCompleted)}
+          className="text-sm px-4 py-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition"
+        >
+          {hideCompleted ? "Show Completed" : "Hide Completed"}
         </button>
       </div>
 
       {/* STATS */}
-      <div style={styles.stats}>
-        <Stat label="OPEN TASKS" value={tasks.filter(t => !t.is_complete).length} />
-        <Stat label="COMPLETED" value={tasks.filter(t => t.is_complete).length} />
+      <div className="grid grid-cols-2 gap-6 mb-8">
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <p className="text-xs text-gray-500 uppercase">Open Tasks</p>
+          <p className="text-2xl font-semibold mt-1">
+            {tasks.filter((t) => !t.is_complete).length}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <p className="text-xs text-gray-500 uppercase">Completed</p>
+          <p className="text-2xl font-semibold mt-1">
+            {tasks.filter((t) => t.is_complete).length}
+          </p>
+        </div>
       </div>
 
       {/* MAIN GRID */}
-      <div style={styles.grid}>
-
+      <div className="grid grid-cols-4 gap-6">
+        
         {/* HABITS */}
-        <div style={styles.card}>
-          <p style={styles.label}>DAILY HABITS</p>
+        <div className="col-span-1 bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-4">
+            Daily Habits
+          </h2>
 
-          <div style={styles.progressBar}>
-            <div style={{ ...styles.progressFill, width: `${habitProgress}%` }} />
+          <div className="space-y-2">
+            {habits.map((habit) => (
+              <div
+                key={habit.id}
+                className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50"
+              >
+                <span className="text-sm text-gray-700">
+                  {habit.name}
+                </span>
+
+                <input
+                  type="checkbox"
+                  checked={habit.completed}
+                  onChange={() => toggleHabit(habit.id)}
+                  className="accent-black"
+                />
+              </div>
+            ))}
           </div>
-
-          {habits.map(h => (
-            <div
-              key={h.id}
-              onClick={() => toggleHabit(h)}
-              style={{
-                ...styles.habit,
-                background: h.completed ? "#d1fae5" : "#f3f4f6"
-              }}
-            >
-              {h.name}
-            </div>
-          ))}
         </div>
 
         {/* TASKS */}
-        <div style={styles.card}>
-
-          {/* INPUT ROW */}
-          <div style={styles.inputRow}>
+        <div className="col-span-3 space-y-4">
+          
+          {/* ADD TASK */}
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex gap-3 items-center">
+            
             <input
+              type="text"
+              placeholder="Add task..."
               value={newTask}
               onChange={(e) => setNewTask(e.target.value)}
-              placeholder="Add task..."
-              style={styles.input}
+              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
             />
 
-            <select value={assignee} onChange={(e) => setAssignee(e.target.value)} style={styles.input}>
+            <select
+              value={assigned}
+              onChange={(e) => setAssigned(e.target.value)}
+              className="px-2 py-2 border rounded-lg text-sm"
+            >
               <option>Mark</option>
               <option>Dane</option>
             </select>
 
-            <select value={urgency} onChange={(e) => setUrgency(e.target.value)} style={styles.input}>
-              <option>High</option>
-              <option>Medium</option>
+            <select
+              value={urgency}
+              onChange={(e) => setUrgency(e.target.value)}
+              className="px-2 py-2 border rounded-lg text-sm"
+            >
               <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
             </select>
 
-            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={styles.input} />
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="px-2 py-2 border rounded-lg text-sm"
+            />
 
-            <button onClick={addTask} style={styles.primaryBtn}>Add</button>
+            <button
+              onClick={addTask}
+              className="bg-black text-white px-4 py-2 rounded-lg text-sm"
+            >
+              Add
+            </button>
           </div>
 
           {/* TASK LIST */}
-          {tasks
-            .filter(t => showCompleted || !t.is_complete)
-            .map((task, i) => (
-              <div
-                key={task.id}
-                draggable
-                onDragStart={() => handleDragStart(i)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={() => handleDrop(i)}
-                style={styles.task}
-              >
-                <div style={{ display: "flex", alignItems: "center" }}>
-                  <input
-                    type="checkbox"
-                    checked={task.is_complete}
-                    onChange={() => toggleComplete(task)}
-                  />
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            
+            <div className="space-y-2">
+              {tasks
+                .filter((t) => (hideCompleted ? !t.is_complete : true))
+                .map((task) => (
+                  <div
+                    key={task.id}
+                    className="flex justify-between items-center px-3 py-3 rounded-lg hover:bg-gray-50"
+                  >
+                    <div className="flex items-center gap-3">
+                      
+                      <input
+                        type="checkbox"
+                        checked={task.is_complete}
+                        onChange={() => toggleTask(task.id)}
+                      />
 
-                  <span style={{ marginLeft: "10px" }}>{task.content}</span>
+                      <div>
+                        <p className={task.is_complete ? "line-through text-gray-400 text-sm" : "text-sm"}>
+                          {task.content}
+                        </p>
 
-                  <span style={{
-                    ...styles.badge,
-                    background: urgencyColor(task.urgency)
-                  }}>
-                    {task.urgency}
-                  </span>
-                </div>
+                        <div className="flex gap-2 mt-1">
+                          
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            task.urgency === "High"
+                              ? "bg-red-100 text-red-600"
+                              : task.urgency === "Medium"
+                              ? "bg-yellow-100 text-yellow-600"
+                              : "bg-gray-100 text-gray-600"
+                          }`}>
+                            {task.urgency}
+                          </span>
 
-                <button onClick={() => deleteTask(task.id)} style={styles.delete}>
-                  ✕
-                </button>
-              </div>
-            ))}
+                          <span className="text-xs text-gray-400">
+                            {task.assigned_to}
+                          </span>
 
+                          {task.due_date && (
+                            <span className="text-xs text-gray-400">
+                              {task.due_date}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => deleteTask(task.id)}
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
-
-/* COMPONENTS */
-
-const Stat = ({ label, value }) => (
-  <div style={styles.statCard}>
-    <p style={styles.label}>{label}</p>
-    <h2>{value}</h2>
-  </div>
-);
-
-/* STYLES */
-
-const styles = {
-  page: {
-    background: "#f8fafc",
-    minHeight: "100vh",
-    padding: "40px",
-    fontFamily: "Inter, sans-serif"
-  },
-
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    marginBottom: "20px"
-  },
-
-  title: {
-    fontSize: "28px",
-    fontWeight: 600
-  },
-
-  subtitle: {
-    color: "#6b7280"
-  },
-
-  stats: {
-    display: "flex",
-    gap: "16px",
-    marginBottom: "20px"
-  },
-
-  statCard: {
-    background: "#fff",
-    padding: "16px",
-    borderRadius: "12px",
-    flex: 1
-  },
-
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "280px 1fr",
-    gap: "20px"
-  },
-
-  card: {
-    background: "#fff",
-    padding: "20px",
-    borderRadius: "16px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
-  },
-
-  label: {
-    fontSize: "11px",
-    color: "#6b7280",
-    marginBottom: "8px"
-  },
-
-  inputRow: {
-    display: "flex",
-    gap: "8px",
-    marginBottom: "15px"
-  },
-
-  input: {
-    padding: "8px",
-    borderRadius: "8px",
-    border: "1px solid #e5e7eb"
-  },
-
-  primaryBtn: {
-    padding: "8px 14px",
-    borderRadius: "8px",
-    background: "#111827",
-    color: "#fff",
-    border: "none",
-    cursor: "pointer"
-  },
-
-  pillBtn: {
-    padding: "6px 12px",
-    borderRadius: "999px",
-    border: "1px solid #ddd",
-    background: "#fff",
-    cursor: "pointer"
-  },
-
-  task: {
-    display: "flex",
-    justifyContent: "space-between",
-    padding: "10px",
-    borderRadius: "10px",
-    marginBottom: "6px",
-    background: "#f9fafb",
-    transition: "all 0.2s ease",
-    cursor: "grab"
-  },
-
-  badge: {
-    marginLeft: "10px",
-    fontSize: "11px",
-    padding: "2px 8px",
-    borderRadius: "999px",
-    color: "#fff"
-  },
-
-  delete: {
-    background: "transparent",
-    border: "none",
-    cursor: "pointer"
-  },
-
-  habit: {
-    padding: "8px",
-    borderRadius: "999px",
-    marginTop: "6px",
-    fontSize: "13px",
-    cursor: "pointer"
-  },
-
-  progressBar: {
-    height: "6px",
-    background: "#e5e7eb",
-    borderRadius: "999px",
-    marginBottom: "10px"
-  },
-
-  progressFill: {
-    height: "100%",
-    background: "#111827",
-    borderRadius: "999px"
-  }
-};
-
-const urgencyColor = (u) => {
-  if (u === "High") return "#ef4444";
-  if (u === "Medium") return "#f59e0b";
-  return "#10b981";
-};
