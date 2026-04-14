@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
+const [priorities, setPriorities] = useState([]);
+const [newPriority, setNewPriority] = useState("");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -11,10 +13,10 @@ export default function Tasks() {
   const [newTask, setNewTask] = useState("");
   const [showCompleted, setShowCompleted] = useState(true);
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
+useEffect(() => {
+  fetchTasks();
+  fetchPriorities(); // 👈 ADD THIS
+}, []);
   const fetchTasks = async () => {
     const { data } = await supabase.from("Task List").select("*");
     if (data) setTasks(data);
@@ -53,7 +55,38 @@ export default function Tasks() {
 
   const completedTasks = tasks.filter((t) => t.is_complete).length;
   const openTasks = tasks.filter((t) => !t.is_complete).length;
+const fetchPriorities = async () => {
+  const { data } = await supabase
+    .from("Weekly Priorities")
+    .select("*");
 
+  if (data) setPriorities(data);
+};
+
+const addPriority = async () => {
+  if (!newPriority) return;
+
+  const user = (await supabase.auth.getUser()).data.user;
+
+  await supabase.from("Weekly Priorities").insert([
+    {
+      content: newPriority,
+      user_id: user.id,
+    },
+  ]);
+
+  setNewPriority("");
+  fetchPriorities();
+};
+
+const deletePriority = async (id) => {
+  await supabase
+    .from("Weekly Priorities")
+    .delete()
+    .eq("id", id);
+
+  fetchPriorities();
+};
   return (
     <div style={{ display: "flex", height: "100vh", background: "#f5f5f5" }}>
       
@@ -74,7 +107,30 @@ export default function Tasks() {
         ))}
 
         <h4 style={{ marginTop: "20px" }}>Weekly Priorities</h4>
-        {["Close deals", "Health focus", "System build"].map((p, i) => (
+        <input
+  value={newPriority}
+  onChange={(e) => setNewPriority(e.target.value)}
+  placeholder="Add priority..."
+/>
+<button onClick={addPriority}>Add</button>
+
+{priorities.map((p) => (
+  <div
+    key={p.id}
+    style={{
+      padding: "10px",
+      marginBottom: "8px",
+      background: "#eee",
+      borderRadius: "8px",
+      display: "flex",
+      justifyContent: "space-between"
+    }}
+  >
+    {p.content}
+
+    <button onClick={() => deletePriority(p.id)}>❌</button>
+  </div>
+))}
           <div key={i} style={{ padding: "10px", marginBottom: "8px", background: "#eee", borderRadius: "8px" }}>
             {p}
           </div>
