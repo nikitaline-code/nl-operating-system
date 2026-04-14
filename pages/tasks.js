@@ -74,21 +74,28 @@ export default function Tasks() {
   };
 
   const addPriority = async () => {
-    if (!newPriority) return;
+  if (!newPriority) return;
 
-    const user = (await supabase.auth.getUser()).data.user;
+  const user = (await supabase.auth.getUser()).data.user;
+  console.log("USER:", user);
 
-    await supabase.from("Weekly Priorities").insert([
+  const { data, error } = await supabase
+    .from("Weekly Priorities")
+    .insert([
       {
         content: newPriority,
-        user_id: user.id,
+        user_id: user?.id,
         order: priorities.length,
       },
-    ]);
+    ])
+    .select();
 
-    setNewPriority("");
-    fetchPriorities();
-  };
+  console.log("INSERT RESULT:", data);
+  console.log("INSERT ERROR:", error);
+
+  setNewPriority("");
+  fetchPriorities();
+};
 
   const deletePriority = async (id) => {
     await supabase.from("Weekly Priorities").delete().eq("id", id);
