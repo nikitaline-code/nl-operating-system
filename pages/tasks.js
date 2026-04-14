@@ -64,14 +64,17 @@ export default function Tasks() {
 
   // ================= PRIORITIES =================
 
-  const fetchPriorities = async () => {
-    const { data } = await supabase
-      .from("Weekly Priorities") // ✅ FIXED
-      .select("*")
-      .order("order", { ascending: true });
+const fetchPriorities = async () => {
+  const { data, error } = await supabase
+    .from("priorities")
+    .select("*")
+    .order("order", { ascending: true });
 
-    if (data) setPriorities(data);
-  };
+  console.log("DATA:", data);
+  console.log("ERROR:", error);
+
+  if (data) setPriorities(data);
+};
 
   const addPriority = async () => {
   if (!newPriority) return;
