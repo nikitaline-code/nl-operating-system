@@ -172,153 +172,11 @@ export default function Tasks() {
       .eq("id", habit.id);
 
     fetchHabits();
-  };
-
-  // ================= PROGRESS =================
-  const completedHabits = habits.filter((h) => h.done).length;
-  const progress = habits.length
-    ? (completedHabits / habits.length) * 100
-    : 0;
-
-  // ================= UI =================
-  return (
-    <div style={{ padding: "30px", background: "#f8fafc", minHeight: "100vh", fontFamily: "Inter" }}>
-
-      <h1>Daily OS</h1>
-
-      {/* CONTROLS */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-        <button onClick={() => setShowCompleted(!showCompleted)} style={pill}>
-          {showCompleted ? "Hide Completed" : "Show Completed"}
-        </button>
-
-        <button onClick={() => setAutoSort(!autoSort)} style={pill}>
-          {autoSort ? "Manual Order" : "Auto Sort"}
-        </button>
-      </div>
-
-      <div style={{ display: "flex", gap: "20px" }}>
-
-        {/* HABITS */}
-        <div style={card}>
-          <h4>Habits</h4>
-
-          {/* PROGRESS */}
-          <div style={{ marginBottom: "12px" }}>
-            <div style={progressBarBg}>
-              <div style={{ ...progressBarFill, width: `${progress}%` }} />
-            </div>
-            <p style={smallText}>
-              {completedHabits} / {habits.length} completed
-            </p>
-          </div>
-
-          {habits.map((h) => (
-            <div key={h.id} style={habitRow}>
-              <input
-                type="checkbox"
-                checked={h.done}
-                onChange={() => toggleHabit(h)}
-              />
-              <span style={{
-                fontSize: "12px",
-                textDecoration: h.done ? "line-through" : "none"
-              }}>
-                {h.name}
-              </span>
-
-              <span style={streak}>
-                🔥 {h.streak || 0}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* TASKS */}
-        <div style={{ flex: 1, ...card }}>
-
-          {/* INPUT */}
-          <div style={inputBar}>
-            <input
-              value={newTask}
-              onChange={(e) => setNewTask(e.target.value)}
-              onKeyDown={handleKey}
-              placeholder="Add task..."
-              style={input}
-            />
-
-            <select onChange={(e) => setAssigned(e.target.value)}>
-              <option>Mark</option>
-              <option>Dane</option>
-            </select>
-
-            <select onChange={(e) => setUrgency(e.target.value)}>
-              <option>High</option>
-              <option>Medium</option>
-              <option>Low</option>
-            </select>
-
-            <input type="date" onChange={(e) => setDueDate(e.target.value)} />
-
-            <button onClick={addTask}>Add</button>
-          </div>
-
-          {/* LIST */}
-          {visibleTasks.map((task, i) => (
-            <div
-              key={task.id}
-              draggable={!autoSort}
-              onDragStart={() => handleDragStart(i)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => handleDrop(i)}
-              style={taskRow}
-            >
-              <div>
-                <input
-                  type="checkbox"
-                  checked={task.is_complete}
-                  onChange={() => toggleComplete(task)}
-                />
-
-                {editingId === task.id ? (
-                  <input
-                    value={editingText}
-                    onChange={(e) => setEditingText(e.target.value)}
-                    onBlur={() => updateTaskText(task.id)}
-                    autoFocus
-                  />
-                ) : (
-                  <span
-                    onClick={() => {
-                      setEditingId(task.id);
-                      setEditingText(task.content);
-                    }}
-                    style={{ marginLeft: "10px" }}
-                  >
-                    {task.content}
-                  </span>
-                )}
-              </div>
-
-              <div style={meta}>
-                {task.assigned_to} • {task.urgency}
-              </div>
-
-              <button onClick={() => deleteTask(task.id)}>✕</button>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ===== STYLES ===== */
-const card = {
-  background: "white",
+  };const card = {
+  background: "#fff",
   padding: "20px",
-  borderRadius: "16px",
-  boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
+  borderRadius: "14px",
+  boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
 };
 
 const pill = {
@@ -326,46 +184,63 @@ const pill = {
   borderRadius: "999px",
   border: "1px solid #e5e7eb",
   background: "#fff",
-  fontSize: "12px"
-};
-
-const inputBar = {
-  display: "flex",
-  gap: "8px",
-  marginBottom: "16px"
+  fontSize: "12px",
+  cursor: "pointer"
 };
 
 const input = {
-  flex: 2,
+  flex: 1,
+  padding: "10px",
+  borderRadius: "8px",
+  border: "1px solid #e5e7eb"
+};
+
+const select = {
+  padding: "10px",
+  borderRadius: "8px",
+  border: "1px solid #e5e7eb"
+};
+
+const date = {
+  padding: "10px",
+  borderRadius: "8px",
+  border: "1px solid #e5e7eb"
+};
+
+const addBtn = {
+  padding: "10px 14px",
+  borderRadius: "8px",
+  background: "#111",
+  color: "#fff",
   border: "none",
-  outline: "none"
+  cursor: "pointer"
 };
 
 const taskRow = {
   display: "flex",
   justifyContent: "space-between",
-  padding: "10px",
-  borderBottom: "1px solid #eee"
+  padding: "12px 0",
+  borderBottom: "1px solid #f1f1f1"
 };
 
 const habitRow = {
   display: "flex",
   alignItems: "center",
   gap: "8px",
-  marginBottom: "8px"
+  marginBottom: "10px"
 };
 
-const progressBarBg = {
+const progressBg = {
   height: "6px",
   background: "#e5e7eb",
   borderRadius: "999px"
 };
 
-const progressBarFill = {
+const progressFill = {
   height: "100%",
   background: "#111",
   borderRadius: "999px",
-  transition: "width 0.3s ease"
+  transition: "0.3s"
 };
 
 const smallText = {
@@ -383,3 +258,171 @@ const meta = {
   fontSize: "12px",
   color: "#6b7280"
 };
+
+const deleteBtn = {
+  background: "transparent",
+  border: "none",
+  cursor: "pointer",
+  color: "#9ca3af"
+};
+
+  // ================= PROGRESS =================
+  const completedHabits = habits.filter((h) => h.done).length;
+  const progress = habits.length
+    ? (completedHabits / habits.length) * 100
+    : 0;
+
+  // ================= UI =================
+ return (
+  <div style={{
+    padding: "40px",
+    background: "#f5f6f7",
+    minHeight: "100vh",
+    fontFamily: "Inter, sans-serif"
+  }}>
+
+    <h1 style={{ marginBottom: "10px" }}>Daily OS</h1>
+
+    {/* TOP CONTROLS */}
+    <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+      <button onClick={() => setShowCompleted(!showCompleted)} style={pill}>
+        {showCompleted ? "Hide Completed" : "Show Completed"}
+      </button>
+
+      <button onClick={() => setAutoSort(!autoSort)} style={pill}>
+        {autoSort ? "Manual Order" : "Auto Order"}
+      </button>
+    </div>
+
+    {/* MAIN GRID */}
+    <div style={{
+      display: "grid",
+      gridTemplateColumns: "280px 1fr",
+      gap: "20px"
+    }}>
+
+      {/* ===== HABITS ===== */}
+      <div style={card}>
+        <h3 style={{ marginBottom: "10px" }}>Daily Habits</h3>
+
+        {/* Progress */}
+        <div style={{ marginBottom: "16px" }}>
+          <div style={progressBg}>
+            <div style={{ ...progressFill, width: `${progress}%` }} />
+          </div>
+          <p style={smallText}>
+            {completedHabits} / {habits.length} completed
+          </p>
+        </div>
+
+        {habits.map((h) => (
+          <div key={h.id} style={habitRow}>
+            <input
+              type="checkbox"
+              checked={h.done}
+              onChange={() => toggleHabit(h)}
+            />
+
+            <span style={{
+              fontSize: "13px",
+              textDecoration: h.done ? "line-through" : "none",
+              opacity: h.done ? 0.5 : 1
+            }}>
+              {h.name}
+            </span>
+
+            <span style={streak}>
+              🔥 {h.streak || 0}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* ===== TASKS ===== */}
+      <div style={card}>
+
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: "15px"
+        }}>
+          <h3>Daily Tasks</h3>
+
+          <button
+            onClick={() => setShowCompleted(!showCompleted)}
+            style={pill}
+          >
+            Hide Completed
+          </button>
+        </div>
+
+        {/* INPUT ROW */}
+        <div style={{
+          display: "flex",
+          gap: "8px",
+          marginBottom: "20px"
+        }}>
+          <input
+            value={newTask}
+            onChange={(e) => setNewTask(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder="Add task..."
+            style={input}
+          />
+
+          <select onChange={(e) => setAssigned(e.target.value)} style={select}>
+            <option>Mark</option>
+            <option>Dane</option>
+          </select>
+
+          <select onChange={(e) => setUrgency(e.target.value)} style={select}>
+            <option>High</option>
+            <option>Medium</option>
+            <option>Low</option>
+          </select>
+
+          <input type="date" onChange={(e) => setDueDate(e.target.value)} style={date} />
+
+          <button onClick={addTask} style={addBtn}>
+            Add
+          </button>
+        </div>
+
+        {/* TASK LIST */}
+        {visibleTasks.map((task, i) => (
+          <div
+            key={task.id}
+            draggable={!autoSort}
+            onDragStart={() => handleDragStart(i)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => handleDrop(i)}
+            style={taskRow}
+          >
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <input
+                type="checkbox"
+                checked={task.is_complete}
+                onChange={() => toggleComplete(task)}
+              />
+
+              <span style={{
+                marginLeft: "10px",
+                textDecoration: task.is_complete ? "line-through" : "none"
+              }}>
+                {task.content}
+              </span>
+            </div>
+
+            <div style={meta}>
+              {task.assigned_to} • {task.urgency}
+            </div>
+
+            <button onClick={() => deleteTask(task.id)} style={deleteBtn}>
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
