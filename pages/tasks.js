@@ -8,22 +8,23 @@ const supabase = createClient(
 
 export default function Tasks() {
   const [tasks, setTasks] = useState([]);
+  const [habits, setHabits] = useState([]);
+
   const [newTask, setNewTask] = useState("");
   const [assigned, setAssigned] = useState("Mark");
   const [urgency, setUrgency] = useState("Medium");
   const [dueDate, setDueDate] = useState("");
 
   const [showCompleted, setShowCompleted] = useState(true);
-  const [dragIndex, setDragIndex] = useState(null);
+  const [autoSort, setAutoSort] = useState(false);
 
-  const [habits, setHabits] = useState([
-    { name: "Wake up", done: false },
-    { name: "Workout", done: false },
-    { name: "Read", done: false }
-  ]);
+  const [dragIndex, setDragIndex] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editingText, setEditingText] = useState("");
 
   useEffect(() => {
     fetchTasks();
+    fetchHabits();
   }, []);
 
   // ================= FETCH =================
@@ -36,7 +37,18 @@ export default function Tasks() {
     if (data) setTasks(data);
   };
 
-  // ================= ADD =================
+  const fetchHabits = async () => {
+    const user = (await supabase.auth.getUser()).data.user;
+
+    const { data } = await supabase
+      .from("habits")
+      .select("*")
+      .eq("user_id", user.id);
+
+    if (data) setHabits(data);
+  };
+
+  // ================= ADD TASK =================
   const addTask = async () => {
     if (!newTask) return;
 
@@ -45,11 +57,11 @@ export default function Tasks() {
     await supabase.from("Task List").insert([
       {
         content: newTask,
-        assigned,
+        user_id: user.id,
+        assigned_to: assigned,
         urgency,
         due_date: dueDate || null,
         is_complete: false,
-        user_id: user.id,
         order: tasks.length
       }
     ]);
@@ -59,13 +71,11 @@ export default function Tasks() {
     fetchTasks();
   };
 
-  // ================= DELETE =================
-  const deleteTask = async (id) => {
-    await supabase.from("Task List").delete().eq("id", id);
-    fetchTasks();
+  const handleKey = (e) => {
+    if (e.key === "Enter") addTask();
   };
 
-  // ================= TOGGLE =================
+  // ================= TASK ACTIONS =================
   const toggleComplete = async (task) => {
     await supabase
       .from("Task List")
@@ -75,11 +85,26 @@ export default function Tasks() {
     fetchTasks();
   };
 
+  const updateTaskText = async (id) => {
+    await supabase
+      .from("Task List")
+      .update({ content: editingText })
+      .eq("id", id);
+
+    setEditingId(null);
+    fetchTasks();
+  };
+
+  const deleteTask = async (id) => {
+    await supabase.from("Task List").delete().eq("id", id);
+    fetchTasks();
+  };
+
   // ================= DRAG =================
-  const handleDragStart = (index) => setDragIndex(index);
+  const handleDragStart = (i) => setDragIndex(i);
 
   const handleDrop = async (dropIndex) => {
-    if (dragIndex === null) return;
+    if (dragIndex === null || autoSort) return;
 
     const updated = [...tasks];
     const dragged = updated[dragIndex];
@@ -98,205 +123,263 @@ export default function Tasks() {
     }
   };
 
-  // ================= HELPERS =================
-  const completed = tasks.filter((t) => t.is_complete).length;
-  const open = tasks.filter((t) => !t.is_complete).length;
+  // ================= AUTO SORT =================
+  const sortedTasks = [...tasks].sort((a, b) => {
+    if (!autoSort) return 0;
 
-  const todayFormatted = new Date().toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric"
+    const urgencyRank = { High: 1, Medium: 2, Low: 3 };
+
+    if (urgencyRank[a.urgency] !== urgencyRank[b.urgency]) {
+      return urgencyRank[a.urgency] - urgencyRank[b.urgency];
+    }
+
+    return new Date(a.due_date || 999999999) - new Date(b.due_date || 999999999);
   });
 
-  const getBadgeStyle = (u) => {
-    const map = {
-      High: { background: "#fee2e2", color: "#991b1b" },
-      Medium: { background: "#fef3c7", color: "#92400e" },
-      Low: { background: "#dcfce7", color: "#166534" }
-    };
-    return {
-      padding: "2px 8px",
-      borderRadius: "999px",
-      fontSize: "10px",
-      fontWeight: "600",
-      ...map[u]
-    };
+  const visibleTasks = (autoSort ? sortedTasks : tasks).filter(
+    (t) => showCompleted || !t.is_complete
+  );
+
+  // ================= HABITS =================
+  const toggleHabit = async (habit) => {
+    const today = new Date().toISOString().split("T")[0];
+
+    let newStreak = habit.streak || 0;
+
+    if (!habit.done) {
+      if (habit.last_completed) {
+        const last = new Date(habit.last_completed);
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        const lastDate = last.toISOString().split("T")[0];
+        const yDate = yesterday.toISOString().split("T")[0];
+
+        if (lastDate === yDate) newStreak += 1;
+        else if (lastDate !== today) newStreak = 1;
+      } else {
+        newStreak = 1;
+      }
+    }
+
+    await supabase
+      .from("habits")
+      .update({
+        done: !habit.done,
+        streak: newStreak,
+        last_completed: today
+      })
+      .eq("id", habit.id);
+
+    fetchHabits();
   };
+
+  // ================= PROGRESS =================
+  const completedHabits = habits.filter((h) => h.done).length;
+  const progress = habits.length
+    ? (completedHabits / habits.length) * 100
+    : 0;
 
   // ================= UI =================
   return (
     <div style={{ padding: "30px", background: "#f8fafc", minHeight: "100vh", fontFamily: "Inter" }}>
 
-      {/* HEADER */}
-      <h1>Daily page</h1>
-      <p style={{ color: "#6b7280" }}>Tasks, goals, and habits for one day.</p>
+      <h1>Daily OS</h1>
 
-      {/* TOP CARDS */}
-      <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
-        <div style={card}>
-          <p style={label}>SELECTED DAY</p>
-          <h2>
-            Today
-            <span style={dateText}>{todayFormatted}</span>
-          </h2>
-        </div>
+      {/* CONTROLS */}
+      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+        <button onClick={() => setShowCompleted(!showCompleted)} style={pill}>
+          {showCompleted ? "Hide Completed" : "Show Completed"}
+        </button>
 
-        <div style={card}>
-          <p style={label}>OPEN TASKS</p>
-          <h2>{open}</h2>
-        </div>
-
-        <div style={card}>
-          <p style={label}>COMPLETED</p>
-          <h2>{completed}</h2>
-        </div>
+        <button onClick={() => setAutoSort(!autoSort)} style={pill}>
+          {autoSort ? "Manual Order" : "Auto Sort"}
+        </button>
       </div>
 
-      {/* MAIN */}
-      <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
+      <div style={{ display: "flex", gap: "20px" }}>
 
         {/* HABITS */}
-        <div style={{ ...card, width: "250px" }}>
-          <p style={label}>DAILY HABITS</p>
+        <div style={card}>
+          <h4>Habits</h4>
 
-          {habits.map((h, i) => (
-            <div
-              key={i}
-              style={habitItem}
-            >
+          {/* PROGRESS */}
+          <div style={{ marginBottom: "12px" }}>
+            <div style={progressBarBg}>
+              <div style={{ ...progressBarFill, width: `${progress}%` }} />
+            </div>
+            <p style={smallText}>
+              {completedHabits} / {habits.length} completed
+            </p>
+          </div>
+
+          {habits.map((h) => (
+            <div key={h.id} style={habitRow}>
               <input
                 type="checkbox"
                 checked={h.done}
-                onChange={() => {
-                  const updated = [...habits];
-                  updated[i].done = !updated[i].done;
-                  setHabits(updated);
-                }}
+                onChange={() => toggleHabit(h)}
               />
               <span style={{
                 fontSize: "12px",
-                textDecoration: h.done ? "line-through" : "none",
-                opacity: h.done ? 0.5 : 1
+                textDecoration: h.done ? "line-through" : "none"
               }}>
                 {h.name}
+              </span>
+
+              <span style={streak}>
+                🔥 {h.streak || 0}
               </span>
             </div>
           ))}
         </div>
 
         {/* TASKS */}
-        <div style={{ ...card, flex: 1 }}>
+        <div style={{ flex: 1, ...card }}>
 
-          {/* HEADER */}
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <p style={label}>DAILY TASKS</p>
+          {/* INPUT */}
+          <div style={inputBar}>
+            <input
+              value={newTask}
+              onChange={(e) => setNewTask(e.target.value)}
+              onKeyDown={handleKey}
+              placeholder="Add task..."
+              style={input}
+            />
 
-            <button
-              onClick={() => setShowCompleted(!showCompleted)}
-              style={toggleBtn}
-            >
-              {showCompleted ? "Hide Completed" : "Show Completed"}
-            </button>
-          </div>
-
-          {/* INPUT ROW */}
-          <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
-            <input value={newTask} onChange={(e) => setNewTask(e.target.value)} placeholder="Task" />
-            <select value={assigned} onChange={(e) => setAssigned(e.target.value)}>
+            <select onChange={(e) => setAssigned(e.target.value)}>
               <option>Mark</option>
               <option>Dane</option>
             </select>
-            <select value={urgency} onChange={(e) => setUrgency(e.target.value)}>
+
+            <select onChange={(e) => setUrgency(e.target.value)}>
               <option>High</option>
               <option>Medium</option>
               <option>Low</option>
             </select>
-            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+
+            <input type="date" onChange={(e) => setDueDate(e.target.value)} />
+
             <button onClick={addTask}>Add</button>
           </div>
 
-          {/* TASK LIST */}
-          <div style={{ marginTop: "20px" }}>
-            {tasks
-              .filter((t) => showCompleted || !t.is_complete)
-              .map((task, i) => (
-                <div
-                  key={task.id}
-                  draggable
-                  onDragStart={() => handleDragStart(i)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => handleDrop(i)}
-                  style={taskItem}
-                >
-                  <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                    <input
-                      type="checkbox"
-                      checked={task.is_complete}
-                      onChange={() => toggleComplete(task)}
-                    />
-                    <span>{task.content}</span>
-                    <span style={getBadgeStyle(task.urgency)}>{task.urgency}</span>
-                  </div>
+          {/* LIST */}
+          {visibleTasks.map((task, i) => (
+            <div
+              key={task.id}
+              draggable={!autoSort}
+              onDragStart={() => handleDragStart(i)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleDrop(i)}
+              style={taskRow}
+            >
+              <div>
+                <input
+                  type="checkbox"
+                  checked={task.is_complete}
+                  onChange={() => toggleComplete(task)}
+                />
 
-                  <div style={{ fontSize: "12px", color: "#6b7280" }}>
-                    {task.assigned} • {task.due_date || ""}
-                    <button onClick={() => deleteTask(task.id)} style={{ marginLeft: "10px" }}>✕</button>
-                  </div>
-                </div>
-              ))}
-          </div>
+                {editingId === task.id ? (
+                  <input
+                    value={editingText}
+                    onChange={(e) => setEditingText(e.target.value)}
+                    onBlur={() => updateTaskText(task.id)}
+                    autoFocus
+                  />
+                ) : (
+                  <span
+                    onClick={() => {
+                      setEditingId(task.id);
+                      setEditingText(task.content);
+                    }}
+                    style={{ marginLeft: "10px" }}
+                  >
+                    {task.content}
+                  </span>
+                )}
+              </div>
 
+              <div style={meta}>
+                {task.assigned_to} • {task.urgency}
+              </div>
+
+              <button onClick={() => deleteTask(task.id)}>✕</button>
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
-/* ================= STYLES ================= */
-
+/* ===== STYLES ===== */
 const card = {
   background: "white",
   padding: "20px",
   borderRadius: "16px",
-  boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
-  transition: "all 0.2s ease"
+  boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
 };
 
-const label = {
-  fontSize: "12px",
-  color: "#6b7280"
-};
-
-const dateText = {
-  marginLeft: "10px",
-  fontSize: "12px",
-  color: "#6b7280"
-};
-
-const habitItem = {
-  display: "flex",
-  gap: "8px",
-  alignItems: "center",
-  padding: "10px",
-  marginTop: "8px",
-  background: "#f1f5f9",
-  borderRadius: "10px",
-  transition: "all 0.2s ease"
-};
-
-const taskItem = {
-  display: "flex",
-  justifyContent: "space-between",
-  padding: "10px",
-  borderBottom: "1px solid #eee",
-  transition: "all 0.2s ease"
-};
-
-const toggleBtn = {
+const pill = {
   padding: "6px 12px",
   borderRadius: "999px",
   border: "1px solid #e5e7eb",
-  background: "#f9fafb",
+  background: "#fff",
+  fontSize: "12px"
+};
+
+const inputBar = {
+  display: "flex",
+  gap: "8px",
+  marginBottom: "16px"
+};
+
+const input = {
+  flex: 2,
+  border: "none",
+  outline: "none"
+};
+
+const taskRow = {
+  display: "flex",
+  justifyContent: "space-between",
+  padding: "10px",
+  borderBottom: "1px solid #eee"
+};
+
+const habitRow = {
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+  marginBottom: "8px"
+};
+
+const progressBarBg = {
+  height: "6px",
+  background: "#e5e7eb",
+  borderRadius: "999px"
+};
+
+const progressBarFill = {
+  height: "100%",
+  background: "#111",
+  borderRadius: "999px",
+  transition: "width 0.3s ease"
+};
+
+const smallText = {
+  fontSize: "11px",
+  color: "#6b7280"
+};
+
+const streak = {
+  marginLeft: "auto",
+  fontSize: "11px",
+  color: "#9ca3af"
+};
+
+const meta = {
   fontSize: "12px",
-  cursor: "pointer"
+  color: "#6b7280"
 };
