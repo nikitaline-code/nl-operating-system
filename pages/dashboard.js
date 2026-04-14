@@ -79,7 +79,9 @@ fetchTasks();
       }}>
         <h2>NL OS</h2>
         <p>Dashboard</p>
-        <p>Tasks</p>
+        <p onClick={() => router.push("/tasks")} style={{ cursor: "pointer" }}>
+  Tasks
+</p>
         <p>Notes</p>
         <p>Calendar</p>
 
