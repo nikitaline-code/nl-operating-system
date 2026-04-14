@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -54,47 +55,48 @@ export default function Tasks() {
   const openTasks = tasks.filter((t) => !t.is_complete).length;
 
   return (
-  <div style={{ padding: "40px" }}>
-    <h1>Tasks ✅</h1>
+    <div style={{ padding: "40px" }}>
+      <h1>Tasks ✅</h1>
 
-    <h3>Open: {openTasks} | Completed: {completedTasks}</h3>
+      <h3>Open: {openTasks} | Completed: {completedTasks}</h3>
 
-    <input
-      value={newTask}
-      onChange={(e) => setNewTask(e.target.value)}
-      placeholder="Add task..."
-    />
-    <button onClick={addTask}>Add</button>
+      <input
+        value={newTask}
+        onChange={(e) => setNewTask(e.target.value)}
+        placeholder="Add task..."
+      />
+      <button onClick={addTask}>Add</button>
 
-    <button onClick={() => setShowCompleted(!showCompleted)}>
-      {showCompleted ? "Hide Completed" : "Show Completed"}
-    </button>
+      <button onClick={() => setShowCompleted(!showCompleted)}>
+        {showCompleted ? "Hide Completed" : "Show Completed"}
+      </button>
 
-    <ul>
-      {tasks
-        .filter((task) => showCompleted || !task.is_complete)
-        .map((task) => (
-          <li
-            key={task.id}
-            style={{
-              display: "flex",
-              gap: "10px",
-              alignItems: "center",
-              textDecoration: task.is_complete ? "line-through" : "none",
-              opacity: task.is_complete ? 0.5 : 1,
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={task.is_complete}
-              onChange={() => toggleComplete(task)}
-            />
+      <ul>
+        {tasks
+          .filter((task) => showCompleted || !task.is_complete)
+          .map((task) => (
+            <li
+              key={task.id}
+              style={{
+                display: "flex",
+                gap: "10px",
+                alignItems: "center",
+                textDecoration: task.is_complete ? "line-through" : "none",
+                opacity: task.is_complete ? 0.5 : 1,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={task.is_complete}
+                onChange={() => toggleComplete(task)}
+              />
 
-            {task.content}
+              {task.content}
 
-            <button onClick={() => deleteTask(task.id)}>❌</button>
-          </li>
-        ))}
-    </ul>
-  </div>
-);
+              <button onClick={() => deleteTask(task.id)}>❌</button>
+            </li>
+          ))}
+      </ul>
+    </div>
+  );
+}
