@@ -66,7 +66,7 @@ export default function Tasks() {
 
   const fetchPriorities = async () => {
     const { data } = await supabase
-      .from("Weekly Priorities")
+      .from("Weekly Priorities") // ✅ FIXED
       .select("*")
       .order("order", { ascending: true });
 
@@ -113,9 +113,10 @@ export default function Tasks() {
     setPriorities(updated);
     setDragIndex(null);
 
+    // save order to DB
     for (let i = 0; i < updated.length; i++) {
       await supabase
-        .from("Weekly Priorities")
+        .from("Weekly Priorities") // ✅ FIXED
         .update({ order: i })
         .eq("id", updated[i].id);
     }
@@ -143,7 +144,7 @@ export default function Tasks() {
           borderRight: "1px solid #e5e7eb",
         }}
       >
-        <h2 style={{ marginBottom: "20px" }}>Daily</h2>
+        <h2>Daily</h2>
 
         <p style={{ fontSize: "12px", color: "#6b7280" }}>HABITS</p>
 
@@ -155,7 +156,6 @@ export default function Tasks() {
               marginTop: "8px",
               background: "#f1f5f9",
               borderRadius: "10px",
-              fontSize: "14px",
             }}
           >
             {h}
@@ -172,6 +172,7 @@ export default function Tasks() {
           WEEKLY PRIORITIES
         </p>
 
+        {/* ADD PRIORITY */}
         <div style={{ display: "flex", gap: "6px", marginTop: "10px" }}>
           <input
             value={newPriority}
@@ -198,6 +199,7 @@ export default function Tasks() {
           </button>
         </div>
 
+        {/* PRIORITY LIST */}
         <div style={{ marginTop: "12px" }}>
           {priorities.map((p, i) => (
             <div
@@ -217,6 +219,7 @@ export default function Tasks() {
               }}
             >
               <span>{p.content}</span>
+
               <button
                 onClick={() => deletePriority(p.id)}
                 style={{
@@ -234,14 +237,14 @@ export default function Tasks() {
 
       {/* MAIN */}
       <div style={{ flex: 1, padding: "40px" }}>
-        <h1 style={{ marginBottom: "10px" }}>Daily OS 🚀</h1>
+        <h1>Daily OS 🚀</h1>
 
-        <p style={{ color: "#6b7280", marginBottom: "20px" }}>
+        <p style={{ color: "#6b7280" }}>
           Open: {openTasks} • Completed: {completedTasks}
         </p>
 
         {/* ADD TASK */}
-        <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+        <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
           <input
             value={newTask}
             onChange={(e) => setNewTask(e.target.value)}
@@ -285,7 +288,7 @@ export default function Tasks() {
             background: "#ffffff",
             borderRadius: "16px",
             padding: "20px",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+            marginTop: "20px",
           }}
         >
           {tasks
@@ -319,23 +322,14 @@ export default function Tasks() {
                   </span>
                 </div>
 
-                <button
-                  onClick={() => deleteTask(task.id)}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  ✕
-                </button>
+                <button onClick={() => deleteTask(task.id)}>✕</button>
               </div>
             ))}
         </div>
 
         {/* PROGRESS */}
         <div style={{ marginTop: "30px" }}>
-          <p style={{ marginBottom: "8px" }}>Progress</p>
+          <p>Progress</p>
           <div
             style={{
               height: "8px",
