@@ -10,7 +10,8 @@ const supabase = createClient(
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState(null);
-
+const [tasks, setTasks] = useState([]);
+const [newTask, setNewTask] = useState("");
   useEffect(() => {
     const checkUser = async () => {
       const { data } = await supabase.auth.getSession();
@@ -22,13 +23,49 @@ export default function Dashboard() {
       }
     };
 
-    checkUser();
+  checkUser();
+fetchTasks();
   }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push("/");
-  };
+  };const fetchTasks = async () => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data, error } = await supabase
+    .from("Task List")
+    .select("*")
+    .eq("user_id", user.id);
+
+  if (!error) {
+    setTasks(data);
+  }
+};
+  const addTask = async () => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!newTask) return;
+
+  const { error } = await supabase.from("Task List").insert([
+    {
+      content: newTask,
+      is_complete: false,
+      user_id: user.id, // 🔥 THIS FIXES YOUR RLS ISSUE
+    },
+  ]);
+
+  if (!error) {
+    setNewTask("");
+    fetchTasks(); // refresh list
+  } else {
+    console.error(error);
+  }
+};
 
   return (
     <div style={{ display: "flex", height: "100vh" }}>
@@ -59,7 +96,22 @@ export default function Dashboard() {
           <p>Logged in as: {user.email}</p>
         )}
 
-        <p>This is your operating system dashboard.</p>
+      <h2>Tasks</h2>
+
+<input
+  type="text"
+  placeholder="Add a task..."
+  value={newTask}
+  onChange={(e) => setNewTask(e.target.value)}
+/>
+
+<button onClick={addTask}>Add</button>
+
+<ul>
+  {tasks.map((task) => (
+    <li key={task.id}>{task.content}</li>
+  ))}
+</ul>
       </div>
     </div>
   );
