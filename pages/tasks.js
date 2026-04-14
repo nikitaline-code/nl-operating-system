@@ -54,42 +54,47 @@ export default function Tasks() {
   const openTasks = tasks.filter((t) => !t.is_complete).length;
 
   return (
-    <div style={{ padding: "40px" }}>
-      <h1>Tasks ✅</h1>
+  <div style={{ padding: "40px" }}>
+    <h1>Tasks ✅</h1>
 
-      <h3>Open: {openTasks} | Completed: {completedTasks}</h3>
+    <h3>Open: {openTasks} | Completed: {completedTasks}</h3>
 
-      <input
-        value={newTask}
-        onChange={(e) => setNewTask(e.target.value)}
-        placeholder="Add task..."
-      />
-      <button onClick={addTask}>Add</button>
-<button onClick={() => setShowCompleted(!showCompleted)}>
-  {showCompleted ? "Hide Completed" : "Show Completed"}
-</button>
-      <ul>
-      tasks
-  .filter(task => showCompleted || !task.is_complete)
-  <ul>
-  {tasks.map((task) => (
-    <li key={task.id}>
-      <input
-        type="checkbox"
-        checked={task.is_complete}
-        onChange={() => toggleComplete(task)}
-      />
+    <input
+      value={newTask}
+      onChange={(e) => setNewTask(e.target.value)}
+      placeholder="Add task..."
+    />
+    <button onClick={addTask}>Add</button>
 
-      {task.content}
+    <button onClick={() => setShowCompleted(!showCompleted)}>
+      {showCompleted ? "Hide Completed" : "Show Completed"}
+    </button>
 
-      <button onClick={() => deleteTask(task.id)}>❌</button>
-    </li>
-  ))}
-</ul>
-            <button onclick={() => deleteTask(task.id)}>X</button>
+    <ul>
+      {tasks
+        .filter((task) => showCompleted || !task.is_complete)
+        .map((task) => (
+          <li
+            key={task.id}
+            style={{
+              display: "flex",
+              gap: "10px",
+              alignItems: "center",
+              textDecoration: task.is_complete ? "line-through" : "none",
+              opacity: task.is_complete ? 0.5 : 1,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={task.is_complete}
+              onChange={() => toggleComplete(task)}
+            />
+
+            {task.content}
+
+            <button onClick={() => deleteTask(task.id)}>❌</button>
           </li>
         ))}
-      </ul>
-    </div>
-  );
-}
+    </ul>
+  </div>
+);
