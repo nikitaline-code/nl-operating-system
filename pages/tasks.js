@@ -12,7 +12,7 @@ export default function Tasks() {
     { name: "Run", done: false },
   ]);
 
-  const [weekly, setWeekly] = useState([
+  const [weekly] = useState([
     "Win the week",
     "Stay disciplined",
   ]);
@@ -59,16 +59,33 @@ export default function Tasks() {
     setHabits(updated);
   };
 
+  const openCount = tasks.filter((t) => !t.done).length;
+  const completedCount = tasks.filter((t) => t.done).length;
+
   return (
     <div style={styles.page}>
       {/* HEADER */}
       <h1 style={styles.title}>Daily OS</h1>
 
+      {/* STATS */}
+      <div style={styles.statsRow}>
+        <div style={styles.statCard}>
+          <span>Open Tasks</span>
+          <h2 style={styles.statNumber}>{openCount}</h2>
+        </div>
+
+        <div style={styles.statCard}>
+          <span>Completed</span>
+          <h2 style={styles.statNumber}>{completedCount}</h2>
+        </div>
+      </div>
+
       {/* MAIN */}
       <div style={styles.main}>
-        {/* LEFT PANEL */}
+        {/* LEFT */}
         <div style={styles.left}>
           <h3>Daily Habits</h3>
+
           {habits.map((h, i) => (
             <div
               key={i}
@@ -83,6 +100,7 @@ export default function Tasks() {
           ))}
 
           <h3 style={{ marginTop: 30 }}>Weekly Priorities</h3>
+
           {weekly.map((w, i) => (
             <div key={i} style={styles.habit}>
               {w}
@@ -90,7 +108,7 @@ export default function Tasks() {
           ))}
         </div>
 
-        {/* RIGHT PANEL */}
+        {/* RIGHT */}
         <div style={styles.right}>
           {/* INPUT */}
           <div style={styles.inputRow}>
@@ -134,7 +152,7 @@ export default function Tasks() {
                 opacity: t.done ? 0.5 : 1,
               }}
             >
-              {/* LEFT SIDE */}
+              {/* TEXT */}
               <div onClick={() => toggleTask(i)} style={{ flex: 1 }}>
                 {t.text}
               </div>
@@ -154,7 +172,7 @@ export default function Tasks() {
                 {t.priority}
               </span>
 
-              {/* PERSON TAG */}
+              {/* PERSON */}
               <span style={styles.person}>{t.person}</span>
 
               {/* REORDER */}
@@ -170,7 +188,7 @@ export default function Tasks() {
   );
 }
 
-/* ---------------- STYLES ---------------- */
+/* ---------- STYLES ---------- */
 
 const styles = {
   page: {
@@ -183,6 +201,24 @@ const styles = {
   title: {
     fontSize: 28,
     marginBottom: 20,
+  },
+
+  statsRow: {
+    display: "flex",
+    gap: 20,
+    marginBottom: 20,
+  },
+
+  statCard: {
+    background: "#fff",
+    padding: 20,
+    borderRadius: 12,
+    flex: 1,
+  },
+
+  statNumber: {
+    fontSize: 28,
+    marginTop: 10,
   },
 
   main: {
