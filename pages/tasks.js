@@ -18,7 +18,9 @@ export default function Tasks() {
   const [urgency, setUrgency] = useState("Medium");
 
   const [showCompleted, setShowCompleted] = useState(true);
-  const [dragIndex, setDragIndex] = useState(null);
+
+  const [dragTaskIndex, setDragTaskIndex] = useState(null);
+  const [dragPriorityIndex, setDragPriorityIndex] = useState(null);
 
   useEffect(() => {
     fetchTasks();
@@ -28,7 +30,11 @@ export default function Tasks() {
   // ================= TASKS =================
 
   const fetchTasks = async () => {
-    const { data } = await supabase.from("Task List").select("*");
+    const { data } = await supabase
+      .from("Task List")
+      .select("*")
+      .order("order", { ascending: true });
+
     if (data) setTasks(data);
   };
 
@@ -42,6 +48,7 @@ export default function Tasks() {
         assigned_by: assignedBy,
         due_date: dueDate || null,
         urgency: urgency,
+        order: tasks.length,
       },
     ]);
 
@@ -63,6 +70,32 @@ export default function Tasks() {
       .eq("id", task.id);
 
     fetchTasks();
+  };
+
+  // ===== TASK DRAG =====
+
+  const handleTaskDragStart = (index) => {
+    setDragTaskIndex(index);
+  };
+
+  const handleTaskDrop = async (dropIndex) => {
+    if (dragTaskIndex === null) return;
+
+    const updated = [...tasks];
+    const dragged = updated[dragTaskIndex];
+
+    updated.splice(dragTaskIndex, 1);
+    updated.splice(dropIndex, 0, dragged);
+
+    setTasks(updated);
+    setDragTaskIndex(null);
+
+    for (let i = 0; i < updated.length; i++) {
+      await supabase
+        .from("Task List")
+        .update({ order: i })
+        .eq("id", updated[i].id);
+    }
   };
 
   const completedTasks = tasks.filter((t) => t.is_complete).length;
@@ -98,21 +131,21 @@ export default function Tasks() {
     fetchPriorities();
   };
 
-  const handleDragStart = (index) => {
-    setDragIndex(index);
+  const handlePriorityDragStart = (index) => {
+    setDragPriorityIndex(index);
   };
 
-  const handleDrop = async (dropIndex) => {
-    if (dragIndex === null) return;
+  const handlePriorityDrop = async (dropIndex) => {
+    if (dragPriorityIndex === null) return;
 
     const updated = [...priorities];
-    const draggedItem = updated[dragIndex];
+    const dragged = updated[dragPriorityIndex];
 
-    updated.splice(dragIndex, 1);
-    updated.splice(dropIndex, 0, draggedItem);
+    updated.splice(dragPriorityIndex, 1);
+    updated.splice(dropIndex, 0, dragged);
 
     setPriorities(updated);
-    setDragIndex(null);
+    setDragPriorityIndex(null);
 
     for (let i = 0; i < updated.length; i++) {
       await supabase
@@ -122,79 +155,28 @@ export default function Tasks() {
     }
   };
 
-  // ================= SORTING =================
-
-  const sortedTasks = tasks
-    .filter((task) => showCompleted || !task.is_complete)
-    .sort((a, b) => {
-      const urgencyOrder = { High: 1, Medium: 2, Low: 3 };
-
-      if (urgencyOrder[a.urgency] !== urgencyOrder[b.urgency]) {
-        return urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
-      }
-
-      if (a.due_date && b.due_date) {
-        return new Date(a.due_date) - new Date(b.due_date);
-      }
-
-      return 0;
-    });
-
   // ================= UI =================
 
   return (
-    <div
-      style={{
-        display: "flex",
-        height: "100vh",
-        background: "#f9fafb",
-        fontFamily: "Inter, system-ui",
-      }}
-    >
+    <div style={{ display: "flex", height: "100vh", background: "#f9fafb" }}>
       {/* SIDEBAR */}
-      <div
-        style={{
-          width: "280px",
-          padding: "24px",
-          background: "#ffffff",
-          borderRight: "1px solid #e5e7eb",
-        }}
-      >
-        <h2>Daily</h2>
+      <div style={{ width: "280px", padding: "24px", background: "#fff" }}>
+        <h3>Weekly Priorities</h3>
 
-        <p style={{ fontSize: "12px", color: "#9ca3af", marginTop: "20px" }}>
-          WEEKLY PRIORITIES
-        </p>
-
-        <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
-          <input
-            value={newPriority}
-            onChange={(e) => setNewPriority(e.target.value)}
-            placeholder="Add priority..."
-            style={{
-              flex: 1,
-              padding: "10px",
-              borderRadius: "10px",
-              border: "1px solid #e5e7eb",
-            }}
-          />
-          <button onClick={addPriority}>+</button>
-        </div>
+        <input
+          value={newPriority}
+          onChange={(e) => setNewPriority(e.target.value)}
+          placeholder="Add priority..."
+        />
+        <button onClick={addPriority}>+</button>
 
         {priorities.map((p, i) => (
           <div
             key={p.id}
             draggable
-            onDragStart={() => handleDragStart(i)}
+            onDragStart={() => handlePriorityDragStart(i)}
             onDragOver={(e) => e.preventDefault()}
-            onDrop={() => handleDrop(i)}
-            style={{
-              padding: "10px",
-              marginTop: "8px",
-              border: "1px solid #e5e7eb",
-              borderRadius: "10px",
-              background: "#fff",
-            }}
+            onDrop={() => handlePriorityDrop(i)}
           >
             {p.content}
             <button onClick={() => deletePriority(p.id)}>✕</button>
@@ -204,94 +186,59 @@ export default function Tasks() {
 
       {/* MAIN */}
       <div style={{ flex: 1, padding: "40px" }}>
-        <h1>Daily OS</h1>
+        <h1>Tasks</h1>
 
-        <p>
-          Open: {openTasks} • Completed: {completedTasks}
-        </p>
+        <input
+          value={newTask}
+          onChange={(e) => setNewTask(e.target.value)}
+          placeholder="Task..."
+        />
 
-        {/* INPUT */}
-        <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-          <input
-            value={newTask}
-            onChange={(e) => setNewTask(e.target.value)}
-            placeholder="Add task..."
-          />
+        <select onChange={(e) => setAssignedBy(e.target.value)}>
+          <option>Mark</option>
+          <option>Dane</option>
+        </select>
 
-          <select
-            value={assignedBy}
-            onChange={(e) => setAssignedBy(e.target.value)}
-          >
-            <option value="Mark">Mark</option>
-            <option value="Dane">Dane</option>
-          </select>
+        <input type="date" onChange={(e) => setDueDate(e.target.value)} />
 
-          <input
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-          />
+        <select onChange={(e) => setUrgency(e.target.value)}>
+          <option>High</option>
+          <option>Medium</option>
+          <option>Low</option>
+        </select>
 
-          <select
-            value={urgency}
-            onChange={(e) => setUrgency(e.target.value)}
-          >
-            <option value="High">High</option>
-            <option value="Medium">Medium</option>
-            <option value="Low">Low</option>
-          </select>
+        <button onClick={addTask}>Add</button>
 
-          <button onClick={addTask}>Add</button>
-        </div>
-
-        {/* TASK LIST */}
-        {sortedTasks.map((task) => (
-          <div
-            key={task.id}
-            style={{
-              padding: "10px",
-              borderBottom: "1px solid #eee",
-              opacity: task.is_complete ? 0.5 : 1,
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={task.is_complete}
-              onChange={() => toggleComplete(task)}
-            />
-
-            {task.content}
-
-            <div style={{ fontSize: "12px" }}>
-              {task.assigned_by} | {task.urgency} | {task.due_date}
-            </div>
-
-            <button onClick={() => deleteTask(task.id)}>✕</button>
-          </div>
-        ))}
-
-        {/* PROGRESS */}
-        <div style={{ marginTop: "20px" }}>
-          <div
-            style={{
-              height: "6px",
-              background: "#ddd",
-              borderRadius: "999px",
-            }}
-          >
+        {tasks
+          .filter((task) => showCompleted || !task.is_complete)
+          .map((task, i) => (
             <div
+              key={task.id}
+              draggable
+              onDragStart={() => handleTaskDragStart(i)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleTaskDrop(i)}
               style={{
-                width: `${
-                  tasks.length
-                    ? (completedTasks / tasks.length) * 100
-                    : 0
-                }%`,
-                height: "100%",
-                background: "black",
+                padding: "10px",
+                borderBottom: "1px solid #ddd",
+                cursor: "grab",
               }}
-            />
-          </div>
-        </div>
+            >
+              <input
+                type="checkbox"
+                checked={task.is_complete}
+                onChange={() => toggleComplete(task)}
+              />
+
+              {task.content}
+
+              <div style={{ fontSize: "12px" }}>
+                {task.assigned_by} | {task.urgency} | {task.due_date}
+              </div>
+
+              <button onClick={() => deleteTask(task.id)}>✕</button>
+            </div>
+          ))}
       </div>
     </div>
   );
