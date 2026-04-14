@@ -7,23 +7,22 @@ const supabase = createClient(
 );
 
 export default function Tasks() {
-  // TASK STATE
   const [tasks, setTasks] = useState([]);
-  const [newTask, setNewTask] = useState("");
-  const [showCompleted, setShowCompleted] = useState(true);
-
-  // PRIORITY STATE
   const [priorities, setPriorities] = useState([]);
+
+  const [newTask, setNewTask] = useState("");
   const [newPriority, setNewPriority] = useState("");
+
+  const [showCompleted, setShowCompleted] = useState(true);
+  const [dragIndex, setDragIndex] = useState(null);
 
   useEffect(() => {
     fetchTasks();
     fetchPriorities();
   }, []);
 
-  // =====================
-  // TASK FUNCTIONS
-  // =====================
+  // ================= TASKS =================
+
   const fetchTasks = async () => {
     const { data } = await supabase.from("Task List").select("*");
     if (data) setTasks(data);
@@ -60,12 +59,14 @@ export default function Tasks() {
     fetchTasks();
   };
 
-  // =====================
-  // PRIORITY FUNCTIONS
-  // =====================
+  const completedTasks = tasks.filter((t) => t.is_complete).length;
+  const openTasks = tasks.filter((t) => !t.is_complete).length;
+
+  // ================= PRIORITIES =================
+
   const fetchPriorities = async () => {
     const { data } = await supabase
-      .from("Priorities")
+      .from("priorities")
       .select("*")
       .order("order", { ascending: true });
 
@@ -77,7 +78,7 @@ export default function Tasks() {
 
     const user = (await supabase.auth.getUser()).data.user;
 
-    await supabase.from("Priorities").insert([
+    await supabase.from("priorities").insert([
       {
         content: newPriority,
         user_id: user.id,
@@ -90,51 +91,44 @@ export default function Tasks() {
   };
 
   const deletePriority = async (id) => {
-    await supabase.from("Priorities").delete().eq("id", id);
+    await supabase.from("priorities").delete().eq("id", id);
     fetchPriorities();
   };
 
-  // =====================
-  // DRAG + DROP
-  // =====================
-  const handleDragStart = (e, index) => {
-    e.dataTransfer.setData("dragIndex", index);
+  // ===== DRAG LOGIC =====
+
+  const handleDragStart = (index) => {
+    setDragIndex(index);
   };
 
-  const handleDrop = async (e, dropIndex) => {
-    const dragIndex = e.dataTransfer.getData("dragIndex");
+  const handleDrop = async (dropIndex) => {
+    if (dragIndex === null) return;
 
     const updated = [...priorities];
-    const draggedItem = updated.splice(dragIndex, 1)[0];
+    const draggedItem = updated[dragIndex];
+
+    updated.splice(dragIndex, 1);
     updated.splice(dropIndex, 0, draggedItem);
 
     setPriorities(updated);
+    setDragIndex(null);
 
-    // save new order
+    // save order to DB
     for (let i = 0; i < updated.length; i++) {
       await supabase
-        .from("Priorities")
+        .from("priorities")
         .update({ order: i })
         .eq("id", updated[i].id);
     }
+
+    fetchPriorities();
   };
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
+  // ================= UI =================
 
-  // =====================
-  // STATS
-  // =====================
-  const completedTasks = tasks.filter((t) => t.is_complete).length;
-  const openTasks = tasks.filter((t) => !t.is_complete).length;
-
-  // =====================
-  // UI
-  // =====================
   return (
     <div style={{ display: "flex", height: "100vh", background: "#f5f5f5" }}>
-      
+
       {/* LEFT PANEL */}
       <div style={{
         width: "300px",
@@ -144,7 +138,6 @@ export default function Tasks() {
       }}>
         <h2>Daily</h2>
 
-        {/* HABITS (static for now) */}
         <h4>Habits</h4>
         {["Wake up early", "Workout", "Read", "Plan day"].map((h, i) => (
           <div key={i} style={{
@@ -157,7 +150,6 @@ export default function Tasks() {
           </div>
         ))}
 
-        {/* PRIORITIES */}
         <h4 style={{ marginTop: "20px" }}>Weekly Priorities</h4>
 
         <input
@@ -167,27 +159,29 @@ export default function Tasks() {
         />
         <button onClick={addPriority}>Add</button>
 
-        {priorities.map((p, i) => (
-          <div
-            key={p.id}
-            draggable
-            onDragStart={(e) => handleDragStart(e, i)}
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, i)}
-            style={{
-              padding: "10px",
-              marginBottom: "8px",
-              background: "#eee",
-              borderRadius: "8px",
-              display: "flex",
-              justifyContent: "space-between",
-              cursor: "grab"
-            }}
-          >
-            <span>{p.content}</span>
-            <button onClick={() => deletePriority(p.id)}>❌</button>
-          </div>
-        ))}
+        <div style={{ marginTop: "10px" }}>
+          {priorities.map((p, i) => (
+            <div
+              key={p.id}
+              draggable
+              onDragStart={() => handleDragStart(i)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleDrop(i)}
+              style={{
+                padding: "10px",
+                marginBottom: "8px",
+                background: "#eee",
+                borderRadius: "8px",
+                display: "flex",
+                justifyContent: "space-between",
+                cursor: "grab"
+              }}
+            >
+              <span>{p.content}</span>
+              <button onClick={() => deletePriority(p.id)}>❌</button>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* RIGHT PANEL */}
@@ -207,7 +201,6 @@ export default function Tasks() {
           {showCompleted ? "Hide Completed" : "Show Completed"}
         </button>
 
-        {/* TASK LIST */}
         <div style={{ marginTop: "20px" }}>
           {tasks
             .filter((task) => showCompleted || !task.is_complete)
