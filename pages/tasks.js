@@ -15,8 +15,8 @@ export default function Tasks() {
   }, []);
 
   const fetchTasks = async () => {
-    const { data, error } = await supabase.from("Task List").select("*");
-    if (!error) setTasks(data);
+    const { data } = await supabase.from("Task List").select("*");
+    if (data) setTasks(data);
   };
 
   const addTask = async () => {
@@ -28,31 +28,36 @@ export default function Tasks() {
       {
         content: newTask,
         user_id: user.id,
-        is_complete: false
-      }
+        is_complete: false,
+      },
     ]);
 
     setNewTask("");
     fetchTasks();
   };
 
-return (
-  <div style={{ display: "flex", padding: "30px", gap: "30px" }}>
+  const deleteTask = async (id) => {
+    await supabase.from("Task List").delete().eq("id", id);
+    fetchTasks();
+  };
 
-    {/* LEFT - Weekly Priorities */}
-    <div style={{ width: "25%" }}>
-      <h2>Weekly Priorities</h2>
+  const toggleComplete = async (task) => {
+    await supabase
+      .from("Task List")
+      .update({ is_complete: !task.is_complete })
+      .eq("id", task.id);
 
-      <ul>
-        <li>Close deals</li>
-        <li>Health routine</li>
-        <li>Deep work blocks</li>
-      </ul>
-    </div>
+    fetchTasks();
+  };
 
-    {/* CENTER - Tasks */}
-    <div style={{ width: "50%" }}>
-      <h2>Daily Tasks</h2>
+  const completedTasks = tasks.filter((t) => t.is_complete).length;
+  const openTasks = tasks.filter((t) => !t.is_complete).length;
+
+  return (
+    <div style={{ padding: "40px" }}>
+      <h1>Tasks ✅</h1>
+
+      <h3>Open: {openTasks} | Completed: {completedTasks}</h3>
 
       <input
         value={newTask}
@@ -63,27 +68,28 @@ return (
 
       <ul>
         {tasks.map((task) => (
-          <li key={task.id} style={{ display: "flex", gap: "10px" }}>
+          <li
+            key={task.id}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              textDecoration: task.is_complete ? "line-through" : "none",
+              opacity: task.is_complete ? 0.5 : 1,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={task.is_complete}
+              onChange={() => toggleComplete(task)}
+            />
+
             {task.content}
+
             <button onClick={() => deleteTask(task.id)}>❌</button>
           </li>
         ))}
       </ul>
     </div>
-
-    {/* RIGHT - Notes */}
-    <div style={{ width: "25%" }}>
-      <h2>Notes</h2>
-      <textarea placeholder="Write notes..." style={{ width: "100%", height: "200px" }} />
-
-      <h3>Day Score</h3>
-      <p>0</p>
-    </div>
-
-  </div>
-);
-  );const deleteTask = async (id) => {
-  await supabase.from("Task List").delete().eq("id", id);
-  fetchTasks();
-};
+  );
 }
