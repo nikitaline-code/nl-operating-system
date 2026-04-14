@@ -156,90 +156,186 @@ export default function Tasks() {
   };
 
   // ================= UI =================
+return (
+  <div
+    style={{
+      background: "#f5f6f8",
+      minHeight: "100vh",
+      padding: "24px",
+      fontFamily: "Inter, system-ui",
+    }}
+  >
+    {/* HEADER */}
+    <div style={{ marginBottom: "20px" }}>
+      <h1 style={{ fontSize: "24px", marginBottom: "4px" }}>
+        Daily page
+      </h1>
+      <p style={{ color: "#6b7280", fontSize: "14px" }}>
+        Tasks, habits, and execution for the day
+      </p>
+    </div>
 
-  return (
-    <div style={{ display: "flex", height: "100vh", background: "#f9fafb" }}>
-      {/* SIDEBAR */}
-      <div style={{ width: "280px", padding: "24px", background: "#fff" }}>
-        <h3>Weekly Priorities</h3>
-
-        <input
-          value={newPriority}
-          onChange={(e) => setNewPriority(e.target.value)}
-          placeholder="Add priority..."
-        />
-        <button onClick={addPriority}>+</button>
-
-        {priorities.map((p, i) => (
-          <div
-            key={p.id}
-            draggable
-            onDragStart={() => handlePriorityDragStart(i)}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => handlePriorityDrop(i)}
-          >
-            {p.content}
-            <button onClick={() => deletePriority(p.id)}>✕</button>
-          </div>
-        ))}
+    {/* TOP CARDS */}
+    <div style={{ display: "flex", gap: "16px", marginBottom: "20px" }}>
+      <div style={cardStyle}>
+        <p style={labelStyle}>OPEN TASKS</p>
+        <h2>{openTasks}</h2>
       </div>
 
-      {/* MAIN */}
-      <div style={{ flex: 1, padding: "40px" }}>
-        <h1>Tasks</h1>
-
-        <input
-          value={newTask}
-          onChange={(e) => setNewTask(e.target.value)}
-          placeholder="Task..."
-        />
-
-        <select onChange={(e) => setAssignedBy(e.target.value)}>
-          <option>Mark</option>
-          <option>Dane</option>
-        </select>
-
-        <input type="date" onChange={(e) => setDueDate(e.target.value)} />
-
-        <select onChange={(e) => setUrgency(e.target.value)}>
-          <option>High</option>
-          <option>Medium</option>
-          <option>Low</option>
-        </select>
-
-        <button onClick={addTask}>Add</button>
-
-        {tasks
-          .filter((task) => showCompleted || !task.is_complete)
-          .map((task, i) => (
-            <div
-              key={task.id}
-              draggable
-              onDragStart={() => handleTaskDragStart(i)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => handleTaskDrop(i)}
-              style={{
-                padding: "10px",
-                borderBottom: "1px solid #ddd",
-                cursor: "grab",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={task.is_complete}
-                onChange={() => toggleComplete(task)}
-              />
-
-              {task.content}
-
-              <div style={{ fontSize: "12px" }}>
-                {task.assigned_by} | {task.urgency} | {task.due_date}
-              </div>
-
-              <button onClick={() => deleteTask(task.id)}>✕</button>
-            </div>
-          ))}
+      <div style={cardStyle}>
+        <p style={labelStyle}>COMPLETED</p>
+        <h2>{completedTasks}</h2>
       </div>
     </div>
-  );
-}
+
+    <div style={{ display: "flex", gap: "20px" }}>
+      
+      {/* LEFT PANEL */}
+      <div style={{ width: "320px", display: "flex", flexDirection: "column", gap: "16px" }}>
+        
+        {/* PRIORITIES */}
+        <div style={cardStyle}>
+          <p style={labelStyle}>WEEKLY PRIORITIES</p>
+
+          <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+            <input
+              value={newPriority}
+              onChange={(e) => setNewPriority(e.target.value)}
+              placeholder="Add priority..."
+              style={inputStyle}
+            />
+            <button onClick={addPriority} style={buttonStyle}>+</button>
+          </div>
+
+          <div style={{ marginTop: "10px" }}>
+            {priorities.map((p, i) => (
+              <div
+                key={p.id}
+                draggable
+                onDragStart={() => handlePriorityDragStart(i)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => handlePriorityDrop(i)}
+                style={pillStyle}
+              >
+                {p.content}
+                <button onClick={() => deletePriority(p.id)} style={iconBtn}>
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* MAIN PANEL */}
+      <div style={{ flex: 1 }}>
+        
+        {/* TASK INPUT */}
+        <div style={{ ...cardStyle, marginBottom: "16px" }}>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            
+            <input
+              value={newTask}
+              onChange={(e) => setNewTask(e.target.value)}
+              placeholder="Add task..."
+              style={{ ...inputStyle, flex: 1 }}
+            />
+
+            <select onChange={(e) => setAssignedBy(e.target.value)} style={inputStyle}>
+              <option>Mark</option>
+              <option>Dane</option>
+            </select>
+
+            <input type="date" onChange={(e) => setDueDate(e.target.value)} style={inputStyle} />
+
+            <select onChange={(e) => setUrgency(e.target.value)} style={inputStyle}>
+              <option>High</option>
+              <option>Medium</option>
+              <option>Low</option>
+            </select>
+
+            <button onClick={addTask} style={buttonStyle}>
+              Add
+            </button>
+          </div>
+        </div>
+
+        {/* TASK LIST */}
+        <div style={cardStyle}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
+            <p style={labelStyle}>DAILY TASKS</p>
+
+            <button
+              onClick={() => setShowCompleted(!showCompleted)}
+              style={ghostBtn}
+            >
+              {showCompleted ? "Hide Completed" : "Show Completed"}
+            </button>
+          </div>
+
+          {tasks
+            .filter((task) => showCompleted || !task.is_complete)
+            .map((task, i) => (
+              <div
+                key={task.id}
+                draggable
+                onDragStart={() => handleTaskDragStart(i)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => handleTaskDrop(i)}
+                style={{
+                  padding: "12px",
+                  borderBottom: "1px solid #eee",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  opacity: task.is_complete ? 0.5 : 1,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <input
+                    type="checkbox"
+                    checked={task.is_complete}
+                    onChange={() => toggleComplete(task)}
+                  />
+
+                  <div>
+                    <div>{task.content}</div>
+
+                    <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
+                      <span style={tagStyle}>{task.assigned_by}</span>
+                      <span style={tagStyle}>{task.urgency}</span>
+                      {task.due_date && <span style={tagStyle}>{task.due_date}</span>}
+                    </div>
+                  </div>
+                </div>
+
+                <button onClick={() => deleteTask(task.id)} style={iconBtn}>
+                  ✕
+                </button>
+              </div>
+            ))}
+        </div>
+
+        {/* PROGRESS */}
+        <div style={{ ...cardStyle, marginTop: "16px" }}>
+          <p style={labelStyle}>PROGRESS</p>
+
+          <div style={{
+            height: "8px",
+            background: "#e5e7eb",
+            borderRadius: "999px",
+            marginTop: "8px"
+          }}>
+            <div style={{
+              width: `${tasks.length ? (completedTasks / tasks.length) * 100 : 0}%`,
+              height: "100%",
+              background: "#111827",
+              borderRadius: "999px"
+            }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+ 
