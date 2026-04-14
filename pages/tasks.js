@@ -12,7 +12,10 @@ export default function Tasks() {
 
   const [newTask, setNewTask] = useState("");
   const [newPriority, setNewPriority] = useState("");
+
   const [assignedBy, setAssignedBy] = useState("Mark");
+  const [dueDate, setDueDate] = useState("");
+  const [urgency, setUrgency] = useState("Medium");
 
   const [showCompleted, setShowCompleted] = useState(true);
   const [dragIndex, setDragIndex] = useState(null);
@@ -37,10 +40,14 @@ export default function Tasks() {
         content: newTask,
         is_complete: false,
         assigned_by: assignedBy,
+        due_date: dueDate || null,
+        urgency: urgency,
       },
     ]);
 
     setNewTask("");
+    setDueDate("");
+    setUrgency("Medium");
     fetchTasks();
   };
 
@@ -91,8 +98,6 @@ export default function Tasks() {
     fetchPriorities();
   };
 
-  // ===== DRAG =====
-
   const handleDragStart = (index) => {
     setDragIndex(index);
   };
@@ -117,6 +122,24 @@ export default function Tasks() {
     }
   };
 
+  // ================= SORTING =================
+
+  const sortedTasks = tasks
+    .filter((task) => showCompleted || !task.is_complete)
+    .sort((a, b) => {
+      const urgencyOrder = { High: 1, Medium: 2, Low: 3 };
+
+      if (urgencyOrder[a.urgency] !== urgencyOrder[b.urgency]) {
+        return urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
+      }
+
+      if (a.due_date && b.due_date) {
+        return new Date(a.due_date) - new Date(b.due_date);
+      }
+
+      return 0;
+    });
+
   // ================= UI =================
 
   return (
@@ -126,7 +149,6 @@ export default function Tasks() {
         height: "100vh",
         background: "#f9fafb",
         fontFamily: "Inter, system-ui",
-        color: "#111827",
       }}
     >
       {/* SIDEBAR */}
@@ -138,16 +160,9 @@ export default function Tasks() {
           borderRight: "1px solid #e5e7eb",
         }}
       >
-        <h2 style={{ marginBottom: "20px" }}>Daily</h2>
+        <h2>Daily</h2>
 
-        <p
-          style={{
-            fontSize: "11px",
-            fontWeight: "600",
-            letterSpacing: "0.08em",
-            color: "#9ca3af",
-          }}
-        >
+        <p style={{ fontSize: "12px", color: "#9ca3af", marginTop: "20px" }}>
           WEEKLY PRIORITIES
         </p>
 
@@ -163,60 +178,35 @@ export default function Tasks() {
               border: "1px solid #e5e7eb",
             }}
           />
-          <button
-            onClick={addPriority}
-            style={{
-              padding: "10px 12px",
-              borderRadius: "10px",
-              background: "#111827",
-              color: "#fff",
-              border: "none",
-            }}
-          >
-            +
-          </button>
+          <button onClick={addPriority}>+</button>
         </div>
 
-        <div style={{ marginTop: "12px" }}>
-          {priorities.map((p, i) => (
-            <div
-              key={p.id}
-              draggable
-              onDragStart={() => handleDragStart(i)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => handleDrop(i)}
-              style={{
-                padding: "12px",
-                marginTop: "8px",
-                background: "#ffffff",
-                border: "1px solid #e5e7eb",
-                borderRadius: "12px",
-                display: "flex",
-                justifyContent: "space-between",
-                cursor: "grab",
-              }}
-            >
-              <span>{p.content}</span>
-              <button
-                onClick={() => deletePriority(p.id)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                ✕
-              </button>
-            </div>
-          ))}
-        </div>
+        {priorities.map((p, i) => (
+          <div
+            key={p.id}
+            draggable
+            onDragStart={() => handleDragStart(i)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => handleDrop(i)}
+            style={{
+              padding: "10px",
+              marginTop: "8px",
+              border: "1px solid #e5e7eb",
+              borderRadius: "10px",
+              background: "#fff",
+            }}
+          >
+            {p.content}
+            <button onClick={() => deletePriority(p.id)}>✕</button>
+          </div>
+        ))}
       </div>
 
       {/* MAIN */}
-      <div style={{ flex: 1, padding: "48px" }}>
-        <h1 style={{ fontSize: "28px", fontWeight: "600" }}>Daily OS</h1>
+      <div style={{ flex: 1, padding: "40px" }}>
+        <h1>Daily OS</h1>
 
-        <p style={{ color: "#6b7280", marginBottom: "20px" }}>
+        <p>
           Open: {openTasks} • Completed: {completedTasks}
         </p>
 
@@ -226,124 +216,66 @@ export default function Tasks() {
             value={newTask}
             onChange={(e) => setNewTask(e.target.value)}
             placeholder="Add task..."
-            style={{
-              flex: 1,
-              padding: "10px",
-              borderRadius: "10px",
-              border: "1px solid #e5e7eb",
-            }}
           />
 
           <select
             value={assignedBy}
             onChange={(e) => setAssignedBy(e.target.value)}
-            style={{
-              padding: "10px",
-              borderRadius: "10px",
-              border: "1px solid #e5e7eb",
-            }}
           >
             <option value="Mark">Mark</option>
             <option value="Dane">Dane</option>
           </select>
 
-          <button
-            onClick={addTask}
-            style={{
-              padding: "10px 14px",
-              borderRadius: "10px",
-              background: "#111827",
-              color: "#fff",
-              border: "none",
-            }}
-          >
-            Add
-          </button>
+          <input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+          />
 
-          <button
-            onClick={() => setShowCompleted(!showCompleted)}
-            style={{
-              padding: "10px 14px",
-              borderRadius: "10px",
-              border: "1px solid #e5e7eb",
-              background: "#fff",
-            }}
+          <select
+            value={urgency}
+            onChange={(e) => setUrgency(e.target.value)}
           >
-            {showCompleted ? "Hide Completed" : "Show Completed"}
-          </button>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+
+          <button onClick={addTask}>Add</button>
         </div>
 
         {/* TASK LIST */}
-        <div
-          style={{
-            background: "#ffffff",
-            borderRadius: "16px",
-            padding: "20px",
-            border: "1px solid #e5e7eb",
-          }}
-        >
-          {tasks
-            .filter((task) => showCompleted || !task.is_complete)
-            .map((task) => (
-              <div
-                key={task.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "12px 0",
-                  borderBottom: "1px solid #f1f5f9",
-                  opacity: task.is_complete ? 0.5 : 1,
-                }}
-              >
-                <div>
-                  <input
-                    type="checkbox"
-                    checked={task.is_complete}
-                    onChange={() => toggleComplete(task)}
-                  />
+        {sortedTasks.map((task) => (
+          <div
+            key={task.id}
+            style={{
+              padding: "10px",
+              borderBottom: "1px solid #eee",
+              opacity: task.is_complete ? 0.5 : 1,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={task.is_complete}
+              onChange={() => toggleComplete(task)}
+            />
 
-                  <div style={{ marginLeft: "10px", display: "inline-block" }}>
-                    <div>{task.content}</div>
+            {task.content}
 
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        padding: "2px 8px",
-                        borderRadius: "999px",
-                        background:
-                          task.assigned_by === "Mark"
-                            ? "#e0f2fe"
-                            : "#fef3c7",
-                        marginTop: "4px",
-                        display: "inline-block",
-                      }}
-                    >
-                      {task.assigned_by || "Unassigned"}
-                    </span>
-                  </div>
-                </div>
+            <div style={{ fontSize: "12px" }}>
+              {task.assigned_by} | {task.urgency} | {task.due_date}
+            </div>
 
-                <button
-                  onClick={() => deleteTask(task.id)}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-        </div>
+            <button onClick={() => deleteTask(task.id)}>✕</button>
+          </div>
+        ))}
 
         {/* PROGRESS */}
-        <div style={{ marginTop: "30px" }}>
-          <p style={{ marginBottom: "8px" }}>Progress</p>
+        <div style={{ marginTop: "20px" }}>
           <div
             style={{
               height: "6px",
-              background: "#e5e7eb",
+              background: "#ddd",
               borderRadius: "999px",
             }}
           >
@@ -355,7 +287,7 @@ export default function Tasks() {
                     : 0
                 }%`,
                 height: "100%",
-                background: "#111827",
+                background: "black",
               }}
             />
           </div>
