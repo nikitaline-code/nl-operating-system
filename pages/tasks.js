@@ -80,7 +80,7 @@ export default function Tasks() {
   console.log("USER:", user);
 
   const { data, error } = await supabase
-    .from("Weekly Priorities")
+    .from("priorities")
     .insert([
       {
         content: newPriority,
