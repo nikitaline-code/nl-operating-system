@@ -12,7 +12,7 @@ export default function Tasks() {
   const [newTask, setNewTask] = useState("");
   const [showCompleted, setShowCompleted] = useState(true);
 
-  // PRIORITY STATE ✅ MUST BE INSIDE
+  // PRIORITY STATE
   const [priorities, setPriorities] = useState([]);
   const [newPriority, setNewPriority] = useState("");
 
@@ -61,10 +61,14 @@ export default function Tasks() {
   };
 
   // =====================
-  // PRIORITY FUNCTIONS ✅
+  // PRIORITY FUNCTIONS
   // =====================
   const fetchPriorities = async () => {
-    const { data } = await supabase.from("Priorities").select("*");
+    const { data } = await supabase
+      .from("Priorities")
+      .select("*")
+      .order("order", { ascending: true });
+
     if (data) setPriorities(data);
   };
 
@@ -77,6 +81,7 @@ export default function Tasks() {
       {
         content: newPriority,
         user_id: user.id,
+        order: priorities.length,
       },
     ]);
 
@@ -89,9 +94,44 @@ export default function Tasks() {
     fetchPriorities();
   };
 
+  // =====================
+  // DRAG + DROP
+  // =====================
+  const handleDragStart = (e, index) => {
+    e.dataTransfer.setData("dragIndex", index);
+  };
+
+  const handleDrop = async (e, dropIndex) => {
+    const dragIndex = e.dataTransfer.getData("dragIndex");
+
+    const updated = [...priorities];
+    const draggedItem = updated.splice(dragIndex, 1)[0];
+    updated.splice(dropIndex, 0, draggedItem);
+
+    setPriorities(updated);
+
+    // save new order
+    for (let i = 0; i < updated.length; i++) {
+      await supabase
+        .from("Priorities")
+        .update({ order: i })
+        .eq("id", updated[i].id);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  // =====================
+  // STATS
+  // =====================
   const completedTasks = tasks.filter((t) => t.is_complete).length;
   const openTasks = tasks.filter((t) => !t.is_complete).length;
 
+  // =====================
+  // UI
+  // =====================
   return (
     <div style={{ display: "flex", height: "100vh", background: "#f5f5f5" }}>
       
@@ -104,13 +144,20 @@ export default function Tasks() {
       }}>
         <h2>Daily</h2>
 
+        {/* HABITS (static for now) */}
         <h4>Habits</h4>
         {["Wake up early", "Workout", "Read", "Plan day"].map((h, i) => (
-          <div key={i} style={{ padding: "10px", marginBottom: "8px", background: "#eee", borderRadius: "8px" }}>
+          <div key={i} style={{
+            padding: "10px",
+            marginBottom: "8px",
+            background: "#eee",
+            borderRadius: "8px"
+          }}>
             {h}
           </div>
         ))}
 
+        {/* PRIORITIES */}
         <h4 style={{ marginTop: "20px" }}>Weekly Priorities</h4>
 
         <input
@@ -120,16 +167,21 @@ export default function Tasks() {
         />
         <button onClick={addPriority}>Add</button>
 
-        {priorities.map((p) => (
+        {priorities.map((p, i) => (
           <div
             key={p.id}
+            draggable
+            onDragStart={(e) => handleDragStart(e, i)}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, i)}
             style={{
               padding: "10px",
               marginBottom: "8px",
               background: "#eee",
               borderRadius: "8px",
               display: "flex",
-              justifyContent: "space-between"
+              justifyContent: "space-between",
+              cursor: "grab"
             }}
           >
             <span>{p.content}</span>
@@ -155,6 +207,7 @@ export default function Tasks() {
           {showCompleted ? "Hide Completed" : "Show Completed"}
         </button>
 
+        {/* TASK LIST */}
         <div style={{ marginTop: "20px" }}>
           {tasks
             .filter((task) => showCompleted || !task.is_complete)
@@ -188,9 +241,14 @@ export default function Tasks() {
             ))}
         </div>
 
+        {/* PROGRESS BAR */}
         <div style={{ marginTop: "20px" }}>
           <h3>Progress</h3>
-          <div style={{ height: "10px", background: "#ddd", borderRadius: "5px" }}>
+          <div style={{
+            height: "10px",
+            background: "#ddd",
+            borderRadius: "5px"
+          }}>
             <div style={{
               width: `${tasks.length ? (completedTasks / tasks.length) * 100 : 0}%`,
               height: "100%",
