@@ -66,7 +66,7 @@ export default function Tasks() {
 
   const fetchPriorities = async () => {
     const { data } = await supabase
-      .from("priorities")
+      .from("Weekly Priorities")
       .select("*")
       .order("order", { ascending: true });
 
@@ -78,7 +78,7 @@ export default function Tasks() {
 
     const user = (await supabase.auth.getUser()).data.user;
 
-    await supabase.from("priorities").insert([
+    await supabase.from("Weekly Priorities").insert([
       {
         content: newPriority,
         user_id: user.id,
@@ -91,7 +91,7 @@ export default function Tasks() {
   };
 
   const deletePriority = async (id) => {
-    await supabase.from("priorities").delete().eq("id", id);
+    await supabase.from("Weekly Priorities").delete().eq("id", id);
     fetchPriorities();
   };
 
@@ -113,10 +113,9 @@ export default function Tasks() {
     setPriorities(updated);
     setDragIndex(null);
 
-    // save order to DB
     for (let i = 0; i < updated.length; i++) {
       await supabase
-        .from("priorities")
+        .from("Weekly Priorities")
         .update({ order: i })
         .eq("id", updated[i].id);
     }
@@ -126,209 +125,239 @@ export default function Tasks() {
 
   // ================= UI =================
 
-return (
-  <div style={{
-    display: "flex",
-    height: "100vh",
-    background: "#f8fafc",
-    fontFamily: "Inter, sans-serif"
-  }}>
+  return (
+    <div
+      style={{
+        display: "flex",
+        height: "100vh",
+        background: "#f8fafc",
+        fontFamily: "Inter, sans-serif",
+      }}
+    >
+      {/* SIDEBAR */}
+      <div
+        style={{
+          width: "300px",
+          padding: "24px",
+          background: "#ffffff",
+          borderRight: "1px solid #e5e7eb",
+        }}
+      >
+        <h2 style={{ marginBottom: "20px" }}>Daily</h2>
 
-    {/* SIDEBAR */}
-    <div style={{
-      width: "300px",
-      padding: "24px",
-      background: "#ffffff",
-      borderRight: "1px solid #e5e7eb"
-    }}>
-      <h2 style={{ marginBottom: "20px" }}>Daily</h2>
+        <p style={{ fontSize: "12px", color: "#6b7280" }}>HABITS</p>
 
-      <p style={{ fontSize: "12px", color: "#6b7280" }}>HABITS</p>
-
-      {["Wake up early", "Workout", "Read", "Plan day"].map((h, i) => (
-        <div key={i} style={{
-          padding: "12px",
-          marginTop: "8px",
-          background: "#f1f5f9",
-          borderRadius: "10px",
-          fontSize: "14px"
-        }}>
-          {h}
-        </div>
-      ))}
-
-      <p style={{ fontSize: "12px", color: "#6b7280", marginTop: "24px" }}>
-        WEEKLY PRIORITIES
-      </p>
-
-      <div style={{ display: "flex", gap: "6px", marginTop: "10px" }}>
-        <input
-          value={newPriority}
-          onChange={(e) => setNewPriority(e.target.value)}
-          placeholder="Add priority..."
-          style={{
-            flex: 1,
-            padding: "8px",
-            borderRadius: "8px",
-            border: "1px solid #ddd"
-          }}
-        />
-        <button onClick={addPriority} style={{
-          padding: "8px 12px",
-          borderRadius: "8px",
-          background: "black",
-          color: "white",
-          border: "none"
-        }}>
-          +
-        </button>
-      </div>
-
-      <div style={{ marginTop: "12px" }}>
-        {priorities.map((p, i) => (
+        {["Wake up early", "Workout", "Read", "Plan day"].map((h, i) => (
           <div
-            key={p.id}
-            draggable
-            onDragStart={() => handleDragStart(i)}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => handleDrop(i)}
+            key={i}
             style={{
               padding: "12px",
               marginTop: "8px",
               background: "#f1f5f9",
               borderRadius: "10px",
-              display: "flex",
-              justifyContent: "space-between",
-              cursor: "grab"
+              fontSize: "14px",
             }}
           >
-            <span>{p.content}</span>
-            <button
-              onClick={() => deletePriority(p.id)}
-              style={{
-                background: "transparent",
-                border: "none",
-                cursor: "pointer"
-              }}
-            >
-              ✕
-            </button>
+            {h}
           </div>
         ))}
-      </div>
-    </div>
 
-    {/* MAIN */}
-    <div style={{ flex: 1, padding: "40px" }}>
-
-      <h1 style={{ marginBottom: "10px" }}>Daily OS 🚀</h1>
-
-      <p style={{ color: "#6b7280", marginBottom: "20px" }}>
-        Open: {openTasks} • Completed: {completedTasks}
-      </p>
-
-      {/* ADD TASK */}
-      <div style={{
-        display: "flex",
-        gap: "10px",
-        marginBottom: "20px"
-      }}>
-        <input
-          value={newTask}
-          onChange={(e) => setNewTask(e.target.value)}
-          placeholder="Add task..."
+        <p
           style={{
-            flex: 1,
-            padding: "10px",
-            borderRadius: "10px",
-            border: "1px solid #ddd"
+            fontSize: "12px",
+            color: "#6b7280",
+            marginTop: "24px",
           }}
-        />
-        <button onClick={addTask} style={{
-          padding: "10px 16px",
-          borderRadius: "10px",
-          background: "black",
-          color: "white",
-          border: "none"
-        }}>
-          Add
-        </button>
+        >
+          WEEKLY PRIORITIES
+        </p>
 
-        <button onClick={() => setShowCompleted(!showCompleted)} style={{
-          padding: "10px 16px",
-          borderRadius: "10px",
-          border: "1px solid #ddd",
-          background: "white"
-        }}>
-          {showCompleted ? "Hide Completed" : "Show Completed"}
-        </button>
-      </div>
+        <div style={{ display: "flex", gap: "6px", marginTop: "10px" }}>
+          <input
+            value={newPriority}
+            onChange={(e) => setNewPriority(e.target.value)}
+            placeholder="Add priority..."
+            style={{
+              flex: 1,
+              padding: "8px",
+              borderRadius: "8px",
+              border: "1px solid #ddd",
+            }}
+          />
+          <button
+            onClick={addPriority}
+            style={{
+              padding: "8px 12px",
+              borderRadius: "8px",
+              background: "black",
+              color: "white",
+              border: "none",
+            }}
+          >
+            +
+          </button>
+        </div>
 
-      {/* TASK LIST */}
-      <div style={{
-        background: "#ffffff",
-        borderRadius: "16px",
-        padding: "20px",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
-      }}>
-        {tasks
-          .filter((task) => showCompleted || !task.is_complete)
-          .map((task) => (
+        <div style={{ marginTop: "12px" }}>
+          {priorities.map((p, i) => (
             <div
-              key={task.id}
+              key={p.id}
+              draggable
+              onDragStart={() => handleDragStart(i)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleDrop(i)}
               style={{
+                padding: "12px",
+                marginTop: "8px",
+                background: "#f1f5f9",
+                borderRadius: "10px",
                 display: "flex",
                 justifyContent: "space-between",
-                padding: "12px 0",
-                borderBottom: "1px solid #eee",
-                opacity: task.is_complete ? 0.5 : 1
+                cursor: "grab",
               }}
             >
-              <div>
-                <input
-                  type="checkbox"
-                  checked={task.is_complete}
-                  onChange={() => toggleComplete(task)}
-                />
-                <span style={{
-                  marginLeft: "10px",
-                  textDecoration: task.is_complete ? "line-through" : "none"
-                }}>
-                  {task.content}
-                </span>
-              </div>
-
+              <span>{p.content}</span>
               <button
-                onClick={() => deleteTask(task.id)}
+                onClick={() => deletePriority(p.id)}
                 style={{
                   background: "transparent",
                   border: "none",
-                  cursor: "pointer"
+                  cursor: "pointer",
                 }}
               >
                 ✕
               </button>
             </div>
           ))}
-      </div>
-
-      {/* PROGRESS */}
-      <div style={{ marginTop: "30px" }}>
-        <p style={{ marginBottom: "8px" }}>Progress</p>
-        <div style={{
-          height: "8px",
-          background: "#e5e7eb",
-          borderRadius: "999px"
-        }}>
-          <div style={{
-            width: `${tasks.length ? (completedTasks / tasks.length) * 100 : 0}%`,
-            height: "100%",
-            background: "black",
-            borderRadius: "999px"
-          }} />
         </div>
       </div>
 
+      {/* MAIN */}
+      <div style={{ flex: 1, padding: "40px" }}>
+        <h1 style={{ marginBottom: "10px" }}>Daily OS 🚀</h1>
+
+        <p style={{ color: "#6b7280", marginBottom: "20px" }}>
+          Open: {openTasks} • Completed: {completedTasks}
+        </p>
+
+        {/* ADD TASK */}
+        <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+          <input
+            value={newTask}
+            onChange={(e) => setNewTask(e.target.value)}
+            placeholder="Add task..."
+            style={{
+              flex: 1,
+              padding: "10px",
+              borderRadius: "10px",
+              border: "1px solid #ddd",
+            }}
+          />
+          <button
+            onClick={addTask}
+            style={{
+              padding: "10px 16px",
+              borderRadius: "10px",
+              background: "black",
+              color: "white",
+              border: "none",
+            }}
+          >
+            Add
+          </button>
+
+          <button
+            onClick={() => setShowCompleted(!showCompleted)}
+            style={{
+              padding: "10px 16px",
+              borderRadius: "10px",
+              border: "1px solid #ddd",
+              background: "white",
+            }}
+          >
+            {showCompleted ? "Hide Completed" : "Show Completed"}
+          </button>
+        </div>
+
+        {/* TASK LIST */}
+        <div
+          style={{
+            background: "#ffffff",
+            borderRadius: "16px",
+            padding: "20px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+          }}
+        >
+          {tasks
+            .filter((task) => showCompleted || !task.is_complete)
+            .map((task) => (
+              <div
+                key={task.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "12px 0",
+                  borderBottom: "1px solid #eee",
+                  opacity: task.is_complete ? 0.5 : 1,
+                }}
+              >
+                <div>
+                  <input
+                    type="checkbox"
+                    checked={task.is_complete}
+                    onChange={() => toggleComplete(task)}
+                  />
+                  <span
+                    style={{
+                      marginLeft: "10px",
+                      textDecoration: task.is_complete
+                        ? "line-through"
+                        : "none",
+                    }}
+                  >
+                    {task.content}
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => deleteTask(task.id)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+        </div>
+
+        {/* PROGRESS */}
+        <div style={{ marginTop: "30px" }}>
+          <p style={{ marginBottom: "8px" }}>Progress</p>
+          <div
+            style={{
+              height: "8px",
+              background: "#e5e7eb",
+              borderRadius: "999px",
+            }}
+          >
+            <div
+              style={{
+                width: `${
+                  tasks.length
+                    ? (completedTasks / tasks.length) * 100
+                    : 0
+                }%`,
+                height: "100%",
+                background: "black",
+                borderRadius: "999px",
+              }}
+            />
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+}
