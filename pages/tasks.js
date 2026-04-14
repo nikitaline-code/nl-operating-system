@@ -12,6 +12,7 @@ export default function Tasks() {
 
   const [newTask, setNewTask] = useState("");
   const [newPriority, setNewPriority] = useState("");
+  const [assignedBy, setAssignedBy] = useState("Mark");
 
   const [showCompleted, setShowCompleted] = useState(true);
   const [dragIndex, setDragIndex] = useState(null);
@@ -35,6 +36,7 @@ export default function Tasks() {
       {
         content: newTask,
         is_complete: false,
+        assigned_by: assignedBy,
       },
     ]);
 
@@ -183,15 +185,6 @@ export default function Tasks() {
               onDragStart={() => handleDragStart(i)}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => handleDrop(i)}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow =
-                  "0 4px 12px rgba(0,0,0,0.08)";
-                e.currentTarget.style.transform = "translateY(-2px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = "none";
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
               style={{
                 padding: "12px",
                 marginTop: "8px",
@@ -201,7 +194,6 @@ export default function Tasks() {
                 display: "flex",
                 justifyContent: "space-between",
                 cursor: "grab",
-                transition: "all 0.2s ease",
               }}
             >
               <span>{p.content}</span>
@@ -223,6 +215,7 @@ export default function Tasks() {
       {/* MAIN */}
       <div style={{ flex: 1, padding: "48px" }}>
         <h1 style={{ fontSize: "28px", fontWeight: "600" }}>Daily OS</h1>
+
         <p style={{ color: "#6b7280", marginBottom: "20px" }}>
           Open: {openTasks} • Completed: {completedTasks}
         </p>
@@ -240,6 +233,19 @@ export default function Tasks() {
               border: "1px solid #e5e7eb",
             }}
           />
+
+          <select
+            value={assignedBy}
+            onChange={(e) => setAssignedBy(e.target.value)}
+            style={{
+              padding: "10px",
+              borderRadius: "10px",
+              border: "1px solid #e5e7eb",
+            }}
+          >
+            <option value="Mark">Mark</option>
+            <option value="Dane">Dane</option>
+          </select>
 
           <button
             onClick={addTask}
@@ -295,9 +301,26 @@ export default function Tasks() {
                     checked={task.is_complete}
                     onChange={() => toggleComplete(task)}
                   />
-                  <span style={{ marginLeft: "10px" }}>
-                    {task.content}
-                  </span>
+
+                  <div style={{ marginLeft: "10px", display: "inline-block" }}>
+                    <div>{task.content}</div>
+
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        padding: "2px 8px",
+                        borderRadius: "999px",
+                        background:
+                          task.assigned_by === "Mark"
+                            ? "#e0f2fe"
+                            : "#fef3c7",
+                        marginTop: "4px",
+                        display: "inline-block",
+                      }}
+                    >
+                      {task.assigned_by || "Unassigned"}
+                    </span>
+                  </div>
                 </div>
 
                 <button
