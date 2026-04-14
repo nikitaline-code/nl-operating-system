@@ -1,7 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
-const [priorities, setPriorities] = useState([]);
-const [newPriority, setNewPriority] = useState("");
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -9,14 +7,23 @@ const supabase = createClient(
 );
 
 export default function Tasks() {
+  // TASK STATE
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
   const [showCompleted, setShowCompleted] = useState(true);
 
-useEffect(() => {
-  fetchTasks();
-  fetchPriorities(); // 👈 ADD THIS
-}, []);
+  // PRIORITY STATE ✅ MUST BE INSIDE
+  const [priorities, setPriorities] = useState([]);
+  const [newPriority, setNewPriority] = useState("");
+
+  useEffect(() => {
+    fetchTasks();
+    fetchPriorities();
+  }, []);
+
+  // =====================
+  // TASK FUNCTIONS
+  // =====================
   const fetchTasks = async () => {
     const { data } = await supabase.from("Task List").select("*");
     if (data) setTasks(data);
@@ -53,44 +60,42 @@ useEffect(() => {
     fetchTasks();
   };
 
+  // =====================
+  // PRIORITY FUNCTIONS ✅
+  // =====================
+  const fetchPriorities = async () => {
+    const { data } = await supabase.from("Priorities").select("*");
+    if (data) setPriorities(data);
+  };
+
+  const addPriority = async () => {
+    if (!newPriority) return;
+
+    const user = (await supabase.auth.getUser()).data.user;
+
+    await supabase.from("Priorities").insert([
+      {
+        content: newPriority,
+        user_id: user.id,
+      },
+    ]);
+
+    setNewPriority("");
+    fetchPriorities();
+  };
+
+  const deletePriority = async (id) => {
+    await supabase.from("Priorities").delete().eq("id", id);
+    fetchPriorities();
+  };
+
   const completedTasks = tasks.filter((t) => t.is_complete).length;
   const openTasks = tasks.filter((t) => !t.is_complete).length;
-const fetchPriorities = async () => {
-  const { data } = await supabase
-    .from("Weekly Priorities")
-    .select("*");
 
-  if (data) setPriorities(data);
-};
-
-const addPriority = async () => {
-  if (!newPriority) return;
-
-  const user = (await supabase.auth.getUser()).data.user;
-
-  await supabase.from("Weekly Priorities").insert([
-    {
-      content: newPriority,
-      user_id: user.id,
-    },
-  ]);
-
-  setNewPriority("");
-  fetchPriorities();
-};
-
-const deletePriority = async (id) => {
-  await supabase
-    .from("Weekly Priorities")
-    .delete()
-    .eq("id", id);
-
-  fetchPriorities();
-};
   return (
     <div style={{ display: "flex", height: "100vh", background: "#f5f5f5" }}>
       
-      {/* LEFT */}
+      {/* LEFT PANEL */}
       <div style={{
         width: "300px",
         padding: "20px",
@@ -107,37 +112,33 @@ const deletePriority = async (id) => {
         ))}
 
         <h4 style={{ marginTop: "20px" }}>Weekly Priorities</h4>
+
         <input
-  value={newPriority}
-  onChange={(e) => setNewPriority(e.target.value)}
-  placeholder="Add priority..."
-/>
-<button onClick={addPriority}>Add</button>
+          value={newPriority}
+          onChange={(e) => setNewPriority(e.target.value)}
+          placeholder="Add priority..."
+        />
+        <button onClick={addPriority}>Add</button>
 
-{priorities.map((p) => (
-  <div
-    key={p.id}
-    style={{
-      padding: "10px",
-      marginBottom: "8px",
-      background: "#eee",
-      borderRadius: "8px",
-      display: "flex",
-      justifyContent: "space-between"
-    }}
-  >
-    {p.content}
-
-    <button onClick={() => deletePriority(p.id)}>❌</button>
-  </div>
-))}
-          <div key={i} style={{ padding: "10px", marginBottom: "8px", background: "#eee", borderRadius: "8px" }}>
-            {p}
+        {priorities.map((p) => (
+          <div
+            key={p.id}
+            style={{
+              padding: "10px",
+              marginBottom: "8px",
+              background: "#eee",
+              borderRadius: "8px",
+              display: "flex",
+              justifyContent: "space-between"
+            }}
+          >
+            <span>{p.content}</span>
+            <button onClick={() => deletePriority(p.id)}>❌</button>
           </div>
         ))}
       </div>
 
-      {/* RIGHT */}
+      {/* RIGHT PANEL */}
       <div style={{ flex: 1, padding: "30px" }}>
         <h1>Daily OS 🚀</h1>
 
