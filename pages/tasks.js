@@ -1,16 +1,20 @@
 import { useState } from "react";
 
 export default function Tasks() {
-  const [person, setPerson] = useState("Mark");
   const [taskText, setTaskText] = useState("");
+  const [person, setPerson] = useState("Mark");
+  const [priority, setPriority] = useState("Medium");
   const [tasks, setTasks] = useState([]);
 
   const [habits, setHabits] = useState([
-    "Wake up at 5AM",
-    "Pray",
-    "Run",
-    "Read Bible",
-    "Workout",
+    { name: "Pray", done: false },
+    { name: "Read", done: false },
+    { name: "Run", done: false },
+  ]);
+
+  const [weekly, setWeekly] = useState([
+    "Win the week",
+    "Stay disciplined",
   ]);
 
   const addTask = () => {
@@ -21,6 +25,7 @@ export default function Tasks() {
       {
         text: taskText,
         person,
+        priority,
         done: false,
       },
     ]);
@@ -34,115 +39,131 @@ export default function Tasks() {
     setTasks(updated);
   };
 
-  const groupedTasks = {
-    Mark: tasks.filter((t) => t.person === "Mark"),
-    Dane: tasks.filter((t) => t.person === "Dane"),
+  const moveUp = (i) => {
+    if (i === 0) return;
+    const updated = [...tasks];
+    [updated[i - 1], updated[i]] = [updated[i], updated[i - 1]];
+    setTasks(updated);
+  };
+
+  const moveDown = (i) => {
+    if (i === tasks.length - 1) return;
+    const updated = [...tasks];
+    [updated[i + 1], updated[i]] = [updated[i], updated[i + 1]];
+    setTasks(updated);
+  };
+
+  const toggleHabit = (i) => {
+    const updated = [...habits];
+    updated[i].done = !updated[i].done;
+    setHabits(updated);
   };
 
   return (
     <div style={styles.page}>
       {/* HEADER */}
-      <div style={styles.header}>
-        <h1 style={styles.title}>Daily OS</h1>
-      </div>
-
-      {/* TOP CARDS */}
-      <div style={styles.topRow}>
-        <div style={styles.bigCard}>
-          <div style={styles.dateLabel}>Selected Day</div>
-          <h2>April 7, 2026</h2>
-        </div>
-
-        <div style={styles.smallCard}>
-          <span>Open Tasks</span>
-          <h2>{tasks.filter((t) => !t.done).length}</h2>
-        </div>
-
-        <div style={styles.smallCard}>
-          <span>Completed</span>
-          <h2>{tasks.filter((t) => t.done).length}</h2>
-        </div>
-      </div>
+      <h1 style={styles.title}>Daily OS</h1>
 
       {/* MAIN */}
       <div style={styles.main}>
-        {/* LEFT */}
+        {/* LEFT PANEL */}
         <div style={styles.left}>
           <h3>Daily Habits</h3>
-
           {habits.map((h, i) => (
-            <div key={i} style={styles.habit}>
-              {h}
+            <div
+              key={i}
+              style={{
+                ...styles.habit,
+                opacity: h.done ? 0.5 : 1,
+              }}
+              onClick={() => toggleHabit(i)}
+            >
+              {h.name}
             </div>
           ))}
 
-          <h3 style={{ marginTop: 30 }}>Long-Term Goals</h3>
-
-          <div style={styles.habit}>Keep Purity Every Day</div>
-          <div style={styles.habit}>Weigh 170lbs</div>
+          <h3 style={{ marginTop: 30 }}>Weekly Priorities</h3>
+          {weekly.map((w, i) => (
+            <div key={i} style={styles.habit}>
+              {w}
+            </div>
+          ))}
         </div>
 
-        {/* RIGHT */}
+        {/* RIGHT PANEL */}
         <div style={styles.right}>
-          <div style={styles.taskHeader}>
-            <h3>Daily Tasks</h3>
+          {/* INPUT */}
+          <div style={styles.inputRow}>
+            <input
+              placeholder="Add task..."
+              value={taskText}
+              onChange={(e) => setTaskText(e.target.value)}
+              style={styles.input}
+            />
 
-            <div style={styles.controls}>
-              <select
-                value={person}
-                onChange={(e) => setPerson(e.target.value)}
-                style={styles.select}
+            <select
+              value={person}
+              onChange={(e) => setPerson(e.target.value)}
+              style={styles.select}
+            >
+              <option>Mark</option>
+              <option>Dane</option>
+            </select>
+
+            <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
+              style={styles.select}
+            >
+              <option>High</option>
+              <option>Medium</option>
+              <option>Low</option>
+            </select>
+
+            <button onClick={addTask} style={styles.addBtn}>
+              Add
+            </button>
+          </div>
+
+          {/* TASK LIST */}
+          {tasks.map((t, i) => (
+            <div
+              key={i}
+              style={{
+                ...styles.task,
+                opacity: t.done ? 0.5 : 1,
+              }}
+            >
+              {/* LEFT SIDE */}
+              <div onClick={() => toggleTask(i)} style={{ flex: 1 }}>
+                {t.text}
+              </div>
+
+              {/* PRIORITY */}
+              <span
+                style={{
+                  ...styles.badge,
+                  background:
+                    t.priority === "High"
+                      ? "#fee2e2"
+                      : t.priority === "Medium"
+                      ? "#fef3c7"
+                      : "#e0f2fe",
+                }}
               >
-                <option>Mark</option>
-                <option>Dane</option>
-              </select>
+                {t.priority}
+              </span>
 
-              <input
-                placeholder="Add task..."
-                value={taskText}
-                onChange={(e) => setTaskText(e.target.value)}
-                style={styles.input}
-              />
+              {/* PERSON TAG */}
+              <span style={styles.person}>{t.person}</span>
 
-              <button onClick={addTask} style={styles.addBtn}>
-                Add
-              </button>
+              {/* REORDER */}
+              <div style={styles.reorder}>
+                <button onClick={() => moveUp(i)}>↑</button>
+                <button onClick={() => moveDown(i)}>↓</button>
+              </div>
             </div>
-          </div>
-
-          {/* MARK TASKS */}
-          <div style={styles.section}>
-            <h4>Mark</h4>
-            {groupedTasks.Mark.map((t, i) => (
-              <div
-                key={i}
-                style={{
-                  ...styles.task,
-                  opacity: t.done ? 0.5 : 1,
-                }}
-                onClick={() => toggleTask(i)}
-              >
-                {t.text}
-              </div>
-            ))}
-          </div>
-
-          {/* DANE TASKS */}
-          <div style={styles.section}>
-            <h4>Dane</h4>
-            {groupedTasks.Dane.map((t, i) => (
-              <div
-                key={i}
-                style={{
-                  ...styles.task,
-                  opacity: t.done ? 0.5 : 1,
-                }}
-                onClick={() => toggleTask(i)}
-              >
-                {t.text}
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
       </div>
     </div>
@@ -159,37 +180,9 @@ const styles = {
     fontFamily: "Inter, sans-serif",
   },
 
-  header: {
-    marginBottom: 20,
-  },
-
   title: {
     fontSize: 28,
-  },
-
-  topRow: {
-    display: "flex",
-    gap: 20,
-    marginBottom: 30,
-  },
-
-  bigCard: {
-    flex: 2,
-    background: "#eaecec",
-    padding: 20,
-    borderRadius: 12,
-  },
-
-  smallCard: {
-    flex: 1,
-    background: "#fff",
-    padding: 20,
-    borderRadius: 12,
-  },
-
-  dateLabel: {
-    fontSize: 12,
-    color: "#666",
+    marginBottom: 20,
   },
 
   main: {
@@ -198,7 +191,7 @@ const styles = {
   },
 
   left: {
-    width: 300,
+    width: 280,
     background: "#fff",
     padding: 20,
     borderRadius: 12,
@@ -216,28 +209,24 @@ const styles = {
     padding: 12,
     borderRadius: 10,
     marginBottom: 10,
-    fontSize: 14,
+    cursor: "pointer",
   },
 
-  taskHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  controls: {
+  inputRow: {
     display: "flex",
     gap: 10,
+    marginBottom: 20,
   },
 
   input: {
-    padding: 8,
+    flex: 1,
+    padding: 10,
     borderRadius: 8,
     border: "1px solid #ddd",
   },
 
   select: {
-    padding: 8,
+    padding: 10,
     borderRadius: 8,
   },
 
@@ -245,18 +234,34 @@ const styles = {
     background: "#111",
     color: "#fff",
     border: "none",
-    padding: "8px 14px",
+    padding: "10px 16px",
     borderRadius: 8,
     cursor: "pointer",
   },
 
-  section: {
-    marginTop: 20,
+  task: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: 12,
+    borderBottom: "1px solid #eee",
   },
 
-  task: {
-    padding: 10,
-    borderBottom: "1px solid #eee",
-    cursor: "pointer",
+  badge: {
+    padding: "4px 10px",
+    borderRadius: 999,
+    fontSize: 12,
+  },
+
+  person: {
+    fontSize: 12,
+    background: "#e5e7eb",
+    padding: "4px 8px",
+    borderRadius: 8,
+  },
+
+  reorder: {
+    display: "flex",
+    gap: 4,
   },
 };
