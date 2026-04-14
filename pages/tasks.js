@@ -1,149 +1,147 @@
 import { useState } from "react";
 
 export default function Tasks() {
-  const [tasks, setTasks] = useState([]);
+  const [person, setPerson] = useState("Mark");
   const [taskText, setTaskText] = useState("");
-  const [priority, setPriority] = useState("Medium");
-  const [hideCompleted, setHideCompleted] = useState(false);
+  const [tasks, setTasks] = useState([]);
 
   const [habits, setHabits] = useState([
-    { name: "Wake up", done: false },
-    { name: "Workout", done: false },
-    { name: "Read", done: false },
+    "Wake up at 5AM",
+    "Pray",
+    "Run",
+    "Read Bible",
+    "Workout",
   ]);
 
   const addTask = () => {
     if (!taskText) return;
+
     setTasks([
       ...tasks,
       {
         text: taskText,
-        priority,
+        person,
         done: false,
       },
     ]);
+
     setTaskText("");
   };
 
-  const toggleTask = (index) => {
+  const toggleTask = (i) => {
     const updated = [...tasks];
-    updated[index].done = !updated[index].done;
+    updated[i].done = !updated[i].done;
     setTasks(updated);
   };
 
-  const toggleHabit = (index) => {
-    const updated = [...habits];
-    updated[index].done = !updated[index].done;
-    setHabits(updated);
+  const groupedTasks = {
+    Mark: tasks.filter((t) => t.person === "Mark"),
+    Dane: tasks.filter((t) => t.person === "Dane"),
   };
 
   return (
     <div style={styles.page}>
       {/* HEADER */}
       <div style={styles.header}>
-        <div>
-          <h1 style={styles.title}>Daily OS</h1>
-          <p style={styles.subtitle}>Focused execution for today</p>
-        </div>
-
-        <button
-          onClick={() => setHideCompleted(!hideCompleted)}
-          style={styles.toggleBtn}
-        >
-          {hideCompleted ? "Show Completed" : "Hide Completed"}
-        </button>
+        <h1 style={styles.title}>Daily OS</h1>
       </div>
 
-      {/* STATS */}
-      <div style={styles.stats}>
-        <div style={styles.card}>
-          <span style={styles.cardLabel}>Open Tasks</span>
+      {/* TOP CARDS */}
+      <div style={styles.topRow}>
+        <div style={styles.bigCard}>
+          <div style={styles.dateLabel}>Selected Day</div>
+          <h2>April 7, 2026</h2>
+        </div>
+
+        <div style={styles.smallCard}>
+          <span>Open Tasks</span>
           <h2>{tasks.filter((t) => !t.done).length}</h2>
         </div>
 
-        <div style={styles.card}>
-          <span style={styles.cardLabel}>Completed</span>
+        <div style={styles.smallCard}>
+          <span>Completed</span>
           <h2>{tasks.filter((t) => t.done).length}</h2>
         </div>
       </div>
 
       {/* MAIN */}
       <div style={styles.main}>
-        {/* HABITS */}
-        <div style={styles.habits}>
-          <h3 style={styles.sectionTitle}>Daily Habits</h3>
+        {/* LEFT */}
+        <div style={styles.left}>
+          <h3>Daily Habits</h3>
 
-          {habits.map((habit, i) => (
-            <div
-              key={i}
-              style={{
-                ...styles.habitItem,
-                opacity: habit.done ? 0.5 : 1,
-              }}
-              onClick={() => toggleHabit(i)}
-            >
-              <span>{habit.name}</span>
-              <input type="checkbox" checked={habit.done} readOnly />
+          {habits.map((h, i) => (
+            <div key={i} style={styles.habit}>
+              {h}
             </div>
           ))}
+
+          <h3 style={{ marginTop: 30 }}>Long-Term Goals</h3>
+
+          <div style={styles.habit}>Keep Purity Every Day</div>
+          <div style={styles.habit}>Weigh 170lbs</div>
         </div>
 
-        {/* TASKS */}
-        <div style={styles.tasks}>
-          {/* INPUT */}
-          <div style={styles.inputRow}>
-            <input
-              value={taskText}
-              onChange={(e) => setTaskText(e.target.value)}
-              placeholder="Add task..."
-              style={styles.input}
-            />
+        {/* RIGHT */}
+        <div style={styles.right}>
+          <div style={styles.taskHeader}>
+            <h3>Daily Tasks</h3>
 
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value)}
-              style={styles.select}
-            >
-              <option>High</option>
-              <option>Medium</option>
-              <option>Low</option>
-            </select>
+            <div style={styles.controls}>
+              <select
+                value={person}
+                onChange={(e) => setPerson(e.target.value)}
+                style={styles.select}
+              >
+                <option>Mark</option>
+                <option>Dane</option>
+              </select>
 
-            <button onClick={addTask} style={styles.addBtn}>
-              Add
-            </button>
+              <input
+                placeholder="Add task..."
+                value={taskText}
+                onChange={(e) => setTaskText(e.target.value)}
+                style={styles.input}
+              />
+
+              <button onClick={addTask} style={styles.addBtn}>
+                Add
+              </button>
+            </div>
           </div>
 
-          {/* TASK LIST */}
-          <div>
-            {tasks
-              .filter((t) => (hideCompleted ? !t.done : true))
-              .map((task, i) => (
-                <div
-                  key={i}
-                  style={{
-                    ...styles.taskItem,
-                    opacity: task.done ? 0.5 : 1,
-                  }}
-                  onClick={() => toggleTask(i)}
-                >
-                  <span>{task.text}</span>
+          {/* MARK TASKS */}
+          <div style={styles.section}>
+            <h4>Mark</h4>
+            {groupedTasks.Mark.map((t, i) => (
+              <div
+                key={i}
+                style={{
+                  ...styles.task,
+                  opacity: t.done ? 0.5 : 1,
+                }}
+                onClick={() => toggleTask(i)}
+              >
+                {t.text}
+              </div>
+            ))}
+          </div>
 
-                  <span
-                    style={{
-                      ...styles.badge,
-                      background:
-                        task.priority === "High"
-                          ? "#fee2e2"
-                          : task.priority === "Medium"
-                          ? "#fef3c7"
-                          : "#e0f2fe",
-                    }}
-                  >
-                    {task.priority}
-                  </span>
-                </div>
-              ))}
+          {/* DANE TASKS */}
+          <div style={styles.section}>
+            <h4>Dane</h4>
+            {groupedTasks.Dane.map((t, i) => (
+              <div
+                key={i}
+                style={{
+                  ...styles.task,
+                  opacity: t.done ? 0.5 : 1,
+                }}
+                onClick={() => toggleTask(i)}
+              >
+                {t.text}
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -155,124 +153,110 @@ export default function Tasks() {
 
 const styles = {
   page: {
+    background: "#f6f7f8",
+    minHeight: "100vh",
     padding: 40,
     fontFamily: "Inter, sans-serif",
-    background: "#f8fafc",
-    minHeight: "100vh",
   },
 
   header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
+    marginBottom: 20,
   },
 
   title: {
-    margin: 0,
     fontSize: 28,
   },
 
-  subtitle: {
-    marginTop: 4,
-    color: "#64748b",
-  },
-
-  toggleBtn: {
-    background: "#fff",
-    border: "1px solid #e2e8f0",
-    padding: "10px 16px",
-    borderRadius: 999,
-    cursor: "pointer",
-  },
-
-  stats: {
+  topRow: {
     display: "flex",
     gap: 20,
-    marginTop: 30,
+    marginBottom: 30,
   },
 
-  card: {
+  bigCard: {
+    flex: 2,
+    background: "#eaecec",
+    padding: 20,
+    borderRadius: 12,
+  },
+
+  smallCard: {
+    flex: 1,
     background: "#fff",
     padding: 20,
     borderRadius: 12,
-    flex: 1,
   },
 
-  cardLabel: {
-    color: "#64748b",
+  dateLabel: {
     fontSize: 12,
+    color: "#666",
   },
 
   main: {
     display: "flex",
     gap: 20,
-    marginTop: 30,
   },
 
-  habits: {
-    width: 250,
+  left: {
+    width: 300,
     background: "#fff",
     padding: 20,
     borderRadius: 12,
   },
 
-  sectionTitle: {
-    marginBottom: 10,
+  right: {
+    flex: 1,
+    background: "#fff",
+    padding: 20,
+    borderRadius: 12,
   },
 
-  habitItem: {
-    display: "flex",
-    justifyContent: "space-between",
-    padding: "10px 0",
-    cursor: "pointer",
+  habit: {
+    background: "#f1f2f4",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 10,
     fontSize: 14,
   },
 
-  tasks: {
-    flex: 1,
-    background: "#fff",
-    padding: 20,
-    borderRadius: 12,
+  taskHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
 
-  inputRow: {
+  controls: {
     display: "flex",
     gap: 10,
-    marginBottom: 20,
   },
 
   input: {
-    flex: 1,
-    padding: 10,
+    padding: 8,
     borderRadius: 8,
-    border: "1px solid #e2e8f0",
+    border: "1px solid #ddd",
   },
 
   select: {
-    padding: 10,
+    padding: 8,
     borderRadius: 8,
   },
 
   addBtn: {
-    background: "#111827",
+    background: "#111",
     color: "#fff",
-    padding: "10px 16px",
-    borderRadius: 8,
     border: "none",
+    padding: "8px 14px",
+    borderRadius: 8,
     cursor: "pointer",
   },
 
-  taskItem: {
-    display: "flex",
-    justifyContent: "space-between",
-    padding: "12px 0",
-    borderBottom: "1px solid #f1f5f9",
-    cursor: "pointer",
+  section: {
+    marginTop: 20,
   },
 
-  badge: {
-    padding: "4px 10px",
-    borderRadius: 999,
-    fontSize: 12,
+  task: {
+    padding: 10,
+    borderBottom: "1px solid #eee",
+    cursor: "pointer",
   },
 };
