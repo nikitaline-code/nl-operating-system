@@ -1,6 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
-
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -9,6 +8,7 @@ const supabase = createClient(
 export default function Tasks() {
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
+  const [showCompleted, setShowCompleted] = useState(true);
 
   useEffect(() => {
     fetchTasks();
@@ -65,9 +65,13 @@ export default function Tasks() {
         placeholder="Add task..."
       />
       <button onClick={addTask}>Add</button>
-
+<button onClick={() => setShowCompleted(!showCompleted)}>
+  {showCompleted ? "Hide Completed" : "Show Completed"}
+</button>
       <ul>
-        {tasks.map((task) => (
+      tasks
+  .filter(task => showCompleted || !task.is_complete)
+  .map((task) => (
           <li
             key={task.id}
             style={{
