@@ -154,7 +154,64 @@ export default function Tasks() {
         .eq("id", updated[i].id);
     }
   };
+const cardStyle = {
+  background: "#ffffff",
+  padding: "16px",
+  borderRadius: "16px",
+  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+};
 
+const labelStyle = {
+  fontSize: "11px",
+  color: "#9ca3af",
+  letterSpacing: "1px",
+};
+
+const inputStyle = {
+  padding: "8px 10px",
+  borderRadius: "8px",
+  border: "1px solid #e5e7eb",
+  fontSize: "14px",
+};
+
+const buttonStyle = {
+  padding: "8px 12px",
+  borderRadius: "8px",
+  background: "#111827",
+  color: "#fff",
+  border: "none",
+  cursor: "pointer",
+};
+
+const ghostBtn = {
+  padding: "6px 10px",
+  borderRadius: "8px",
+  border: "1px solid #e5e7eb",
+  background: "#fff",
+  cursor: "pointer",
+};
+
+const iconBtn = {
+  background: "transparent",
+  border: "none",
+  cursor: "pointer",
+};
+
+const pillStyle = {
+  padding: "10px",
+  borderRadius: "999px",
+  background: "#f1f5f9",
+  display: "flex",
+  justifyContent: "space-between",
+  marginTop: "6px",
+};
+
+const tagStyle = {
+  fontSize: "10px",
+  background: "#f3f4f6",
+  padding: "2px 6px",
+  borderRadius: "999px",
+};
   // ================= UI =================
 return (
   <div
