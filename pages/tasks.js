@@ -31,12 +31,9 @@ export default function Tasks() {
   const addTask = async () => {
     if (!newTask) return;
 
-    const user = (await supabase.auth.getUser()).data.user;
-
     await supabase.from("Task List").insert([
       {
         content: newTask,
-        user_id: user.id,
         is_complete: false,
       },
     ]);
@@ -64,48 +61,35 @@ export default function Tasks() {
 
   // ================= PRIORITIES =================
 
-const fetchPriorities = async () => {
-  const { data, error } = await supabase
-    .from("priorities")
-    .select("*")
-    .order("order", { ascending: true });
+  const fetchPriorities = async () => {
+    const { data } = await supabase
+      .from("priorities")
+      .select("*")
+      .order("order", { ascending: true });
 
-  console.log("DATA:", data);
-  console.log("ERROR:", error);
-
-  if (data) setPriorities(data);
-};
+    if (data) setPriorities(data);
+  };
 
   const addPriority = async () => {
-  if (!newPriority) return;
+    if (!newPriority) return;
 
-  const user = (await supabase.auth.getUser()).data.user;
-  console.log("USER:", user);
-
-  const { data, error } = await supabase
-    .from("priorities")
-    .insert([
+    await supabase.from("priorities").insert([
       {
         content: newPriority,
-        user_id: user?.id,
         order: priorities.length,
       },
-    ])
-    .select();
+    ]);
 
-  console.log("INSERT RESULT:", data);
-  console.log("INSERT ERROR:", error);
-
-  setNewPriority("");
-  fetchPriorities();
-};
-
-  const deletePriority = async (id) => {
-    await supabase.from("Weekly Priorities").delete().eq("id", id);
+    setNewPriority("");
     fetchPriorities();
   };
 
-  // ===== DRAG LOGIC =====
+  const deletePriority = async (id) => {
+    await supabase.from("priorities").delete().eq("id", id);
+    fetchPriorities();
+  };
+
+  // ===== DRAG =====
 
   const handleDragStart = (index) => {
     setDragIndex(index);
@@ -123,15 +107,12 @@ const fetchPriorities = async () => {
     setPriorities(updated);
     setDragIndex(null);
 
-    // save order to DB
     for (let i = 0; i < updated.length; i++) {
       await supabase
-        .from("Weekly Priorities") // ✅ FIXED
+        .from("priorities")
         .update({ order: i })
         .eq("id", updated[i].id);
     }
-
-    fetchPriorities();
   };
 
   // ================= UI =================
@@ -141,67 +122,52 @@ const fetchPriorities = async () => {
       style={{
         display: "flex",
         height: "100vh",
-        background: "#f8fafc",
-        fontFamily: "Inter, sans-serif",
+        background: "#f9fafb",
+        fontFamily: "Inter, system-ui",
+        color: "#111827",
       }}
     >
       {/* SIDEBAR */}
       <div
         style={{
-          width: "300px",
+          width: "280px",
           padding: "24px",
           background: "#ffffff",
           borderRight: "1px solid #e5e7eb",
         }}
       >
-        <h2>Daily</h2>
-
-        <p style={{ fontSize: "12px", color: "#6b7280" }}>HABITS</p>
-
-        {["Wake up early", "Workout", "Read", "Plan day"].map((h, i) => (
-          <div
-            key={i}
-            style={{
-              padding: "12px",
-              marginTop: "8px",
-              background: "#f1f5f9",
-              borderRadius: "10px",
-            }}
-          >
-            {h}
-          </div>
-        ))}
+        <h2 style={{ marginBottom: "20px" }}>Daily</h2>
 
         <p
           style={{
-            fontSize: "12px",
-            color: "#6b7280",
-            marginTop: "24px",
+            fontSize: "11px",
+            fontWeight: "600",
+            letterSpacing: "0.08em",
+            color: "#9ca3af",
           }}
         >
           WEEKLY PRIORITIES
         </p>
 
-        {/* ADD PRIORITY */}
-        <div style={{ display: "flex", gap: "6px", marginTop: "10px" }}>
+        <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
           <input
             value={newPriority}
             onChange={(e) => setNewPriority(e.target.value)}
             placeholder="Add priority..."
             style={{
               flex: 1,
-              padding: "8px",
-              borderRadius: "8px",
-              border: "1px solid #ddd",
+              padding: "10px",
+              borderRadius: "10px",
+              border: "1px solid #e5e7eb",
             }}
           />
           <button
             onClick={addPriority}
             style={{
-              padding: "8px 12px",
-              borderRadius: "8px",
-              background: "black",
-              color: "white",
+              padding: "10px 12px",
+              borderRadius: "10px",
+              background: "#111827",
+              color: "#fff",
               border: "none",
             }}
           >
@@ -209,7 +175,6 @@ const fetchPriorities = async () => {
           </button>
         </div>
 
-        {/* PRIORITY LIST */}
         <div style={{ marginTop: "12px" }}>
           {priorities.map((p, i) => (
             <div
@@ -218,18 +183,28 @@ const fetchPriorities = async () => {
               onDragStart={() => handleDragStart(i)}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => handleDrop(i)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow =
+                  "0 4px 12px rgba(0,0,0,0.08)";
+                e.currentTarget.style.transform = "translateY(-2px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = "none";
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
               style={{
                 padding: "12px",
                 marginTop: "8px",
-                background: "#f1f5f9",
-                borderRadius: "10px",
+                background: "#ffffff",
+                border: "1px solid #e5e7eb",
+                borderRadius: "12px",
                 display: "flex",
                 justifyContent: "space-between",
                 cursor: "grab",
+                transition: "all 0.2s ease",
               }}
             >
               <span>{p.content}</span>
-
               <button
                 onClick={() => deletePriority(p.id)}
                 style={{
@@ -246,15 +221,14 @@ const fetchPriorities = async () => {
       </div>
 
       {/* MAIN */}
-      <div style={{ flex: 1, padding: "40px" }}>
-        <h1>Daily OS 🚀</h1>
-
-        <p style={{ color: "#6b7280" }}>
+      <div style={{ flex: 1, padding: "48px" }}>
+        <h1 style={{ fontSize: "28px", fontWeight: "600" }}>Daily OS</h1>
+        <p style={{ color: "#6b7280", marginBottom: "20px" }}>
           Open: {openTasks} • Completed: {completedTasks}
         </p>
 
-        {/* ADD TASK */}
-        <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+        {/* INPUT */}
+        <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
           <input
             value={newTask}
             onChange={(e) => setNewTask(e.target.value)}
@@ -263,16 +237,17 @@ const fetchPriorities = async () => {
               flex: 1,
               padding: "10px",
               borderRadius: "10px",
-              border: "1px solid #ddd",
+              border: "1px solid #e5e7eb",
             }}
           />
+
           <button
             onClick={addTask}
             style={{
-              padding: "10px 16px",
+              padding: "10px 14px",
               borderRadius: "10px",
-              background: "black",
-              color: "white",
+              background: "#111827",
+              color: "#fff",
               border: "none",
             }}
           >
@@ -282,10 +257,10 @@ const fetchPriorities = async () => {
           <button
             onClick={() => setShowCompleted(!showCompleted)}
             style={{
-              padding: "10px 16px",
+              padding: "10px 14px",
               borderRadius: "10px",
-              border: "1px solid #ddd",
-              background: "white",
+              border: "1px solid #e5e7eb",
+              background: "#fff",
             }}
           >
             {showCompleted ? "Hide Completed" : "Show Completed"}
@@ -298,7 +273,7 @@ const fetchPriorities = async () => {
             background: "#ffffff",
             borderRadius: "16px",
             padding: "20px",
-            marginTop: "20px",
+            border: "1px solid #e5e7eb",
           }}
         >
           {tasks
@@ -310,7 +285,7 @@ const fetchPriorities = async () => {
                   display: "flex",
                   justifyContent: "space-between",
                   padding: "12px 0",
-                  borderBottom: "1px solid #eee",
+                  borderBottom: "1px solid #f1f5f9",
                   opacity: task.is_complete ? 0.5 : 1,
                 }}
               >
@@ -320,29 +295,31 @@ const fetchPriorities = async () => {
                     checked={task.is_complete}
                     onChange={() => toggleComplete(task)}
                   />
-                  <span
-                    style={{
-                      marginLeft: "10px",
-                      textDecoration: task.is_complete
-                        ? "line-through"
-                        : "none",
-                    }}
-                  >
+                  <span style={{ marginLeft: "10px" }}>
                     {task.content}
                   </span>
                 </div>
 
-                <button onClick={() => deleteTask(task.id)}>✕</button>
+                <button
+                  onClick={() => deleteTask(task.id)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  ✕
+                </button>
               </div>
             ))}
         </div>
 
         {/* PROGRESS */}
         <div style={{ marginTop: "30px" }}>
-          <p>Progress</p>
+          <p style={{ marginBottom: "8px" }}>Progress</p>
           <div
             style={{
-              height: "8px",
+              height: "6px",
               background: "#e5e7eb",
               borderRadius: "999px",
             }}
@@ -355,8 +332,7 @@ const fetchPriorities = async () => {
                     : 0
                 }%`,
                 height: "100%",
-                background: "black",
-                borderRadius: "999px",
+                background: "#111827",
               }}
             />
           </div>
