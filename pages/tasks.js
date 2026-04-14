@@ -16,6 +16,12 @@ export default function Tasks() {
   const [showCompleted, setShowCompleted] = useState(true);
   const [dragIndex, setDragIndex] = useState(null);
 
+  const [habits, setHabits] = useState([
+    { name: "Wake up", done: false },
+    { name: "Workout", done: false },
+    { name: "Read", done: false },
+  ]);
+
   useEffect(() => {
     fetchTasks();
   }, []);
@@ -83,7 +89,6 @@ export default function Tasks() {
     setTasks(updated);
     setDragIndex(null);
 
-    // persist order
     for (let i = 0; i < updated.length; i++) {
       await supabase
         .from("Task List")
@@ -94,25 +99,35 @@ export default function Tasks() {
     fetchTasks();
   };
 
-  // ================= GROUPING =================
+  // ================= DATA =================
   const today = new Date();
+
+  const formattedDate = today.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 
   const visibleTasks = tasks.filter(
     (t) => showCompleted || !t.is_complete
   );
 
-  const overdue = visibleTasks.filter(
-    (t) => t.due_date && new Date(t.due_date) < today && !t.is_complete
-  );
-
-  const high = visibleTasks.filter((t) => t.urgency === "High");
-  const medium = visibleTasks.filter((t) => t.urgency === "Medium");
-  const low = visibleTasks.filter((t) => t.urgency === "Low");
-
   const openCount = tasks.filter((t) => !t.is_complete).length;
   const completeCount = tasks.filter((t) => t.is_complete).length;
 
-  // ================= STYLES =================
+  // ================= UI HELPERS =================
+  const urgencyColor = {
+    High: "#fee2e2",
+    Medium: "#fef3c7",
+    Low: "#e0f2fe",
+  };
+
+  const urgencyText = {
+    High: "#dc2626",
+    Medium: "#d97706",
+    Low: "#0284c7",
+  };
+
   const card = {
     background: "#ffffff",
     borderRadius: "16px",
@@ -120,36 +135,35 @@ export default function Tasks() {
     boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
   };
 
-  const sectionTitle = {
-    fontSize: "12px",
-    color: "#6b7280",
-    marginBottom: "10px",
-    letterSpacing: "0.05em",
-  };
-
   // ================= UI =================
   return (
-    <div style={{ padding: "30px", background: "#f5f6f7" }}>
+    <div style={{ padding: "30px", background: "#f5f6f7", minHeight: "100vh" }}>
 
-      <h1 style={{ marginBottom: "5px" }}>Daily page</h1>
+      <h1>Daily page</h1>
       <p style={{ color: "#6b7280", marginBottom: "20px" }}>
         Tasks, goals, and habits for one day.
       </p>
 
-      {/* TOP CARDS */}
+      {/* TOP */}
       <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }}>
         <div style={{ ...card, flex: 2 }}>
-          <div style={sectionTitle}>SELECTED DAY</div>
-          <h2>Today</h2>
+          <div style={{ fontSize: "12px", color: "#6b7280" }}>
+            SELECTED DAY
+          </div>
+          <h2>{formattedDate}</h2>
         </div>
 
         <div style={{ ...card, flex: 1 }}>
-          <div style={sectionTitle}>OPEN TASKS</div>
+          <div style={{ fontSize: "12px", color: "#6b7280" }}>
+            OPEN TASKS
+          </div>
           <h2>{openCount}</h2>
         </div>
 
         <div style={{ ...card, flex: 1 }}>
-          <div style={sectionTitle}>COMPLETED</div>
+          <div style={{ fontSize: "12px", color: "#6b7280" }}>
+            COMPLETED
+          </div>
           <h2>{completeCount}</h2>
         </div>
       </div>
@@ -157,45 +171,77 @@ export default function Tasks() {
       {/* MAIN */}
       <div style={{ display: "flex", gap: "20px" }}>
 
-        {/* LEFT */}
-        <div style={{ width: "300px", ...card }}>
-          <div style={sectionTitle}>DAILY HABITS</div>
+        {/* HABITS */}
+        <div style={{ width: "280px", ...card }}>
+          <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "10px" }}>
+            DAILY HABITS
+          </div>
 
-          {["Wake up", "Workout", "Read"].map((h, i) => (
-            <div key={i} style={{
-              padding: "10px",
-              marginBottom: "8px",
-              background: "#f1f5f9",
-              borderRadius: "10px"
-            }}>
-              {h}
+          {habits.map((h, i) => (
+            <div
+              key={i}
+              onClick={() => {
+                const updated = [...habits];
+                updated[i].done = !updated[i].done;
+                setHabits(updated);
+              }}
+              style={{
+                padding: "10px",
+                marginBottom: "8px",
+                borderRadius: "10px",
+                background: h.done ? "#dcfce7" : "#f1f5f9",
+                textDecoration: h.done ? "line-through" : "none",
+                cursor: "pointer",
+              }}
+            >
+              {h.name}
             </div>
           ))}
         </div>
 
-        {/* RIGHT */}
+        {/* TASKS */}
         <div style={{ flex: 1, ...card }}>
 
+          {/* HEADER */}
           <div style={{
             display: "flex",
             justifyContent: "space-between",
-            marginBottom: "10px"
+            marginBottom: "16px"
           }}>
-            <div style={sectionTitle}>DAILY TASKS</div>
-
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button onClick={() => setShowCompleted(!showCompleted)}>
-                {showCompleted ? "Hide Completed" : "Show Completed"}
-              </button>
+            <div style={{ fontSize: "12px", color: "#6b7280" }}>
+              DAILY TASKS
             </div>
+
+            <button
+              onClick={() => setShowCompleted(!showCompleted)}
+              style={{
+                padding: "6px 12px",
+                borderRadius: "999px",
+                border: "1px solid #e5e7eb",
+                background: showCompleted ? "#111" : "#fff",
+                color: showCompleted ? "#fff" : "#111",
+                fontSize: "12px",
+              }}
+            >
+              {showCompleted ? "Hide Completed" : "Show Completed"}
+            </button>
           </div>
 
-          {/* ADD */}
-          <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
+          {/* ADD ROW */}
+          <div style={{
+            display: "flex",
+            gap: "8px",
+            marginBottom: "20px",
+            background: "#f9fafb",
+            padding: "10px",
+            borderRadius: "12px",
+            border: "1px solid #eee"
+          }}>
             <input
               value={newTask}
               onChange={(e) => setNewTask(e.target.value)}
-              placeholder="Task"
+              placeholder="Add task..."
+              style={{ flex: 2, border: "none", background: "transparent" }}
             />
 
             <select value={assigned} onChange={(e) => setAssigned(e.target.value)}>
@@ -215,7 +261,7 @@ export default function Tasks() {
           </div>
 
           {/* TASK LIST */}
-          {[...overdue, ...high, ...medium, ...low].map((task, i) => (
+          {visibleTasks.map((task, i) => (
             <div
               key={task.id}
               draggable
@@ -228,7 +274,7 @@ export default function Tasks() {
                 padding: "10px 0",
                 borderBottom: "1px solid #eee",
                 opacity: task.is_complete ? 0.5 : 1,
-                cursor: "grab"
+                cursor: "grab",
               }}
             >
               <div>
@@ -237,19 +283,37 @@ export default function Tasks() {
                   checked={task.is_complete}
                   onChange={() => toggleComplete(task)}
                 />
+
                 <span style={{ marginLeft: "10px" }}>
                   {task.content}
                 </span>
 
-                <div style={{ fontSize: "12px", color: "#6b7280" }}>
-                  {task.assigned_to} • {task.urgency} • {task.due_date || "No date"}
+                <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                  <span style={{
+                    background: urgencyColor[task.urgency],
+                    color: urgencyText[task.urgency],
+                    padding: "2px 8px",
+                    borderRadius: "999px",
+                    fontSize: "11px"
+                  }}>
+                    {task.urgency}
+                  </span>
+
+                  <span style={{ fontSize: "11px", color: "#6b7280" }}>
+                    {task.assigned_to}
+                  </span>
+
+                  {task.due_date && (
+                    <span style={{ fontSize: "11px", color: "#9ca3af" }}>
+                      {task.due_date}
+                    </span>
+                  )}
                 </div>
               </div>
 
               <button onClick={() => deleteTask(task.id)}>✕</button>
             </div>
           ))}
-
         </div>
       </div>
     </div>
