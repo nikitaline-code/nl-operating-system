@@ -36,27 +36,52 @@ export default function Tasks() {
     fetchTasks();
   };
 
-  return (
-    <div style={{ padding: "40px" }}>
-      <h1>Tasks ✅</h1>
+return (
+  <div style={{ display: "flex", padding: "30px", gap: "30px" }}>
+
+    {/* LEFT - Weekly Priorities */}
+    <div style={{ width: "25%" }}>
+      <h2>Weekly Priorities</h2>
+
+      <ul>
+        <li>Close deals</li>
+        <li>Health routine</li>
+        <li>Deep work blocks</li>
+      </ul>
+    </div>
+
+    {/* CENTER - Tasks */}
+    <div style={{ width: "50%" }}>
+      <h2>Daily Tasks</h2>
 
       <input
         value={newTask}
         onChange={(e) => setNewTask(e.target.value)}
-        placeholder="New task..."
+        placeholder="Add task..."
       />
-
       <button onClick={addTask}>Add</button>
 
       <ul>
         {tasks.map((task) => (
-         <li key={task.id} style={{ display: "flex", gap: "10px" }}>
-  {task.content}
-  <button onClick={() => deleteTask(task.id)}>❌</button>
-</li>
+          <li key={task.id} style={{ display: "flex", gap: "10px" }}>
+            {task.content}
+            <button onClick={() => deleteTask(task.id)}>❌</button>
+          </li>
         ))}
       </ul>
     </div>
+
+    {/* RIGHT - Notes */}
+    <div style={{ width: "25%" }}>
+      <h2>Notes</h2>
+      <textarea placeholder="Write notes..." style={{ width: "100%", height: "200px" }} />
+
+      <h3>Day Score</h3>
+      <p>0</p>
+    </div>
+
+  </div>
+);
   );const deleteTask = async (id) => {
   await supabase.from("Task List").delete().eq("id", id);
   fetchTasks();
