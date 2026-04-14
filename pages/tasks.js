@@ -261,12 +261,14 @@ const styles = {
     marginTop: 20,
   },
 
+  /* 🔥 UPDATED HABIT STYLE */
   habit: {
     background: "#f1f2f4",
-    padding: 12,
+    padding: 10,
     borderRadius: 12,
-    marginBottom: 10,
+    marginBottom: 8,
     cursor: "pointer",
+    fontSize: 13,
   },
 
   inputRow: {
