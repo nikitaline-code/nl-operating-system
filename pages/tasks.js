@@ -1,145 +1,122 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState([]);
-  const [habits, setHabits] = useState([
-    { id: 1, name: "Wake up", completed: false },
-    { id: 2, name: "Workout", completed: false },
-    { id: 3, name: "Read", completed: false },
-  ]);
-
-  const [newTask, setNewTask] = useState("");
-  const [assigned, setAssigned] = useState("Mark");
+  const [taskInput, setTaskInput] = useState("");
+  const [assignee, setAssignee] = useState("Mark");
   const [urgency, setUrgency] = useState("Medium");
   const [dueDate, setDueDate] = useState("");
   const [hideCompleted, setHideCompleted] = useState(false);
 
-  // ADD TASK
+  const [habits, setHabits] = useState([
+    { name: "Wake up", done: false },
+    { name: "Workout", done: false },
+    { name: "Read", done: false },
+  ]);
+
   const addTask = () => {
-    if (!newTask) return;
+    if (!taskInput) return;
 
-    const task = {
-      id: Date.now(),
-      content: newTask,
-      assigned_to: assigned,
-      urgency,
-      due_date: dueDate,
-      is_complete: false,
-    };
+    setTasks([
+      ...tasks,
+      {
+        id: Date.now(),
+        text: taskInput,
+        assignee,
+        urgency,
+        dueDate,
+        done: false,
+      },
+    ]);
 
-    setTasks([task, ...tasks]);
-    setNewTask("");
-    setDueDate("");
+    setTaskInput("");
   };
 
-  // TOGGLE TASK
   const toggleTask = (id) => {
     setTasks(
       tasks.map((t) =>
-        t.id === id ? { ...t, is_complete: !t.is_complete } : t
+        t.id === id ? { ...t, done: !t.done } : t
       )
     );
   };
 
-  // DELETE TASK
   const deleteTask = (id) => {
     setTasks(tasks.filter((t) => t.id !== id));
   };
 
-  // TOGGLE HABIT
-  const toggleHabit = (id) => {
-    setHabits(
-      habits.map((h) =>
-        h.id === id ? { ...h, completed: !h.completed } : h
-      )
-    );
+  const toggleHabit = (index) => {
+    const updated = [...habits];
+    updated[index].done = !updated[index].done;
+    setHabits(updated);
   };
 
+  const openTasks = tasks.filter((t) => !t.done).length;
+  const completedTasks = tasks.filter((t) => t.done).length;
+
   return (
-    <div className="min-h-screen bg-[#f7f8fa] p-8">
-      
-      {/* HEADER */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Daily OS</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Focused execution for today
-          </p>
+    <div style={styles.page}>
+      <h1 style={styles.title}>Daily OS</h1>
+      <p style={styles.subtitle}>Focused execution for today</p>
+
+      {/* TOP STATS */}
+      <div style={styles.statsRow}>
+        <div style={styles.card}>
+          <p style={styles.label}>OPEN TASKS</p>
+          <h2>{openTasks}</h2>
+        </div>
+
+        <div style={styles.card}>
+          <p style={styles.label}>COMPLETED</p>
+          <h2>{completedTasks}</h2>
         </div>
 
         <button
+          style={styles.hideBtn}
           onClick={() => setHideCompleted(!hideCompleted)}
-          className="text-sm px-4 py-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition"
         >
           {hideCompleted ? "Show Completed" : "Hide Completed"}
         </button>
       </div>
 
-      {/* STATS */}
-      <div className="grid grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-          <p className="text-xs text-gray-500 uppercase">Open Tasks</p>
-          <p className="text-2xl font-semibold mt-1">
-            {tasks.filter((t) => !t.is_complete).length}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-          <p className="text-xs text-gray-500 uppercase">Completed</p>
-          <p className="text-2xl font-semibold mt-1">
-            {tasks.filter((t) => t.is_complete).length}
-          </p>
-        </div>
-      </div>
-
-      {/* MAIN GRID */}
-      <div className="grid grid-cols-4 gap-6">
-        
+      <div style={styles.grid}>
         {/* HABITS */}
-        <div className="col-span-1 bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-4">
-            Daily Habits
-          </h2>
-
-          <div className="space-y-2">
-            {habits.map((habit) => (
-              <div
-                key={habit.id}
-                className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50"
+        <div style={styles.card}>
+          <h3>Daily Habits</h3>
+          {habits.map((h, i) => (
+            <div key={i} style={styles.habitRow}>
+              <input
+                type="checkbox"
+                checked={h.done}
+                onChange={() => toggleHabit(i)}
+              />
+              <span
+                style={{
+                  ...styles.habitText,
+                  textDecoration: h.done ? "line-through" : "none",
+                }}
               >
-                <span className="text-sm text-gray-700">
-                  {habit.name}
-                </span>
-
-                <input
-                  type="checkbox"
-                  checked={habit.completed}
-                  onChange={() => toggleHabit(habit.id)}
-                  className="accent-black"
-                />
-              </div>
-            ))}
-          </div>
+                {h.name}
+              </span>
+            </div>
+          ))}
         </div>
 
         {/* TASKS */}
-        <div className="col-span-3 space-y-4">
-          
-          {/* ADD TASK */}
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex gap-3 items-center">
-            
+        <div style={styles.card}>
+          <h3>Daily Tasks</h3>
+
+          {/* INPUT */}
+          <div style={styles.inputRow}>
             <input
-              type="text"
               placeholder="Add task..."
-              value={newTask}
-              onChange={(e) => setNewTask(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              value={taskInput}
+              onChange={(e) => setTaskInput(e.target.value)}
+              style={styles.input}
             />
 
             <select
-              value={assigned}
-              onChange={(e) => setAssigned(e.target.value)}
-              className="px-2 py-2 border rounded-lg text-sm"
+              value={assignee}
+              onChange={(e) => setAssignee(e.target.value)}
             >
               <option>Mark</option>
               <option>Dane</option>
@@ -148,89 +125,134 @@ export default function TasksPage() {
             <select
               value={urgency}
               onChange={(e) => setUrgency(e.target.value)}
-              className="px-2 py-2 border rounded-lg text-sm"
             >
-              <option>Low</option>
-              <option>Medium</option>
               <option>High</option>
+              <option>Medium</option>
+              <option>Low</option>
             </select>
 
             <input
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="px-2 py-2 border rounded-lg text-sm"
             />
 
-            <button
-              onClick={addTask}
-              className="bg-black text-white px-4 py-2 rounded-lg text-sm"
-            >
+            <button style={styles.addBtn} onClick={addTask}>
               Add
             </button>
           </div>
 
           {/* TASK LIST */}
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            
-            <div className="space-y-2">
-              {tasks
-                .filter((t) => (hideCompleted ? !t.is_complete : true))
-                .map((task) => (
+          {tasks
+            .filter((t) => (hideCompleted ? !t.done : true))
+            .map((task) => (
+              <div key={task.id} style={styles.taskRow}>
+                <input
+                  type="checkbox"
+                  checked={task.done}
+                  onChange={() => toggleTask(task.id)}
+                />
+
+                <div style={{ flex: 1 }}>
                   <div
-                    key={task.id}
-                    className="flex justify-between items-center px-3 py-3 rounded-lg hover:bg-gray-50"
+                    style={{
+                      textDecoration: task.done ? "line-through" : "none",
+                    }}
                   >
-                    <div className="flex items-center gap-3">
-                      
-                      <input
-                        type="checkbox"
-                        checked={task.is_complete}
-                        onChange={() => toggleTask(task.id)}
-                      />
-
-                      <div>
-                        <p className={task.is_complete ? "line-through text-gray-400 text-sm" : "text-sm"}>
-                          {task.content}
-                        </p>
-
-                        <div className="flex gap-2 mt-1">
-                          
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            task.urgency === "High"
-                              ? "bg-red-100 text-red-600"
-                              : task.urgency === "Medium"
-                              ? "bg-yellow-100 text-yellow-600"
-                              : "bg-gray-100 text-gray-600"
-                          }`}>
-                            {task.urgency}
-                          </span>
-
-                          <span className="text-xs text-gray-400">
-                            {task.assigned_to}
-                          </span>
-
-                          {task.due_date && (
-                            <span className="text-xs text-gray-400">
-                              {task.due_date}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => deleteTask(task.id)}
-                      className="text-gray-400 hover:text-red-500"
-                    >
-                      ✕
-                    </button>
+                    {task.text}
                   </div>
-                ))}
-            </div>
-          </div>
+
+                  <div style={styles.meta}>
+                    {task.assignee} • {task.urgency} • {task.dueDate || "No date"}
+                  </div>
+                </div>
+
+                <button onClick={() => deleteTask(task.id)}>✕</button>
+              </div>
+            ))}
         </div>
       </div>
     </div>
   );
 }
+
+/* 🎨 STYLES */
+const styles = {
+  page: {
+    padding: "40px",
+    fontFamily: "Arial",
+    background: "#f7f8fa",
+    minHeight: "100vh",
+  },
+  title: {
+    marginBottom: 5,
+  },
+  subtitle: {
+    color: "#666",
+    marginBottom: 30,
+  },
+  statsRow: {
+    display: "flex",
+    gap: 20,
+    marginBottom: 30,
+    alignItems: "center",
+  },
+  card: {
+    background: "#fff",
+    padding: 20,
+    borderRadius: 12,
+    boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+    flex: 1,
+  },
+  label: {
+    fontSize: 12,
+    color: "#888",
+  },
+  hideBtn: {
+    padding: "10px 16px",
+    borderRadius: 999,
+    border: "1px solid #ddd",
+    background: "#fff",
+    cursor: "pointer",
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "300px 1fr",
+    gap: 20,
+  },
+  habitRow: {
+    display: "flex",
+    gap: 10,
+    marginTop: 10,
+  },
+  habitText: {
+    fontSize: 14,
+  },
+  inputRow: {
+    display: "flex",
+    gap: 10,
+    marginBottom: 20,
+  },
+  input: {
+    flex: 1,
+    padding: 8,
+  },
+  addBtn: {
+    background: "#111",
+    color: "#fff",
+    padding: "8px 14px",
+    borderRadius: 6,
+    cursor: "pointer",
+  },
+  taskRow: {
+    display: "flex",
+    gap: 10,
+    alignItems: "center",
+    padding: 10,
+    borderBottom: "1px solid #eee",
+  },
+  meta: {
+    fontSize: 12,
+    color: "#888",
+  },
+};
