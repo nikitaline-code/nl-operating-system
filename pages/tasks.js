@@ -22,12 +22,7 @@ export default function Tasks() {
 
     setTasks([
       ...tasks,
-      {
-        text: taskText,
-        person,
-        priority,
-        done: false,
-      },
+      { text: taskText, person, priority, done: false },
     ]);
 
     setTaskText("");
@@ -59,24 +54,31 @@ export default function Tasks() {
     setHabits(updated);
   };
 
-  const openCount = tasks.filter((t) => !t.done).length;
-  const completedCount = tasks.filter((t) => t.done).length;
+  const open = tasks.filter(t => !t.done).length;
+  const done = tasks.filter(t => t.done).length;
 
   return (
     <div style={styles.page}>
       {/* HEADER */}
-      <h1 style={styles.title}>Daily OS</h1>
+      <div style={styles.header}>
+        <div>
+          <h1 style={styles.title}>Daily page</h1>
+          <p style={styles.subtitle}>
+            Focused execution for today
+          </p>
+        </div>
+      </div>
 
       {/* STATS */}
       <div style={styles.statsRow}>
         <div style={styles.statCard}>
-          <span>Open Tasks</span>
-          <h2 style={styles.statNumber}>{openCount}</h2>
+          <span style={styles.statLabel}>Open Tasks</span>
+          <div style={styles.statValue}>{open}</div>
         </div>
 
         <div style={styles.statCard}>
-          <span>Completed</span>
-          <h2 style={styles.statNumber}>{completedCount}</h2>
+          <span style={styles.statLabel}>Completed</span>
+          <div style={styles.statValue}>{done}</div>
         </div>
       </div>
 
@@ -84,14 +86,14 @@ export default function Tasks() {
       <div style={styles.main}>
         {/* LEFT */}
         <div style={styles.left}>
-          <h3>Daily Habits</h3>
+          <h4 style={styles.sectionTitle}>Daily Habits</h4>
 
           {habits.map((h, i) => (
             <div
               key={i}
               style={{
                 ...styles.habit,
-                opacity: h.done ? 0.5 : 1,
+                opacity: h.done ? 0.4 : 1,
               }}
               onClick={() => toggleHabit(i)}
             >
@@ -99,7 +101,7 @@ export default function Tasks() {
             </div>
           ))}
 
-          <h3 style={{ marginTop: 30 }}>Weekly Priorities</h3>
+          <h4 style={styles.sectionTitle}>Weekly Priorities</h4>
 
           {weekly.map((w, i) => (
             <div key={i} style={styles.habit}>
@@ -139,49 +141,44 @@ export default function Tasks() {
             </select>
 
             <button onClick={addTask} style={styles.addBtn}>
-              Add
+              Add task
             </button>
           </div>
 
           {/* TASK LIST */}
-          {tasks.map((t, i) => (
-            <div
-              key={i}
-              style={{
-                ...styles.task,
-                opacity: t.done ? 0.5 : 1,
-              }}
-            >
-              {/* TEXT */}
-              <div onClick={() => toggleTask(i)} style={{ flex: 1 }}>
-                {t.text}
-              </div>
-
-              {/* PRIORITY */}
-              <span
+          <div style={styles.taskList}>
+            {tasks.map((t, i) => (
+              <div
+                key={i}
                 style={{
-                  ...styles.badge,
-                  background:
-                    t.priority === "High"
-                      ? "#fee2e2"
-                      : t.priority === "Medium"
-                      ? "#fef3c7"
-                      : "#e0f2fe",
+                  ...styles.task,
+                  opacity: t.done ? 0.4 : 1,
                 }}
               >
-                {t.priority}
-              </span>
+                <div
+                  style={styles.taskText}
+                  onClick={() => toggleTask(i)}
+                >
+                  {t.text}
+                </div>
 
-              {/* PERSON */}
-              <span style={styles.person}>{t.person}</span>
+                <div style={styles.taskRight}>
+                  <span style={styles.priority}>
+                    {t.priority}
+                  </span>
 
-              {/* REORDER */}
-              <div style={styles.reorder}>
-                <button onClick={() => moveUp(i)}>↑</button>
-                <button onClick={() => moveDown(i)}>↓</button>
+                  <span style={styles.person}>
+                    {t.person}
+                  </span>
+
+                  <div style={styles.reorder}>
+                    <span onClick={() => moveUp(i)}>↑</span>
+                    <span onClick={() => moveDown(i)}>↓</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -192,15 +189,24 @@ export default function Tasks() {
 
 const styles = {
   page: {
-    background: "#f6f7f8",
+    background: "#f4f5f7",
     minHeight: "100vh",
-    padding: 40,
+    padding: "40px 60px",
     fontFamily: "Inter, sans-serif",
+    color: "#111",
+  },
+
+  header: {
+    marginBottom: 20,
   },
 
   title: {
     fontSize: 28,
-    marginBottom: 20,
+    marginBottom: 4,
+  },
+
+  subtitle: {
+    color: "#6b7280",
   },
 
   statsRow: {
@@ -211,14 +217,20 @@ const styles = {
 
   statCard: {
     background: "#fff",
+    borderRadius: 16,
     padding: 20,
-    borderRadius: 12,
     flex: 1,
+    boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
   },
 
-  statNumber: {
+  statLabel: {
+    fontSize: 12,
+    color: "#6b7280",
+  },
+
+  statValue: {
     fontSize: 28,
-    marginTop: 10,
+    marginTop: 8,
   },
 
   main: {
@@ -230,20 +242,29 @@ const styles = {
     width: 280,
     background: "#fff",
     padding: 20,
-    borderRadius: 12,
+    borderRadius: 16,
+    boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
   },
 
   right: {
     flex: 1,
     background: "#fff",
     padding: 20,
-    borderRadius: 12,
+    borderRadius: 16,
+    boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
+  },
+
+  sectionTitle: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginBottom: 10,
+    marginTop: 20,
   },
 
   habit: {
     background: "#f1f2f4",
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     marginBottom: 10,
     cursor: "pointer",
   },
@@ -256,48 +277,66 @@ const styles = {
 
   input: {
     flex: 1,
-    padding: 10,
-    borderRadius: 8,
-    border: "1px solid #ddd",
+    padding: 12,
+    borderRadius: 12,
+    border: "1px solid #e5e7eb",
+    background: "#f9fafb",
   },
 
   select: {
     padding: 10,
-    borderRadius: 8,
+    borderRadius: 10,
+    border: "1px solid #e5e7eb",
+    background: "#fff",
   },
 
   addBtn: {
-    background: "#111",
+    background: "#111827",
     color: "#fff",
     border: "none",
     padding: "10px 16px",
-    borderRadius: 8,
+    borderRadius: 12,
     cursor: "pointer",
+  },
+
+  taskList: {
+    marginTop: 10,
   },
 
   task: {
     display: "flex",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: 10,
-    padding: 12,
-    borderBottom: "1px solid #eee",
+    padding: "14px 0",
+    borderBottom: "1px solid #f0f0f0",
   },
 
-  badge: {
-    padding: "4px 10px",
-    borderRadius: 999,
+  taskText: {
+    cursor: "pointer",
+  },
+
+  taskRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  priority: {
     fontSize: 12,
+    color: "#6b7280",
   },
 
   person: {
     fontSize: 12,
-    background: "#e5e7eb",
-    padding: "4px 8px",
-    borderRadius: 8,
+    background: "#eef2ff",
+    padding: "4px 10px",
+    borderRadius: 999,
   },
 
   reorder: {
     display: "flex",
-    gap: 4,
+    gap: 6,
+    cursor: "pointer",
+    color: "#9ca3af",
   },
 };
