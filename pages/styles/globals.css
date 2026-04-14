@@ -1,8 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 body {
-  background: #f7f8fa;
-  font-family: Arial, sans-serif;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f8fafc;
 }
