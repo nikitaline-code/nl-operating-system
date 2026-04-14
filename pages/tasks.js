@@ -8,21 +8,29 @@ const supabase = createClient(
 
 export default function Tasks() {
   const [tasks, setTasks] = useState([]);
-
   const [newTask, setNewTask] = useState("");
-  const [assignedTo, setAssignedTo] = useState("Mark");
+  const [assigned, setAssigned] = useState("Mark");
   const [urgency, setUrgency] = useState("Medium");
   const [dueDate, setDueDate] = useState("");
+
+  const [showCompleted, setShowCompleted] = useState(true);
+  const [dragIndex, setDragIndex] = useState(null);
 
   useEffect(() => {
     fetchTasks();
   }, []);
 
+  // ================= FETCH =================
   const fetchTasks = async () => {
-    const { data } = await supabase.from("Task List").select("*");
+    const { data } = await supabase
+      .from("Task List")
+      .select("*")
+      .order("order", { ascending: true });
+
     if (data) setTasks(data);
   };
 
+  // ================= ADD =================
   const addTask = async () => {
     if (!newTask) return;
 
@@ -32,10 +40,11 @@ export default function Tasks() {
       {
         content: newTask,
         user_id: user.id,
-        is_complete: false,
-        assigned_to: assignedTo,
+        assigned_to: assigned,
         urgency,
         due_date: dueDate || null,
+        is_complete: false,
+        order: tasks.length,
       },
     ]);
 
@@ -44,6 +53,7 @@ export default function Tasks() {
     fetchTasks();
   };
 
+  // ================= UPDATE =================
   const toggleComplete = async (task) => {
     await supabase
       .from("Task List")
@@ -58,104 +68,104 @@ export default function Tasks() {
     fetchTasks();
   };
 
-  const openTasks = tasks.filter((t) => !t.is_complete).length;
-  const completedTasks = tasks.filter((t) => t.is_complete).length;
+  // ================= DRAG =================
+  const handleDragStart = (index) => setDragIndex(index);
 
-  const today = new Date().toLocaleDateString();
+  const handleDrop = async (dropIndex) => {
+    if (dragIndex === null) return;
 
-  const renderTask = (task) => (
-    <div key={task.id} style={{
-      display: "flex",
-      justifyContent: "space-between",
-      padding: "12px 0",
-      borderBottom: "1px solid #eee"
-    }}>
-      <div>
-        <input
-          type="checkbox"
-          checked={task.is_complete}
-          onChange={() => toggleComplete(task)}
-        />
-        <span style={{ marginLeft: 10 }}>
-          {task.content}
-        </span>
-        <div style={{ fontSize: 11, color: "#9ca3af" }}>
-          {task.assigned_to} • {task.urgency}
-        </div>
-      </div>
-      <button onClick={() => deleteTask(task.id)}>✕</button>
-    </div>
+    const updated = [...tasks];
+    const dragged = updated[dragIndex];
+
+    updated.splice(dragIndex, 1);
+    updated.splice(dropIndex, 0, dragged);
+
+    setTasks(updated);
+    setDragIndex(null);
+
+    // persist order
+    for (let i = 0; i < updated.length; i++) {
+      await supabase
+        .from("Task List")
+        .update({ order: i })
+        .eq("id", updated[i].id);
+    }
+
+    fetchTasks();
+  };
+
+  // ================= GROUPING =================
+  const today = new Date();
+
+  const visibleTasks = tasks.filter(
+    (t) => showCompleted || !t.is_complete
   );
 
+  const overdue = visibleTasks.filter(
+    (t) => t.due_date && new Date(t.due_date) < today && !t.is_complete
+  );
+
+  const high = visibleTasks.filter((t) => t.urgency === "High");
+  const medium = visibleTasks.filter((t) => t.urgency === "Medium");
+  const low = visibleTasks.filter((t) => t.urgency === "Low");
+
+  const openCount = tasks.filter((t) => !t.is_complete).length;
+  const completeCount = tasks.filter((t) => t.is_complete).length;
+
+  // ================= STYLES =================
+  const card = {
+    background: "#ffffff",
+    borderRadius: "16px",
+    padding: "20px",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+  };
+
+  const sectionTitle = {
+    fontSize: "12px",
+    color: "#6b7280",
+    marginBottom: "10px",
+    letterSpacing: "0.05em",
+  };
+
+  // ================= UI =================
   return (
-    <div style={{
-      background: "#f3f4f6",
-      minHeight: "100vh",
-      padding: "30px",
-      fontFamily: "Inter"
-    }}>
+    <div style={{ padding: "30px", background: "#f5f6f7" }}>
 
-      <h2 style={{ marginBottom: "20px" }}>Daily page</h2>
+      <h1 style={{ marginBottom: "5px" }}>Daily page</h1>
+      <p style={{ color: "#6b7280", marginBottom: "20px" }}>
+        Tasks, goals, and habits for one day.
+      </p>
 
-      {/* TOP ROW */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "2fr 1fr 1fr",
-        gap: "20px",
-        marginBottom: "20px"
-      }}>
-
-        {/* DATE CARD */}
-        <div style={{
-          background: "#e5e7eb",
-          padding: "20px",
-          borderRadius: "14px"
-        }}>
-          <p style={{ fontSize: "12px", color: "#6b7280" }}>SELECTED DAY</p>
-          <h2>{today}</h2>
+      {/* TOP CARDS */}
+      <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }}>
+        <div style={{ ...card, flex: 2 }}>
+          <div style={sectionTitle}>SELECTED DAY</div>
+          <h2>Today</h2>
         </div>
 
-        {/* OPEN */}
-        <div style={{
-          background: "#fff",
-          padding: "20px",
-          borderRadius: "14px"
-        }}>
-          <p>OPEN TASKS</p>
-          <h2>{openTasks}</h2>
+        <div style={{ ...card, flex: 1 }}>
+          <div style={sectionTitle}>OPEN TASKS</div>
+          <h2>{openCount}</h2>
         </div>
 
-        {/* COMPLETED */}
-        <div style={{
-          background: "#fff",
-          padding: "20px",
-          borderRadius: "14px"
-        }}>
-          <p>COMPLETED</p>
-          <h2>{completedTasks}</h2>
+        <div style={{ ...card, flex: 1 }}>
+          <div style={sectionTitle}>COMPLETED</div>
+          <h2>{completeCount}</h2>
         </div>
       </div>
 
-      {/* MAIN GRID */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 2fr",
-        gap: "20px"
-      }}>
+      {/* MAIN */}
+      <div style={{ display: "flex", gap: "20px" }}>
 
-        {/* LEFT COLUMN */}
-        <div style={{
-          background: "#fff",
-          padding: "20px",
-          borderRadius: "14px"
-        }}>
-          <p style={{ fontSize: "12px", color: "#6b7280" }}>DAILY HABITS</p>
+        {/* LEFT */}
+        <div style={{ width: "300px", ...card }}>
+          <div style={sectionTitle}>DAILY HABITS</div>
 
-          {["Wake up", "Workout", "Read", "Plan"].map((h, i) => (
+          {["Wake up", "Workout", "Read"].map((h, i) => (
             <div key={i} style={{
               padding: "10px",
-              marginTop: "8px",
-              background: "#f3f4f6",
+              marginBottom: "8px",
+              background: "#f1f5f9",
               borderRadius: "10px"
             }}>
               {h}
@@ -163,65 +173,82 @@ export default function Tasks() {
           ))}
         </div>
 
-        {/* RIGHT COLUMN */}
-        <div style={{
-          background: "#fff",
-          padding: "20px",
-          borderRadius: "14px"
-        }}>
+        {/* RIGHT */}
+        <div style={{ flex: 1, ...card }}>
 
           <div style={{
             display: "flex",
             justifyContent: "space-between",
             marginBottom: "10px"
           }}>
-            <h3>Daily Tasks</h3>
+            <div style={sectionTitle}>DAILY TASKS</div>
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button onClick={() => setShowCompleted(!showCompleted)}>
+                {showCompleted ? "Hide Completed" : "Show Completed"}
+              </button>
+            </div>
           </div>
 
           {/* ADD */}
-          <div style={{
-            display: "flex",
-            gap: "8px",
-            marginBottom: "10px"
-          }}>
+          <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
             <input
               value={newTask}
               onChange={(e) => setNewTask(e.target.value)}
-              placeholder="Add task"
+              placeholder="Task"
             />
 
-            <select onChange={(e) => setAssignedTo(e.target.value)}>
+            <select value={assigned} onChange={(e) => setAssigned(e.target.value)}>
               <option>Mark</option>
               <option>Dane</option>
             </select>
 
-            <select onChange={(e) => setUrgency(e.target.value)}>
+            <select value={urgency} onChange={(e) => setUrgency(e.target.value)}>
               <option>High</option>
               <option>Medium</option>
               <option>Low</option>
             </select>
 
-            <input
-              type="date"
-              onChange={(e) => setDueDate(e.target.value)}
-            />
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
 
             <button onClick={addTask}>Add</button>
           </div>
 
-          {/* TASKS */}
-          {tasks.map(renderTask)}
+          {/* TASK LIST */}
+          {[...overdue, ...high, ...medium, ...low].map((task, i) => (
+            <div
+              key={task.id}
+              draggable
+              onDragStart={() => handleDragStart(i)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleDrop(i)}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                padding: "10px 0",
+                borderBottom: "1px solid #eee",
+                opacity: task.is_complete ? 0.5 : 1,
+                cursor: "grab"
+              }}
+            >
+              <div>
+                <input
+                  type="checkbox"
+                  checked={task.is_complete}
+                  onChange={() => toggleComplete(task)}
+                />
+                <span style={{ marginLeft: "10px" }}>
+                  {task.content}
+                </span>
 
-          {/* NOTES */}
-          <div style={{ marginTop: "20px" }}>
-            <p>Notes</p>
-            <textarea style={{
-              width: "100%",
-              height: "80px",
-              borderRadius: "10px",
-              border: "1px solid #ddd"
-            }} />
-          </div>
+                <div style={{ fontSize: "12px", color: "#6b7280" }}>
+                  {task.assigned_to} • {task.urgency} • {task.due_date || "No date"}
+                </div>
+              </div>
+
+              <button onClick={() => deleteTask(task.id)}>✕</button>
+            </div>
+          ))}
 
         </div>
       </div>
