@@ -1,3 +1,3 @@
-export default function Page() {
-  return <div>Works</div>;
+export default function Home() {
+  return <div>Home works ✅</div>;
 }
