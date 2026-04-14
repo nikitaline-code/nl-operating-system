@@ -126,130 +126,209 @@ export default function Tasks() {
 
   // ================= UI =================
 
-  return (
-    <div style={{ display: "flex", height: "100vh", background: "#f5f5f5" }}>
+return (
+  <div style={{
+    display: "flex",
+    height: "100vh",
+    background: "#f8fafc",
+    fontFamily: "Inter, sans-serif"
+  }}>
 
-      {/* LEFT PANEL */}
-      <div style={{
-        width: "300px",
-        padding: "20px",
-        background: "#fff",
-        borderRight: "1px solid #ddd"
-      }}>
-        <h2>Daily</h2>
+    {/* SIDEBAR */}
+    <div style={{
+      width: "300px",
+      padding: "24px",
+      background: "#ffffff",
+      borderRight: "1px solid #e5e7eb"
+    }}>
+      <h2 style={{ marginBottom: "20px" }}>Daily</h2>
 
-        <h4>Habits</h4>
-        {["Wake up early", "Workout", "Read", "Plan day"].map((h, i) => (
-          <div key={i} style={{
-            padding: "10px",
-            marginBottom: "8px",
-            background: "#eee",
-            borderRadius: "8px"
-          }}>
-            {h}
-          </div>
-        ))}
+      <p style={{ fontSize: "12px", color: "#6b7280" }}>HABITS</p>
 
-        <h4 style={{ marginTop: "20px" }}>Weekly Priorities</h4>
+      {["Wake up early", "Workout", "Read", "Plan day"].map((h, i) => (
+        <div key={i} style={{
+          padding: "12px",
+          marginTop: "8px",
+          background: "#f1f5f9",
+          borderRadius: "10px",
+          fontSize: "14px"
+        }}>
+          {h}
+        </div>
+      ))}
 
+      <p style={{ fontSize: "12px", color: "#6b7280", marginTop: "24px" }}>
+        WEEKLY PRIORITIES
+      </p>
+
+      <div style={{ display: "flex", gap: "6px", marginTop: "10px" }}>
         <input
           value={newPriority}
           onChange={(e) => setNewPriority(e.target.value)}
           placeholder="Add priority..."
+          style={{
+            flex: 1,
+            padding: "8px",
+            borderRadius: "8px",
+            border: "1px solid #ddd"
+          }}
         />
-        <button onClick={addPriority}>Add</button>
-
-        <div style={{ marginTop: "10px" }}>
-          {priorities.map((p, i) => (
-            <div
-              key={p.id}
-              draggable
-              onDragStart={() => handleDragStart(i)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => handleDrop(i)}
-              style={{
-                padding: "10px",
-                marginBottom: "8px",
-                background: "#eee",
-                borderRadius: "8px",
-                display: "flex",
-                justifyContent: "space-between",
-                cursor: "grab"
-              }}
-            >
-              <span>{p.content}</span>
-              <button onClick={() => deletePriority(p.id)}>❌</button>
-            </div>
-          ))}
-        </div>
+        <button onClick={addPriority} style={{
+          padding: "8px 12px",
+          borderRadius: "8px",
+          background: "black",
+          color: "white",
+          border: "none"
+        }}>
+          +
+        </button>
       </div>
 
-      {/* RIGHT PANEL */}
-      <div style={{ flex: 1, padding: "30px" }}>
-        <h1>Daily OS 🚀</h1>
+      <div style={{ marginTop: "12px" }}>
+        {priorities.map((p, i) => (
+          <div
+            key={p.id}
+            draggable
+            onDragStart={() => handleDragStart(i)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => handleDrop(i)}
+            style={{
+              padding: "12px",
+              marginTop: "8px",
+              background: "#f1f5f9",
+              borderRadius: "10px",
+              display: "flex",
+              justifyContent: "space-between",
+              cursor: "grab"
+            }}
+          >
+            <span>{p.content}</span>
+            <button
+              onClick={() => deletePriority(p.id)}
+              style={{
+                background: "transparent",
+                border: "none",
+                cursor: "pointer"
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
 
-        <h3>Open: {openTasks} | Completed: {completedTasks}</h3>
+    {/* MAIN */}
+    <div style={{ flex: 1, padding: "40px" }}>
 
+      <h1 style={{ marginBottom: "10px" }}>Daily OS 🚀</h1>
+
+      <p style={{ color: "#6b7280", marginBottom: "20px" }}>
+        Open: {openTasks} • Completed: {completedTasks}
+      </p>
+
+      {/* ADD TASK */}
+      <div style={{
+        display: "flex",
+        gap: "10px",
+        marginBottom: "20px"
+      }}>
         <input
           value={newTask}
           onChange={(e) => setNewTask(e.target.value)}
           placeholder="Add task..."
+          style={{
+            flex: 1,
+            padding: "10px",
+            borderRadius: "10px",
+            border: "1px solid #ddd"
+          }}
         />
-        <button onClick={addTask}>Add</button>
-
-        <button onClick={() => setShowCompleted(!showCompleted)}>
-          {showCompleted ? "Hide Completed" : "Show Completed"}
+        <button onClick={addTask} style={{
+          padding: "10px 16px",
+          borderRadius: "10px",
+          background: "black",
+          color: "white",
+          border: "none"
+        }}>
+          Add
         </button>
 
-        <div style={{ marginTop: "20px" }}>
-          {tasks
-            .filter((task) => showCompleted || !task.is_complete)
-            .map((task) => (
-              <div
-                key={task.id}
+        <button onClick={() => setShowCompleted(!showCompleted)} style={{
+          padding: "10px 16px",
+          borderRadius: "10px",
+          border: "1px solid #ddd",
+          background: "white"
+        }}>
+          {showCompleted ? "Hide Completed" : "Show Completed"}
+        </button>
+      </div>
+
+      {/* TASK LIST */}
+      <div style={{
+        background: "#ffffff",
+        borderRadius: "16px",
+        padding: "20px",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
+      }}>
+        {tasks
+          .filter((task) => showCompleted || !task.is_complete)
+          .map((task) => (
+            <div
+              key={task.id}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                padding: "12px 0",
+                borderBottom: "1px solid #eee",
+                opacity: task.is_complete ? 0.5 : 1
+              }}
+            >
+              <div>
+                <input
+                  type="checkbox"
+                  checked={task.is_complete}
+                  onChange={() => toggleComplete(task)}
+                />
+                <span style={{
+                  marginLeft: "10px",
+                  textDecoration: task.is_complete ? "line-through" : "none"
+                }}>
+                  {task.content}
+                </span>
+              </div>
+
+              <button
+                onClick={() => deleteTask(task.id)}
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "10px",
-                  borderBottom: "1px solid #eee",
-                  opacity: task.is_complete ? 0.5 : 1
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer"
                 }}
               >
-                <div>
-                  <input
-                    type="checkbox"
-                    checked={task.is_complete}
-                    onChange={() => toggleComplete(task)}
-                  />
-                  <span style={{
-                    marginLeft: "10px",
-                    textDecoration: task.is_complete ? "line-through" : "none"
-                  }}>
-                    {task.content}
-                  </span>
-                </div>
+                ✕
+              </button>
+            </div>
+          ))}
+      </div>
 
-                <button onClick={() => deleteTask(task.id)}>❌</button>
-              </div>
-            ))}
-        </div>
-
-        {/* PROGRESS BAR */}
-        <div style={{ marginTop: "20px" }}>
-          <h3>Progress</h3>
+      {/* PROGRESS */}
+      <div style={{ marginTop: "30px" }}>
+        <p style={{ marginBottom: "8px" }}>Progress</p>
+        <div style={{
+          height: "8px",
+          background: "#e5e7eb",
+          borderRadius: "999px"
+        }}>
           <div style={{
-            height: "10px",
-            background: "#ddd",
-            borderRadius: "5px"
-          }}>
-            <div style={{
-              width: `${tasks.length ? (completedTasks / tasks.length) * 100 : 0}%`,
-              height: "100%",
-              background: "green"
-            }} />
-          </div>
+            width: `${tasks.length ? (completedTasks / tasks.length) * 100 : 0}%`,
+            height: "100%",
+            background: "black",
+            borderRadius: "999px"
+          }} />
         </div>
       </div>
+
     </div>
-  );
-}
+  </div>
+);
