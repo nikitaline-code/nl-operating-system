@@ -5,6 +5,8 @@ export default function Tasks() {
   const [person, setPerson] = useState("Mark");
   const [priority, setPriority] = useState("Medium");
   const [tasks, setTasks] = useState([]);
+  const [hideCompleted, setHideCompleted] = useState(false);
+  const [dragIndex, setDragIndex] = useState(null);
 
   const [habits, setHabits] = useState([
     { name: "Pray", done: false },
@@ -34,24 +36,26 @@ export default function Tasks() {
     setTasks(updated);
   };
 
-  const moveUp = (i) => {
-    if (i === 0) return;
-    const updated = [...tasks];
-    [updated[i - 1], updated[i]] = [updated[i], updated[i - 1]];
-    setTasks(updated);
-  };
-
-  const moveDown = (i) => {
-    if (i === tasks.length - 1) return;
-    const updated = [...tasks];
-    [updated[i + 1], updated[i]] = [updated[i], updated[i + 1]];
-    setTasks(updated);
-  };
-
   const toggleHabit = (i) => {
     const updated = [...habits];
     updated[i].done = !updated[i].done;
     setHabits(updated);
+  };
+
+  // DRAG LOGIC
+  const handleDragStart = (index) => setDragIndex(index);
+
+  const handleDrop = (index) => {
+    if (dragIndex === null) return;
+
+    const updated = [...tasks];
+    const dragged = updated[dragIndex];
+
+    updated.splice(dragIndex, 1);
+    updated.splice(index, 0, dragged);
+
+    setTasks(updated);
+    setDragIndex(null);
   };
 
   const open = tasks.filter(t => !t.done).length;
@@ -63,10 +67,15 @@ export default function Tasks() {
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>Daily page</h1>
-          <p style={styles.subtitle}>
-            Focused execution for today
-          </p>
+          <p style={styles.subtitle}>Focused execution for today</p>
         </div>
+
+        <button
+          onClick={() => setHideCompleted(!hideCompleted)}
+          style={styles.toggleBtn}
+        >
+          {hideCompleted ? "Show Completed" : "Hide Completed"}
+        </button>
       </div>
 
       {/* STATS */}
@@ -147,37 +156,38 @@ export default function Tasks() {
 
           {/* TASK LIST */}
           <div style={styles.taskList}>
-            {tasks.map((t, i) => (
-              <div
-                key={i}
-                style={{
-                  ...styles.task,
-                  opacity: t.done ? 0.4 : 1,
-                }}
-              >
+            {tasks
+              .filter(t => (hideCompleted ? !t.done : true))
+              .map((t, i) => (
                 <div
-                  style={styles.taskText}
-                  onClick={() => toggleTask(i)}
+                  key={i}
+                  draggable
+                  onDragStart={() => handleDragStart(i)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => handleDrop(i)}
+                  style={{
+                    ...styles.task,
+                    opacity: t.done ? 0.4 : 1,
+                  }}
                 >
-                  {t.text}
-                </div>
+                  <div
+                    style={styles.taskText}
+                    onClick={() => toggleTask(i)}
+                  >
+                    {t.text}
+                  </div>
 
-                <div style={styles.taskRight}>
-                  <span style={styles.priority}>
-                    {t.priority}
-                  </span>
+                  <div style={styles.taskRight}>
+                    <span style={styles.priority}>
+                      {t.priority}
+                    </span>
 
-                  <span style={styles.person}>
-                    {t.person}
-                  </span>
-
-                  <div style={styles.reorder}>
-                    <span onClick={() => moveUp(i)}>↑</span>
-                    <span onClick={() => moveDown(i)}>↓</span>
+                    <span style={styles.person}>
+                      {t.person}
+                    </span>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       </div>
@@ -197,6 +207,9 @@ const styles = {
   },
 
   header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 20,
   },
 
@@ -207,6 +220,15 @@ const styles = {
 
   subtitle: {
     color: "#6b7280",
+  },
+
+  toggleBtn: {
+    background: "#fff",
+    border: "1px solid #e5e7eb",
+    padding: "8px 14px",
+    borderRadius: 999,
+    cursor: "pointer",
+    fontSize: 12,
   },
 
   statsRow: {
@@ -261,7 +283,6 @@ const styles = {
     marginTop: 20,
   },
 
-  /* 🔥 UPDATED HABIT STYLE */
   habit: {
     background: "#f1f2f4",
     padding: 10,
@@ -309,12 +330,13 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "14px 0",
+    padding: "12px 0",
     borderBottom: "1px solid #f0f0f0",
+    cursor: "grab",
   },
 
   taskText: {
-    cursor: "pointer",
+    fontSize: 13,
   },
 
   taskRight: {
@@ -333,12 +355,5 @@ const styles = {
     background: "#eef2ff",
     padding: "4px 10px",
     borderRadius: 999,
-  },
-
-  reorder: {
-    display: "flex",
-    gap: 6,
-    cursor: "pointer",
-    color: "#9ca3af",
   },
 };
