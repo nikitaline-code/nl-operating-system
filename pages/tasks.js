@@ -71,26 +71,22 @@ export default function Tasks() {
       <ul>
       tasks
   .filter(task => showCompleted || !task.is_complete)
-  .map((task) => (
-          <li
-            key={task.id}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              textDecoration: task.is_complete ? "line-through" : "none",
-              opacity: task.is_complete ? 0.5 : 1,
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={task.is_complete}
-              onChange={() => toggleComplete(task)}
-            />
+  <ul>
+  {tasks.map((task) => (
+    <li key={task.id}>
+      <input
+        type="checkbox"
+        checked={task.is_complete}
+        onChange={() => toggleComplete(task)}
+      />
 
-            {task.content}
+      {task.content}
 
-            <button onClick={() => deleteTask(task.id)}>❌</button>
+      <button onClick={() => deleteTask(task.id)}>❌</button>
+    </li>
+  ))}
+</ul>
+            <button onclick={() => deleteTask(task.id)}>X</button>
           </li>
         ))}
       </ul>
