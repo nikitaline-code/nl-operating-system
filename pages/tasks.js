@@ -1,31 +1,97 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+function formatDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatPrettyDate(date) {
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function shiftDate(date, days) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
 
 export default function Tasks() {
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const dateKey = useMemo(() => formatDateKey(selectedDate), [selectedDate]);
+
   const [taskText, setTaskText] = useState("");
   const [person, setPerson] = useState("Mark");
   const [priority, setPriority] = useState("Medium");
-  const [tasks, setTasks] = useState([]);
   const [hideCompleted, setHideCompleted] = useState(false);
   const [dragIndex, setDragIndex] = useState(null);
 
-  const [habits, setHabits] = useState([
-    { name: "Pray", done: false },
-    { name: "Read", done: false },
-    { name: "Run", done: false },
-  ]);
+  const defaultHabits = useMemo(
+    () => [
+      { name: "Pray", done: false },
+      { name: "Read", done: false },
+      { name: "Run", done: false },
+    ],
+    []
+  );
 
-  const [weekly] = useState([
-    "Win the week",
-    "Stay disciplined",
-  ]);
+  const [tasksByDate, setTasksByDate] = useState({});
+  const [habitsByDate, setHabitsByDate] = useState({});
+
+  const weekly = useMemo(() => ["Win the week", "Stay disciplined"], []);
+
+  useEffect(() => {
+    const savedTasks = localStorage.getItem("daily-os-tasks-by-date");
+    const savedHabits = localStorage.getItem("daily-os-habits-by-date");
+
+    if (savedTasks) setTasksByDate(JSON.parse(savedTasks));
+    if (savedHabits) setHabitsByDate(JSON.parse(savedHabits));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("daily-os-tasks-by-date", JSON.stringify(tasksByDate));
+  }, [tasksByDate]);
+
+  useEffect(() => {
+    localStorage.setItem("daily-os-habits-by-date", JSON.stringify(habitsByDate));
+  }, [habitsByDate]);
+
+  useEffect(() => {
+    if (!habitsByDate[dateKey]) {
+      setHabitsByDate((prev) => ({
+        ...prev,
+        [dateKey]: defaultHabits,
+      }));
+    }
+  }, [dateKey, habitsByDate, defaultHabits]);
+
+  const tasks = tasksByDate[dateKey] || [];
+  const habits = habitsByDate[dateKey] || defaultHabits;
 
   const addTask = () => {
-    if (!taskText) return;
+    if (!taskText.trim()) return;
 
-    setTasks([
+    const nextTasks = [
       ...tasks,
-      { text: taskText, person, priority, done: false },
-    ]);
+      {
+        id: Date.now(),
+        text: taskText.trim(),
+        person,
+        priority,
+        done: false,
+      },
+    ];
+
+    setTasksByDate((prev) => ({
+      ...prev,
+      [dateKey]: nextTasks,
+    }));
 
     setTaskText("");
   };
@@ -33,16 +99,23 @@ export default function Tasks() {
   const toggleTask = (i) => {
     const updated = [...tasks];
     updated[i].done = !updated[i].done;
-    setTasks(updated);
+
+    setTasksByDate((prev) => ({
+      ...prev,
+      [dateKey]: updated,
+    }));
   };
 
   const toggleHabit = (i) => {
     const updated = [...habits];
     updated[i].done = !updated[i].done;
-    setHabits(updated);
+
+    setHabitsByDate((prev) => ({
+      ...prev,
+      [dateKey]: updated,
+    }));
   };
 
-  // DRAG LOGIC
   const handleDragStart = (index) => setDragIndex(index);
 
   const handleDrop = (index) => {
@@ -54,16 +127,23 @@ export default function Tasks() {
     updated.splice(dragIndex, 1);
     updated.splice(index, 0, dragged);
 
-    setTasks(updated);
+    setTasksByDate((prev) => ({
+      ...prev,
+      [dateKey]: updated,
+    }));
+
     setDragIndex(null);
   };
 
-  const open = tasks.filter(t => !t.done).length;
-  const done = tasks.filter(t => t.done).length;
+  const open = tasks.filter((t) => !t.done).length;
+  const done = tasks.filter((t) => t.done).length;
+
+  const availableDays = Object.keys(tasksByDate)
+    .sort((a, b) => (a < b ? 1 : -1))
+    .slice(0, 10);
 
   return (
     <div style={styles.page}>
-      {/* HEADER */}
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>Daily page</h1>
@@ -78,8 +158,29 @@ export default function Tasks() {
         </button>
       </div>
 
-      {/* STATS */}
       <div style={styles.statsRow}>
+        <div style={styles.bigDateCard}>
+          <span style={styles.statLabel}>Selected Day</span>
+
+          <div style={styles.dateRow}>
+            <button
+              style={styles.dateNavBtn}
+              onClick={() => setSelectedDate((d) => shiftDate(d, -1))}
+            >
+              ←
+            </button>
+
+            <div style={styles.dateText}>{formatPrettyDate(selectedDate)}</div>
+
+            <button
+              style={styles.dateNavBtn}
+              onClick={() => setSelectedDate((d) => shiftDate(d, 1))}
+            >
+              →
+            </button>
+          </div>
+        </div>
+
         <div style={styles.statCard}>
           <span style={styles.statLabel}>Open Tasks</span>
           <div style={styles.statValue}>{open}</div>
@@ -91,9 +192,7 @@ export default function Tasks() {
         </div>
       </div>
 
-      {/* MAIN */}
       <div style={styles.main}>
-        {/* LEFT */}
         <div style={styles.left}>
           <h4 style={styles.sectionTitle}>Daily Habits</h4>
 
@@ -117,11 +216,28 @@ export default function Tasks() {
               {w}
             </div>
           ))}
+
+          <h4 style={styles.sectionTitle}>Recent Days</h4>
+
+          {availableDays.length === 0 && (
+            <div style={styles.recentDay}>No saved days yet</div>
+          )}
+
+          {availableDays.map((day) => (
+            <div
+              key={day}
+              style={{
+                ...styles.recentDay,
+                background: day === dateKey ? "#e9eefc" : "#f1f2f4",
+              }}
+              onClick={() => setSelectedDate(new Date(`${day}T12:00:00`))}
+            >
+              {day}
+            </div>
+          ))}
         </div>
 
-        {/* RIGHT */}
         <div style={styles.right}>
-          {/* INPUT */}
           <div style={styles.inputRow}>
             <input
               placeholder="Add task..."
@@ -154,13 +270,12 @@ export default function Tasks() {
             </button>
           </div>
 
-          {/* TASK LIST */}
           <div style={styles.taskList}>
             {tasks
-              .filter(t => (hideCompleted ? !t.done : true))
+              .filter((t) => (hideCompleted ? !t.done : true))
               .map((t, i) => (
                 <div
-                  key={i}
+                  key={t.id}
                   draggable
                   onDragStart={() => handleDragStart(i)}
                   onDragOver={(e) => e.preventDefault()}
@@ -178,13 +293,21 @@ export default function Tasks() {
                   </div>
 
                   <div style={styles.taskRight}>
-                    <span style={styles.priority}>
+                    <span
+                      style={{
+                        ...styles.priorityPill,
+                        background:
+                          t.priority === "High"
+                            ? "#fee2e2"
+                            : t.priority === "Medium"
+                            ? "#fef3c7"
+                            : "#e0f2fe",
+                      }}
+                    >
                       {t.priority}
                     </span>
 
-                    <span style={styles.person}>
-                      {t.person}
-                    </span>
+                    <span style={styles.personPill}>{t.person}</span>
                   </div>
                 </div>
               ))}
@@ -194,8 +317,6 @@ export default function Tasks() {
     </div>
   );
 }
-
-/* ---------- STYLES ---------- */
 
 const styles = {
   page: {
@@ -235,6 +356,35 @@ const styles = {
     display: "flex",
     gap: 20,
     marginBottom: 20,
+  },
+
+  bigDateCard: {
+    background: "#ebecef",
+    borderRadius: 16,
+    padding: 20,
+    flex: 2,
+    boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
+  },
+
+  dateRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 8,
+  },
+
+  dateText: {
+    fontSize: 24,
+    fontWeight: 600,
+  },
+
+  dateNavBtn: {
+    background: "#fff",
+    border: "1px solid #d8dbe2",
+    borderRadius: 10,
+    width: 32,
+    height: 32,
+    cursor: "pointer",
   },
 
   statCard: {
@@ -292,6 +442,14 @@ const styles = {
     fontSize: 13,
   },
 
+  recentDay: {
+    padding: 10,
+    borderRadius: 12,
+    marginBottom: 8,
+    cursor: "pointer",
+    fontSize: 13,
+  },
+
   inputRow: {
     display: "flex",
     gap: 10,
@@ -337,6 +495,7 @@ const styles = {
 
   taskText: {
     fontSize: 13,
+    cursor: "pointer",
   },
 
   taskRight: {
@@ -345,12 +504,14 @@ const styles = {
     gap: 12,
   },
 
-  priority: {
+  priorityPill: {
     fontSize: 12,
     color: "#6b7280",
+    padding: "4px 10px",
+    borderRadius: 999,
   },
 
-  person: {
+  personPill: {
     fontSize: 12,
     background: "#eef2ff",
     padding: "4px 10px",
