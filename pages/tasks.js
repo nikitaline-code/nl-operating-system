@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
 function formatDateKey(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function formatPrettyDate(date) {
@@ -77,7 +77,7 @@ export default function Tasks() {
   const addTask = () => {
     if (!taskText.trim()) return;
 
-    const nextTasks = [
+    const next = [
       ...tasks,
       {
         id: Date.now(),
@@ -90,7 +90,7 @@ export default function Tasks() {
 
     setTasksByDate((prev) => ({
       ...prev,
-      [dateKey]: nextTasks,
+      [dateKey]: next,
     }));
 
     setTaskText("");
@@ -116,16 +116,16 @@ export default function Tasks() {
     }));
   };
 
-  const handleDragStart = (index) => setDragIndex(index);
+  const handleDragStart = (i) => setDragIndex(i);
 
-  const handleDrop = (index) => {
+  const handleDrop = (i) => {
     if (dragIndex === null) return;
 
     const updated = [...tasks];
     const dragged = updated[dragIndex];
 
     updated.splice(dragIndex, 1);
-    updated.splice(index, 0, dragged);
+    updated.splice(i, 0, dragged);
 
     setTasksByDate((prev) => ({
       ...prev,
@@ -138,46 +138,29 @@ export default function Tasks() {
   const open = tasks.filter((t) => !t.done).length;
   const done = tasks.filter((t) => t.done).length;
 
-  const availableDays = Object.keys(tasksByDate)
+  const recentDays = Object.keys(tasksByDate)
     .sort((a, b) => (a < b ? 1 : -1))
-    .slice(0, 10);
+    .slice(0, 7);
 
   return (
     <div style={styles.page}>
+      {/* HEADER */}
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>Daily page</h1>
           <p style={styles.subtitle}>Focused execution for today</p>
         </div>
-
-        <button
-          onClick={() => setHideCompleted(!hideCompleted)}
-          style={styles.toggleBtn}
-        >
-          {hideCompleted ? "Show Completed" : "Hide Completed"}
-        </button>
       </div>
 
+      {/* TOP CARDS */}
       <div style={styles.statsRow}>
         <div style={styles.bigDateCard}>
           <span style={styles.statLabel}>Selected Day</span>
 
           <div style={styles.dateRow}>
-            <button
-              style={styles.dateNavBtn}
-              onClick={() => setSelectedDate((d) => shiftDate(d, -1))}
-            >
-              ←
-            </button>
-
+            <button onClick={() => setSelectedDate((d) => shiftDate(d, -1))} style={styles.dateBtn}>←</button>
             <div style={styles.dateText}>{formatPrettyDate(selectedDate)}</div>
-
-            <button
-              style={styles.dateNavBtn}
-              onClick={() => setSelectedDate((d) => shiftDate(d, 1))}
-            >
-              →
-            </button>
+            <button onClick={() => setSelectedDate((d) => shiftDate(d, 1))} style={styles.dateBtn}>→</button>
           </div>
         </div>
 
@@ -192,17 +175,16 @@ export default function Tasks() {
         </div>
       </div>
 
+      {/* MAIN */}
       <div style={styles.main}>
+        {/* LEFT */}
         <div style={styles.left}>
           <h4 style={styles.sectionTitle}>Daily Habits</h4>
 
           {habits.map((h, i) => (
             <div
               key={i}
-              style={{
-                ...styles.habit,
-                opacity: h.done ? 0.4 : 1,
-              }}
+              style={{ ...styles.habit, opacity: h.done ? 0.4 : 1 }}
               onClick={() => toggleHabit(i)}
             >
               {h.name}
@@ -210,311 +192,134 @@ export default function Tasks() {
           ))}
 
           <h4 style={styles.sectionTitle}>Weekly Priorities</h4>
-
           {weekly.map((w, i) => (
-            <div key={i} style={styles.habit}>
-              {w}
-            </div>
+            <div key={i} style={styles.habit}>{w}</div>
           ))}
 
           <h4 style={styles.sectionTitle}>Recent Days</h4>
-
-          {availableDays.length === 0 && (
-            <div style={styles.recentDay}>No saved days yet</div>
-          )}
-
-          {availableDays.map((day) => (
+          {recentDays.map((d) => (
             <div
-              key={day}
+              key={d}
               style={{
-                ...styles.recentDay,
-                background: day === dateKey ? "#e9eefc" : "#f1f2f4",
+                ...styles.recent,
+                background: d === dateKey ? "#e9eefc" : "#f1f2f4",
               }}
-              onClick={() => setSelectedDate(new Date(`${day}T12:00:00`))}
+              onClick={() => setSelectedDate(new Date(`${d}T12:00:00`))}
             >
-              {day}
+              {d}
             </div>
           ))}
         </div>
 
+        {/* RIGHT */}
         <div style={styles.right}>
+          {/* INPUT */}
           <div style={styles.inputRow}>
             <input
-              placeholder="Add task..."
               value={taskText}
               onChange={(e) => setTaskText(e.target.value)}
+              placeholder="Add task..."
               style={styles.input}
             />
 
-            <select
-              value={person}
-              onChange={(e) => setPerson(e.target.value)}
-              style={styles.select}
-            >
+            <select value={person} onChange={(e) => setPerson(e.target.value)} style={styles.select}>
               <option>Mark</option>
               <option>Dane</option>
             </select>
 
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value)}
-              style={styles.select}
-            >
+            <select value={priority} onChange={(e) => setPriority(e.target.value)} style={styles.select}>
               <option>High</option>
               <option>Medium</option>
               <option>Low</option>
             </select>
 
-            <button onClick={addTask} style={styles.addBtn}>
-              Add task
+            <button onClick={addTask} style={styles.addBtn}>Add</button>
+          </div>
+
+          {/* 🔥 MOVED TOGGLE HERE */}
+          <div style={styles.taskToolbar}>
+            <button onClick={() => setHideCompleted(!hideCompleted)} style={styles.toggle}>
+              {hideCompleted ? "Show Completed" : "Hide Completed"}
             </button>
           </div>
 
-          <div style={styles.taskList}>
-            {tasks
-              .filter((t) => (hideCompleted ? !t.done : true))
-              .map((t, i) => (
-                <div
-                  key={t.id}
-                  draggable
-                  onDragStart={() => handleDragStart(i)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => handleDrop(i)}
-                  style={{
-                    ...styles.task,
-                    opacity: t.done ? 0.4 : 1,
-                  }}
-                >
-                  <div
-                    style={styles.taskText}
-                    onClick={() => toggleTask(i)}
-                  >
-                    {t.text}
-                  </div>
-
-                  <div style={styles.taskRight}>
-                    <span
-                      style={{
-                        ...styles.priorityPill,
-                        background:
-                          t.priority === "High"
-                            ? "#fee2e2"
-                            : t.priority === "Medium"
-                            ? "#fef3c7"
-                            : "#e0f2fe",
-                      }}
-                    >
-                      {t.priority}
-                    </span>
-
-                    <span style={styles.personPill}>{t.person}</span>
-                  </div>
+          {/* TASKS */}
+          {tasks
+            .filter((t) => (hideCompleted ? !t.done : true))
+            .map((t, i) => (
+              <div
+                key={t.id}
+                draggable
+                onDragStart={() => handleDragStart(i)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => handleDrop(i)}
+                style={{ ...styles.task, opacity: t.done ? 0.4 : 1 }}
+              >
+                <div onClick={() => toggleTask(i)} style={styles.taskText}>
+                  {t.text}
                 </div>
-              ))}
-          </div>
+
+                <div style={styles.taskRight}>
+                  <span style={styles.priority}>{t.priority}</span>
+                  <span style={styles.person}>{t.person}</span>
+                </div>
+              </div>
+            ))}
         </div>
       </div>
     </div>
   );
 }
 
+/* ---------- STYLES ---------- */
+
 const styles = {
-  page: {
-    background: "#f4f5f7",
-    minHeight: "100vh",
-    padding: "40px 60px",
-    fontFamily: "Inter, sans-serif",
-    color: "#111",
-  },
+  page: { background: "#f4f5f7", minHeight: "100vh", padding: 40 },
+  header: { marginBottom: 20 },
+  title: { fontSize: 28 },
+  subtitle: { color: "#6b7280" },
 
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
+  statsRow: { display: "flex", gap: 20, marginBottom: 20 },
 
-  title: {
-    fontSize: 28,
-    marginBottom: 4,
-  },
+  bigDateCard: { flex: 2, background: "#ebecef", padding: 20, borderRadius: 16 },
+  statCard: { flex: 1, background: "#fff", padding: 20, borderRadius: 16 },
 
-  subtitle: {
-    color: "#6b7280",
-  },
+  statLabel: { fontSize: 12, color: "#6b7280" },
+  statValue: { fontSize: 28 },
 
-  toggleBtn: {
-    background: "#fff",
-    border: "1px solid #e5e7eb",
-    padding: "8px 14px",
+  dateRow: { display: "flex", alignItems: "center", gap: 10 },
+  dateText: { fontSize: 22, fontWeight: 600 },
+  dateBtn: { padding: 6, borderRadius: 8 },
+
+  main: { display: "flex", gap: 20 },
+
+  left: { width: 260, background: "#fff", padding: 20, borderRadius: 16 },
+  right: { flex: 1, background: "#fff", padding: 20, borderRadius: 16 },
+
+  sectionTitle: { fontSize: 12, color: "#6b7280", marginTop: 20 },
+
+  habit: { padding: 10, background: "#f1f2f4", borderRadius: 10, marginBottom: 8, fontSize: 13 },
+  recent: { padding: 10, borderRadius: 10, marginBottom: 6, fontSize: 13 },
+
+  inputRow: { display: "flex", gap: 10, marginBottom: 10 },
+  input: { flex: 1, padding: 10 },
+  select: { padding: 10 },
+  addBtn: { padding: "10px 16px", background: "#111", color: "#fff", borderRadius: 10 },
+
+  taskToolbar: { marginBottom: 10 },
+
+  toggle: {
+    padding: "6px 12px",
     borderRadius: 999,
-    cursor: "pointer",
+    border: "1px solid #ddd",
+    background: "#fff",
     fontSize: 12,
   },
 
-  statsRow: {
-    display: "flex",
-    gap: 20,
-    marginBottom: 20,
-  },
+  task: { display: "flex", justifyContent: "space-between", padding: 10, borderBottom: "1px solid #eee" },
+  taskText: { fontSize: 13 },
 
-  bigDateCard: {
-    background: "#ebecef",
-    borderRadius: 16,
-    padding: 20,
-    flex: 2,
-    boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
-  },
-
-  dateRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    marginTop: 8,
-  },
-
-  dateText: {
-    fontSize: 24,
-    fontWeight: 600,
-  },
-
-  dateNavBtn: {
-    background: "#fff",
-    border: "1px solid #d8dbe2",
-    borderRadius: 10,
-    width: 32,
-    height: 32,
-    cursor: "pointer",
-  },
-
-  statCard: {
-    background: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    flex: 1,
-    boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
-  },
-
-  statLabel: {
-    fontSize: 12,
-    color: "#6b7280",
-  },
-
-  statValue: {
-    fontSize: 28,
-    marginTop: 8,
-  },
-
-  main: {
-    display: "flex",
-    gap: 20,
-  },
-
-  left: {
-    width: 280,
-    background: "#fff",
-    padding: 20,
-    borderRadius: 16,
-    boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
-  },
-
-  right: {
-    flex: 1,
-    background: "#fff",
-    padding: 20,
-    borderRadius: 16,
-    boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
-  },
-
-  sectionTitle: {
-    fontSize: 12,
-    color: "#6b7280",
-    marginBottom: 10,
-    marginTop: 20,
-  },
-
-  habit: {
-    background: "#f1f2f4",
-    padding: 10,
-    borderRadius: 12,
-    marginBottom: 8,
-    cursor: "pointer",
-    fontSize: 13,
-  },
-
-  recentDay: {
-    padding: 10,
-    borderRadius: 12,
-    marginBottom: 8,
-    cursor: "pointer",
-    fontSize: 13,
-  },
-
-  inputRow: {
-    display: "flex",
-    gap: 10,
-    marginBottom: 20,
-  },
-
-  input: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 12,
-    border: "1px solid #e5e7eb",
-    background: "#f9fafb",
-  },
-
-  select: {
-    padding: 10,
-    borderRadius: 10,
-    border: "1px solid #e5e7eb",
-    background: "#fff",
-  },
-
-  addBtn: {
-    background: "#111827",
-    color: "#fff",
-    border: "none",
-    padding: "10px 16px",
-    borderRadius: 12,
-    cursor: "pointer",
-  },
-
-  taskList: {
-    marginTop: 10,
-  },
-
-  task: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "12px 0",
-    borderBottom: "1px solid #f0f0f0",
-    cursor: "grab",
-  },
-
-  taskText: {
-    fontSize: 13,
-    cursor: "pointer",
-  },
-
-  taskRight: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-  },
-
-  priorityPill: {
-    fontSize: 12,
-    color: "#6b7280",
-    padding: "4px 10px",
-    borderRadius: 999,
-  },
-
-  personPill: {
-    fontSize: 12,
-    background: "#eef2ff",
-    padding: "4px 10px",
-    borderRadius: 999,
-  },
+  taskRight: { display: "flex", gap: 10 },
+  priority: { fontSize: 12, color: "#6b7280" },
+  person: { fontSize: 12, background: "#eef2ff", padding: "4px 8px", borderRadius: 999 },
 };
