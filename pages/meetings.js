@@ -10,6 +10,13 @@ function formatDateKey(date) {
   return `${y}-${m}-${d}`;
 }
 
+function formatPrettyDate(date) {
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 function createDailyTemplate() {
   return {
     Mark: {
