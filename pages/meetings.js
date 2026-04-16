@@ -18,8 +18,20 @@ export default function MeetingsPage() {
       title: "Weekly Calendar Review",
       type: "calendar",
       items: [
-        { id: 201, time: "9:00am", text: "Weekly review with team", meta: "30mn" },
-        { id: 202, time: "10:15am", text: "New client onboarding call", meta: "45mn" },
+        {
+          id: 201,
+          time: "9:00am",
+          text: "Weekly review with team",
+          meta: "30m",
+          checked: false,
+        },
+        {
+          id: 202,
+          time: "10:15am",
+          text: "New client onboarding call",
+          meta: "45m",
+          checked: false,
+        },
       ],
       newItemText: "",
     },
@@ -28,24 +40,81 @@ export default function MeetingsPage() {
       title: "Tasks for the Week",
       type: "task",
       items: [
-        { id: 301, text: "Follow up w/ Client X", priority: "High", owner: "Dane" },
-        { id: 302, text: "Finish proposal draft", priority: "Medium", owner: "Mark" },
-        { id: 303, text: "Review funding round options", priority: "Low", owner: "Mark" },
+        {
+          id: 301,
+          text: "Follow up w/ Client X",
+          priority: "High",
+          owner: "Dane",
+          checked: false,
+        },
+        {
+          id: 302,
+          text: "Finish proposal draft",
+          priority: "Medium",
+          owner: "Mark",
+          checked: false,
+        },
+        {
+          id: 303,
+          text: "Review funding round options",
+          priority: "Low",
+          owner: "Mark",
+          checked: false,
+        },
       ],
       newItemText: "",
     },
   ];
 
   const defaultDailyCalendar = [
-    { id: 1, duration: "30m", text: "Weekly review with team", time: "9:00am", checked: false },
-    { id: 2, duration: "45m", text: "New client onboarding call", time: "10:15am", checked: false },
-    { id: 3, duration: "60m", text: "Marketing strategy session", time: "1:00pm", checked: false },
+    {
+      id: 1,
+      duration: "30m",
+      text: "Weekly review with team",
+      time: "9:00am",
+      checked: false,
+    },
+    {
+      id: 2,
+      duration: "45m",
+      text: "New client onboarding call",
+      time: "10:15am",
+      checked: false,
+    },
+    {
+      id: 3,
+      duration: "60m",
+      text: "Marketing strategy session",
+      time: "1:00pm",
+      checked: false,
+    },
   ];
 
   const defaultTodayTasks = [
-    { id: 1, avatar: "👨🏻", text: "Follow up w Client X", priority: "High", owner: "Dane" },
-    { id: 2, avatar: "👨🏼", text: "Finish proposal draft", priority: "Medium", owner: "Mark" },
-    { id: 3, avatar: "👨🏽", text: "Review funding round options", priority: "Low", owner: "Mark" },
+    {
+      id: 1,
+      avatar: "👨🏻",
+      text: "Follow up w Client X",
+      priority: "High",
+      owner: "Dane",
+      checked: false,
+    },
+    {
+      id: 2,
+      avatar: "👨🏼",
+      text: "Finish proposal draft",
+      priority: "Medium",
+      owner: "Mark",
+      checked: false,
+    },
+    {
+      id: 3,
+      avatar: "👨🏽",
+      text: "Review funding round options",
+      priority: "Low",
+      owner: "Mark",
+      checked: false,
+    },
   ];
 
   const defaultComments = [
@@ -72,7 +141,16 @@ export default function MeetingsPage() {
   const [todayTasks, setTodayTasks] = useState(defaultTodayTasks);
   const [comments, setComments] = useState(defaultComments);
   const [commentInput, setCommentInput] = useState("");
+
   const [draggedSectionIndex, setDraggedSectionIndex] = useState(null);
+
+  const [draggedSectionRow, setDraggedSectionRow] = useState({
+    sectionId: null,
+    rowIndex: null,
+  });
+
+  const [draggedDailyRowIndex, setDraggedDailyRowIndex] = useState(null);
+  const [draggedTodayTaskIndex, setDraggedTodayTaskIndex] = useState(null);
 
   useEffect(() => {
     const savedWeeklySections = localStorage.getItem("meetings_weekly_sections");
@@ -114,6 +192,15 @@ export default function MeetingsPage() {
     localStorage.setItem("meetings_selected_owner", selectedOwner);
   }, [selectedOwner]);
 
+  const moveItem = (list, fromIndex, toIndex) => {
+    if (fromIndex === null || toIndex === null || fromIndex === toIndex) return list;
+    const updated = [...list];
+    const dragged = updated[fromIndex];
+    updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, dragged);
+    return updated;
+  };
+
   const handleSectionDragStart = (index) => {
     setDraggedSectionIndex(index);
   };
@@ -124,18 +211,70 @@ export default function MeetingsPage() {
 
   const handleSectionDrop = (dropIndex) => {
     if (draggedSectionIndex === null || draggedSectionIndex === dropIndex) return;
-
-    const updated = [...weeklySections];
-    const draggedItem = updated[draggedSectionIndex];
-    updated.splice(draggedSectionIndex, 1);
-    updated.splice(dropIndex, 0, draggedItem);
-
-    setWeeklySections(updated);
+    setWeeklySections((prev) => moveItem(prev, draggedSectionIndex, dropIndex));
     setDraggedSectionIndex(null);
   };
 
   const handleSectionDragEnd = () => {
     setDraggedSectionIndex(null);
+  };
+
+  const handleSectionRowDragStart = (sectionId, rowIndex) => {
+    setDraggedSectionRow({ sectionId, rowIndex });
+  };
+
+  const handleSectionRowDrop = (sectionId, dropIndex) => {
+    if (
+      draggedSectionRow.sectionId === null ||
+      draggedSectionRow.rowIndex === null ||
+      draggedSectionRow.sectionId !== sectionId
+    ) {
+      return;
+    }
+
+    setWeeklySections((prev) =>
+      prev.map((section) => {
+        if (section.id !== sectionId) return section;
+        return {
+          ...section,
+          items: moveItem(section.items, draggedSectionRow.rowIndex, dropIndex),
+        };
+      })
+    );
+
+    setDraggedSectionRow({ sectionId: null, rowIndex: null });
+  };
+
+  const handleSectionRowDragEnd = () => {
+    setDraggedSectionRow({ sectionId: null, rowIndex: null });
+  };
+
+  const handleDailyRowDragStart = (index) => {
+    setDraggedDailyRowIndex(index);
+  };
+
+  const handleDailyRowDrop = (dropIndex) => {
+    if (draggedDailyRowIndex === null || draggedDailyRowIndex === dropIndex) return;
+    setDailyCalendar((prev) => moveItem(prev, draggedDailyRowIndex, dropIndex));
+    setDraggedDailyRowIndex(null);
+  };
+
+  const handleDailyRowDragEnd = () => {
+    setDraggedDailyRowIndex(null);
+  };
+
+  const handleTodayTaskDragStart = (index) => {
+    setDraggedTodayTaskIndex(index);
+  };
+
+  const handleTodayTaskDrop = (dropIndex) => {
+    if (draggedTodayTaskIndex === null || draggedTodayTaskIndex === dropIndex) return;
+    setTodayTasks((prev) => moveItem(prev, draggedTodayTaskIndex, dropIndex));
+    setDraggedTodayTaskIndex(null);
+  };
+
+  const handleTodayTaskDragEnd = () => {
+    setDraggedTodayTaskIndex(null);
   };
 
   const updateSectionNewItemText = (sectionId, value) => {
@@ -158,9 +297,21 @@ export default function MeetingsPage() {
         if (section.type === "priority") {
           newItem = { id: Date.now(), text, checked: false };
         } else if (section.type === "calendar") {
-          newItem = { id: Date.now(), time: "9:00am", text, meta: "30mn" };
+          newItem = {
+            id: Date.now(),
+            time: "9:00am",
+            text,
+            meta: "30m",
+            checked: false,
+          };
         } else {
-          newItem = { id: Date.now(), text, priority: "Medium", owner: "Mark" };
+          newItem = {
+            id: Date.now(),
+            text,
+            priority: "Medium",
+            owner: "Mark",
+            checked: false,
+          };
         }
 
         return {
@@ -182,13 +333,58 @@ export default function MeetingsPage() {
     );
   };
 
+  const toggleSectionItemChecked = (sectionId, itemId) => {
+    setWeeklySections((prev) =>
+      prev.map((section) =>
+        section.id === sectionId
+          ? {
+              ...section,
+              items: section.items.map((item) =>
+                item.id === itemId ? { ...item, checked: !item.checked } : item
+              ),
+            }
+          : section
+      )
+    );
+  };
+
+  const updateSectionCalendarField = (sectionId, itemId, field, value) => {
+    setWeeklySections((prev) =>
+      prev.map((section) =>
+        section.id === sectionId
+          ? {
+              ...section,
+              items: section.items.map((item) =>
+                item.id === itemId ? { ...item, [field]: value } : item
+              ),
+            }
+          : section
+      )
+    );
+  };
+
+  const updateSectionTaskField = (sectionId, itemId, field, value) => {
+    setWeeklySections((prev) =>
+      prev.map((section) =>
+        section.id === sectionId
+          ? {
+              ...section,
+              items: section.items.map((item) =>
+                item.id === itemId ? { ...item, [field]: value } : item
+              ),
+            }
+          : section
+      )
+    );
+  };
+
   const addDailyCalendarItem = () => {
     setDailyCalendar((prev) => [
       ...prev,
       {
         id: Date.now(),
         duration: "30m",
-        text: "New item",
+        text: "New meeting",
         time: "9:00am",
         checked: false,
       },
@@ -197,6 +393,20 @@ export default function MeetingsPage() {
 
   const deleteDailyCalendarItem = (id) => {
     setDailyCalendar((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const toggleDailyCalendarItem = (id) => {
+    setDailyCalendar((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, checked: !item.checked } : item
+      )
+    );
+  };
+
+  const updateDailyCalendarField = (id, field, value) => {
+    setDailyCalendar((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+    );
   };
 
   const addTodayTask = () => {
@@ -208,12 +418,27 @@ export default function MeetingsPage() {
         text: "New task",
         priority: "Medium",
         owner: selectedOwner,
+        checked: false,
       },
     ]);
   };
 
   const deleteTodayTask = (id) => {
     setTodayTasks((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const toggleTodayTask = (id) => {
+    setTodayTasks((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, checked: !item.checked } : item
+      )
+    );
+  };
+
+  const updateTodayTaskField = (id, field, value) => {
+    setTodayTasks((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+    );
   };
 
   const addComment = () => {
@@ -235,30 +460,53 @@ export default function MeetingsPage() {
 
   const getPriorityStyle = (priority) => {
     if (priority === "High") {
-      return {
-        background: "#d98c79",
-        color: "#fff",
-      };
+      return { background: "#d98c79", color: "#fff" };
     }
     if (priority === "Medium") {
-      return {
-        background: "#ead9b6",
-        color: "#7a6849",
-      };
+      return { background: "#ead9b6", color: "#7a6849" };
     }
-    return {
-      background: "#8faa90",
-      color: "#fff",
-    };
+    return { background: "#8faa90", color: "#fff" };
   };
+
+  const renderCheck = (checked, onClick) => (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        ...styles.checkButton,
+        ...(checked ? styles.checkButtonDone : {}),
+      }}
+    >
+      {checked ? "✓" : ""}
+    </button>
+  );
+
+  const renderDragHandle = () => <div style={styles.rowDragHandle}>⋮⋮</div>;
 
   const renderSectionRows = (section) => {
     if (section.type === "priority") {
-      return section.items.map((item) => (
-        <div key={item.id} style={styles.row}>
+      return section.items.map((item, index) => (
+        <div
+          key={item.id}
+          draggable
+          onDragStart={() => handleSectionRowDragStart(section.id, index)}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={() => handleSectionRowDrop(section.id, index)}
+          onDragEnd={handleSectionRowDragEnd}
+          style={{
+            ...styles.row,
+            ...(draggedSectionRow.sectionId === section.id &&
+            draggedSectionRow.rowIndex === index
+              ? styles.draggingRow
+              : {}),
+          }}
+        >
           <div style={styles.rowLeft}>
-            <div style={styles.checkbox} />
-            <span style={styles.rowText}>{item.text}</span>
+            {renderDragHandle()}
+            {renderCheck(item.checked, () => toggleSectionItemChecked(section.id, item.id))}
+            <span style={{ ...styles.rowText, ...(item.checked ? styles.doneText : {}) }}>
+              {item.text}
+            </span>
           </div>
           <button
             onClick={() => deleteSectionItem(section.id, item.id)}
@@ -271,44 +519,126 @@ export default function MeetingsPage() {
     }
 
     if (section.type === "calendar") {
-      return section.items.map((item) => (
-        <div key={item.id} style={styles.row}>
+      return section.items.map((item, index) => (
+        <div
+          key={item.id}
+          draggable
+          onDragStart={() => handleSectionRowDragStart(section.id, index)}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={() => handleSectionRowDrop(section.id, index)}
+          onDragEnd={handleSectionRowDragEnd}
+          style={{
+            ...styles.row,
+            ...(draggedSectionRow.sectionId === section.id &&
+            draggedSectionRow.rowIndex === index
+              ? styles.draggingRow
+              : {}),
+          }}
+        >
           <div style={styles.rowLeft}>
-            <div style={styles.radio} />
-            <span style={styles.rowText}>
-              {item.time} | {item.text}
-            </span>
+            {renderDragHandle()}
+            {renderCheck(item.checked, () => toggleSectionItemChecked(section.id, item.id))}
+
+            <input
+              value={item.time}
+              onChange={(e) =>
+                updateSectionCalendarField(section.id, item.id, "time", e.target.value)
+              }
+              style={styles.smallInlineInput}
+            />
+
+            <span style={styles.pipe}>|</span>
+
+            <input
+              value={item.text}
+              onChange={(e) =>
+                updateSectionCalendarField(section.id, item.id, "text", e.target.value)
+              }
+              style={{
+                ...styles.inlineTextInput,
+                ...(item.checked ? styles.doneText : {}),
+              }}
+            />
           </div>
+
           <div style={styles.rowRightCluster}>
-            <div style={styles.metaPill}>{item.meta}</div>
+            <input
+              value={item.meta}
+              onChange={(e) =>
+                updateSectionCalendarField(section.id, item.id, "meta", e.target.value)
+              }
+              style={styles.metaInput}
+            />
             <button
               onClick={() => deleteSectionItem(section.id, item.id)}
               style={styles.iconButton}
             >
-              ˅
+              ×
             </button>
           </div>
         </div>
       ));
     }
 
-    return section.items.map((item) => (
-      <div key={item.id} style={styles.row}>
+    return section.items.map((item, index) => (
+      <div
+        key={item.id}
+        draggable
+        onDragStart={() => handleSectionRowDragStart(section.id, index)}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={() => handleSectionRowDrop(section.id, index)}
+        onDragEnd={handleSectionRowDragEnd}
+        style={{
+          ...styles.row,
+          ...(draggedSectionRow.sectionId === section.id &&
+          draggedSectionRow.rowIndex === index
+            ? styles.draggingRow
+            : {}),
+        }}
+      >
         <div style={styles.rowLeft}>
-          <div style={styles.checkbox} />
-          <span style={styles.rowText}>{item.text}</span>
+          {renderDragHandle()}
+          {renderCheck(item.checked, () => toggleSectionItemChecked(section.id, item.id))}
+          <input
+            value={item.text}
+            onChange={(e) =>
+              updateSectionTaskField(section.id, item.id, "text", e.target.value)
+            }
+            style={{
+              ...styles.inlineTextInput,
+              ...(item.checked ? styles.doneText : {}),
+            }}
+          />
         </div>
+
         <div style={styles.rowRightCluster}>
-          <div style={{ ...styles.priorityPill, ...getPriorityStyle(item.priority) }}>
-            {item.priority}
-          </div>
-          <div style={styles.ownerSelect}>{item.owner} ˅</div>
-          <button
-            onClick={() => deleteSectionItem(section.id, item.id)}
-            style={styles.iconButton}
+          <select
+            value={item.priority}
+            onChange={(e) =>
+              updateSectionTaskField(section.id, item.id, "priority", e.target.value)
+            }
+            style={{
+              ...styles.prioritySelect,
+              ...getPriorityStyle(item.priority),
+            }}
           >
-            ×
-          </button>
+            <option>High</option>
+            <option>Medium</option>
+            <option>Low</option>
+          </select>
+
+          <select
+            value={item.owner}
+            onChange={(e) =>
+              updateSectionTaskField(section.id, item.id, "owner", e.target.value)
+            }
+            style={styles.ownerSelect}
+          >
+            <option>Mark</option>
+            <option>Dane</option>
+            <option>Nikita</option>
+          </select>
+
           <button
             onClick={() => deleteSectionItem(section.id, item.id)}
             style={styles.iconButton}
@@ -354,14 +684,11 @@ export default function MeetingsPage() {
                 section.type === "priority"
                   ? "Add new priority..."
                   : section.type === "calendar"
-                  ? "Add new item..."
-                  : "Add new decision..."
+                  ? "Add new meeting..."
+                  : "Add new task..."
               }
               style={styles.addInput}
             />
-            <button onClick={() => addItemToSection(section.id)} style={styles.hiddenAddButton}>
-              Add
-            </button>
           </div>
         </div>
       ))}
@@ -393,21 +720,68 @@ export default function MeetingsPage() {
             </button>
           </div>
 
-          <div style={styles.timeCard}>20:19</div>
+          <div style={styles.timeCard}>
+            {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          </div>
         </div>
 
         <div style={styles.subPanel}>
           <h3 style={styles.panelTitle}>Daily Calendar</h3>
 
-          {dailyCalendar.map((item) => (
-            <div key={item.id} style={styles.row}>
+          {dailyCalendar.map((item, index) => (
+            <div
+              key={item.id}
+              draggable
+              onDragStart={() => handleDailyRowDragStart(index)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleDailyRowDrop(index)}
+              onDragEnd={handleDailyRowDragEnd}
+              style={{
+                ...styles.row,
+                ...(draggedDailyRowIndex === index ? styles.draggingRow : {}),
+              }}
+            >
               <div style={styles.rowLeft}>
-                <div style={styles.checkbox} />
-                <span style={styles.rowText}>
-                  {item.duration} | {item.text}
-                </span>
+                {renderDragHandle()}
+                {renderCheck(item.checked, () => toggleDailyCalendarItem(item.id))}
+
+                <input
+                  value={item.duration}
+                  onChange={(e) =>
+                    updateDailyCalendarField(item.id, "duration", e.target.value)
+                  }
+                  style={styles.durationInput}
+                />
+
+                <span style={styles.pipe}>|</span>
+
+                <input
+                  value={item.text}
+                  onChange={(e) =>
+                    updateDailyCalendarField(item.id, "text", e.target.value)
+                  }
+                  style={{
+                    ...styles.inlineTextInput,
+                    ...(item.checked ? styles.doneText : {}),
+                  }}
+                />
               </div>
-              <div style={styles.timeText}>{item.time}</div>
+
+              <div style={styles.rowRightCluster}>
+                <input
+                  value={item.time}
+                  onChange={(e) =>
+                    updateDailyCalendarField(item.id, "time", e.target.value)
+                  }
+                  style={styles.timeInput}
+                />
+                <button
+                  onClick={() => deleteDailyCalendarItem(item.id)}
+                  style={styles.iconButton}
+                >
+                  ×
+                </button>
+              </div>
             </div>
           ))}
 
@@ -422,22 +796,64 @@ export default function MeetingsPage() {
         <div style={styles.subPanel}>
           <h3 style={styles.panelTitle}>Today’s Tasks</h3>
 
-          {todayTasks.map((item) => (
-            <div key={item.id} style={styles.row}>
+          {todayTasks.map((item, index) => (
+            <div
+              key={item.id}
+              draggable
+              onDragStart={() => handleTodayTaskDragStart(index)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleTodayTaskDrop(index)}
+              onDragEnd={handleTodayTaskDragEnd}
+              style={{
+                ...styles.row,
+                ...(draggedTodayTaskIndex === index ? styles.draggingRow : {}),
+              }}
+            >
               <div style={styles.rowLeft}>
-                <div style={styles.checkbox} />
+                {renderDragHandle()}
+                {renderCheck(item.checked, () => toggleTodayTask(item.id))}
                 <span style={styles.avatar}>{item.avatar}</span>
-                <span style={styles.rowText}>{item.text}</span>
+
+                <input
+                  value={item.text}
+                  onChange={(e) =>
+                    updateTodayTaskField(item.id, "text", e.target.value)
+                  }
+                  style={{
+                    ...styles.inlineTextInput,
+                    ...(item.checked ? styles.doneText : {}),
+                  }}
+                />
               </div>
 
               <div style={styles.rowRightCluster}>
-                <div style={{ ...styles.priorityPill, ...getPriorityStyle(item.priority) }}>
-                  {item.priority}
-                </div>
-                <div style={styles.ownerSelect}>{item.owner} ˅</div>
-                <button onClick={() => deleteTodayTask(item.id)} style={styles.iconButton}>
-                  ×
-                </button>
+                <select
+                  value={item.priority}
+                  onChange={(e) =>
+                    updateTodayTaskField(item.id, "priority", e.target.value)
+                  }
+                  style={{
+                    ...styles.prioritySelect,
+                    ...getPriorityStyle(item.priority),
+                  }}
+                >
+                  <option>High</option>
+                  <option>Medium</option>
+                  <option>Low</option>
+                </select>
+
+                <select
+                  value={item.owner}
+                  onChange={(e) =>
+                    updateTodayTaskField(item.id, "owner", e.target.value)
+                  }
+                  style={styles.ownerSelect}
+                >
+                  <option>Mark</option>
+                  <option>Dane</option>
+                  <option>Nikita</option>
+                </select>
+
                 <button onClick={() => deleteTodayTask(item.id)} style={styles.iconButton}>
                   ×
                 </button>
@@ -459,8 +875,7 @@ export default function MeetingsPage() {
               <div style={styles.commentAvatar}>{comment.avatar}</div>
               <div style={styles.commentContent}>
                 <div style={styles.commentText}>
-                  <span style={styles.mentionPill}>{comment.mention}</span>{" "}
-                  {comment.text}
+                  <span style={styles.mentionPill}>{comment.mention}</span> {comment.text}
                 </div>
                 <div style={styles.commentTime}>{comment.time}</div>
               </div>
@@ -650,11 +1065,17 @@ const styles = {
     justifyContent: "space-between",
     gap: "12px",
     borderBottom: "1px solid #ebeef4",
+    padding: "2px 0",
+    cursor: "grab",
+  },
+  draggingRow: {
+    opacity: 0.5,
+    background: "#eef2f8",
   },
   rowLeft: {
     display: "flex",
     alignItems: "center",
-    gap: "12px",
+    gap: "10px",
     flex: 1,
     minWidth: 0,
   },
@@ -665,44 +1086,111 @@ const styles = {
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
+  doneText: {
+    textDecoration: "line-through",
+    opacity: 0.55,
+  },
   rowRightCluster: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
     flexShrink: 0,
   },
-  checkbox: {
+  rowDragHandle: {
+    color: "#b1b7c4",
+    fontSize: "14px",
+    lineHeight: 1,
+    letterSpacing: "1px",
+    cursor: "grab",
+    userSelect: "none",
+    flexShrink: 0,
+  },
+  checkButton: {
     width: "20px",
     height: "20px",
     borderRadius: "4px",
     border: "2px solid #c6cbd7",
     background: "#f8f9fc",
+    color: "#6d93c9",
+    fontSize: "13px",
+    fontWeight: 700,
+    cursor: "pointer",
+    padding: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     flexShrink: 0,
   },
-  radio: {
-    width: "18px",
-    height: "18px",
-    borderRadius: "50%",
-    border: "2px solid #aeb5c3",
-    background: "#f8f9fc",
+  checkButtonDone: {
+    background: "#eaf1ff",
+    border: "2px solid #6d93c9",
+  },
+  pipe: {
+    color: "#9ca4b3",
+    fontSize: "16px",
     flexShrink: 0,
   },
-  metaPill: {
-    minWidth: "78px",
+  inlineTextInput: {
+    border: "none",
+    background: "transparent",
+    outline: "none",
+    fontSize: "18px",
+    color: "#454d5d",
+    width: "100%",
+    minWidth: 0,
+  },
+  smallInlineInput: {
+    width: "76px",
+    border: "1px solid #dde2eb",
+    background: "#fff",
+    outline: "none",
+    fontSize: "14px",
+    color: "#454d5d",
+    borderRadius: "6px",
+    padding: "6px 8px",
+  },
+  metaInput: {
+    width: "68px",
     textAlign: "center",
-    padding: "7px 12px",
+    padding: "7px 8px",
     borderRadius: "6px",
     border: "1px solid #d8dde8",
     background: "#f9fafc",
     color: "#495264",
-    fontSize: "16px",
+    fontSize: "14px",
+    outline: "none",
   },
-  priorityPill: {
-    padding: "5px 14px",
+  durationInput: {
+    width: "52px",
+    border: "1px solid #dde2eb",
+    background: "#fff",
+    outline: "none",
+    fontSize: "14px",
+    color: "#454d5d",
+    borderRadius: "6px",
+    padding: "6px 6px",
+    textAlign: "center",
+  },
+  timeInput: {
+    width: "78px",
+    border: "1px solid #dde2eb",
+    background: "#fff",
+    outline: "none",
+    fontSize: "14px",
+    color: "#454d5d",
+    borderRadius: "6px",
+    padding: "6px 8px",
+    textAlign: "center",
+  },
+  prioritySelect: {
+    padding: "5px 10px",
     borderRadius: "6px",
     fontSize: "14px",
     fontWeight: 500,
     lineHeight: 1.1,
+    border: "none",
+    outline: "none",
+    cursor: "pointer",
   },
   ownerSelect: {
     padding: "6px 12px",
@@ -713,6 +1201,7 @@ const styles = {
     fontSize: "14px",
     minWidth: "74px",
     textAlign: "center",
+    outline: "none",
   },
   iconButton: {
     border: "none",
@@ -746,9 +1235,6 @@ const styles = {
     outline: "none",
     fontSize: "16px",
     color: "#4d5567",
-  },
-  hiddenAddButton: {
-    display: "none",
   },
   rightTopBar: {
     display: "flex",
@@ -798,11 +1284,6 @@ const styles = {
     fontSize: "16px",
     cursor: "pointer",
     padding: 0,
-  },
-  timeText: {
-    fontSize: "18px",
-    color: "#454d5d",
-    flexShrink: 0,
   },
   avatar: {
     fontSize: "24px",
