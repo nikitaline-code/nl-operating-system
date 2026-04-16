@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-const STORAGE_KEY = "daily-os-meetings-v5";
+const STORAGE_KEY = "daily-os-meetings-v6";
 const WEEKLY_PRIORITIES_KEY = "daily-os-weekly-priorities";
 
 function formatDateKey(date) {
@@ -600,7 +600,7 @@ export default function MeetingsPage() {
       </div>
 
       {view === "weekly" ? (
-        <div style={styles.twoCol}>
+        <div style={styles.weeklyOnlyWrap}>
           <div style={styles.leftCol}>
             <div style={styles.card}>
               <div style={styles.cardHeader}>
@@ -766,202 +766,6 @@ export default function MeetingsPage() {
                   placeholder="Add new decision..."
                 />
                 <button style={styles.addBtn} onClick={addWeeklyDecision}>
-                  Add
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div style={styles.rightCol}>
-            <div style={styles.sideTopCard}>
-              <div style={styles.personToggle}>
-                <button
-                  style={{
-                    ...styles.personBtn,
-                    ...(dailyPerson === "Mark" ? styles.personBtnActive : {}),
-                  }}
-                  onClick={() => setDailyPerson("Mark")}
-                >
-                  Mark
-                </button>
-                <button
-                  style={{
-                    ...styles.personBtn,
-                    ...(dailyPerson === "Dane" ? styles.personBtnActive : {}),
-                  }}
-                  onClick={() => setDailyPerson("Dane")}
-                >
-                  Dane
-                </button>
-              </div>
-
-              <div style={styles.dateSwitcher}>
-                {recentDates.slice(0, 3).map((date, index) => (
-                  <DatePill key={formatDateKey(date)} date={date} index={index} />
-                ))}
-              </div>
-            </div>
-
-            <div style={styles.sideCard}>
-              <div style={styles.cardHeader}>
-                <div style={styles.cardTitle}>Daily Calendar</div>
-                <DragHandle />
-              </div>
-
-              {personData.calendar.map((item, index) => (
-                <DragRow
-                  key={item.id}
-                  item={item}
-                  index={index}
-                  sectionKey="calendar"
-                  onToggle={() => toggleDailyCalendar(index)}
-                  onRemove={() => removeDailyCalendar(index)}
-                  onEditText={(value) => editDailyCalendar(index, "text", value)}
-                  onEditTime={(value) => editDailyCalendar(index, "time", value)}
-                  showTime
-                />
-              ))}
-
-              <div style={styles.inputLine}>
-                <input
-                  style={styles.inlineInput}
-                  value={newDailyCalendar}
-                  onChange={(e) => setNewDailyCalendar(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addDailyCalendar()}
-                  placeholder="Add new item..."
-                />
-                <button style={styles.addBtn} onClick={addDailyCalendar}>
-                  Add
-                </button>
-              </div>
-            </div>
-
-            <div style={styles.sideCard}>
-              <div style={styles.cardHeader}>
-                <div style={styles.cardTitle}>Today's Tasks</div>
-                <DragHandle />
-              </div>
-
-              {personData.tasks.map((item, index) => (
-                <DragRow
-                  key={item.id}
-                  item={item}
-                  index={index}
-                  sectionKey="tasks"
-                  onToggle={() => toggleDailyTask(index)}
-                  onRemove={() => removeDailyTask(index)}
-                  onEditText={(value) => editDailyTask(index, "text", value)}
-                  right={
-                    <>
-                      <select
-                        style={{
-                          ...styles.priorityPillSelect,
-                          ...priorityStyle(item.priority),
-                        }}
-                        value={item.priority}
-                        onChange={(e) =>
-                          editDailyTask(index, "priority", e.target.value)
-                        }
-                      >
-                        <option>High</option>
-                        <option>Medium</option>
-                        <option>Low</option>
-                      </select>
-                      <select
-                        style={styles.ownerPillSelect}
-                        value={item.owner}
-                        onChange={(e) =>
-                          editDailyTask(index, "owner", e.target.value)
-                        }
-                      >
-                        <option>Mark</option>
-                        <option>Dane</option>
-                      </select>
-                    </>
-                  }
-                />
-              ))}
-
-              <div style={styles.taskEntryRow}>
-                <input
-                  style={{ ...styles.inlineInput, flex: 1 }}
-                  value={newDailyTask}
-                  onChange={(e) => setNewDailyTask(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addDailyTask()}
-                  placeholder="Add new task..."
-                />
-                <select
-                  style={styles.select}
-                  value={newDailyTaskPriority}
-                  onChange={(e) => setNewDailyTaskPriority(e.target.value)}
-                >
-                  <option>High</option>
-                  <option>Medium</option>
-                  <option>Low</option>
-                </select>
-                <button style={styles.addBtn} onClick={addDailyTask}>
-                  Add
-                </button>
-              </div>
-            </div>
-
-            <div style={styles.sideCard}>
-              <div style={styles.cardHeader}>
-                <div style={styles.cardTitle}>Decisions Needed</div>
-                <DragHandle />
-              </div>
-
-              {personData.decisions.map((item, index) => (
-                <DragRow
-                  key={item.id}
-                  item={item}
-                  index={index}
-                  sectionKey="decisions"
-                  onToggle={() => toggleDailyDecision(index)}
-                  onRemove={() => removeDailyDecision(index)}
-                  onEditText={(value) => editDailyDecision(index, value)}
-                />
-              ))}
-
-              <div style={styles.inputLine}>
-                <input
-                  style={styles.inlineInput}
-                  value={newDailyDecision}
-                  onChange={(e) => setNewDailyDecision(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addDailyDecision()}
-                  placeholder="Add new decision..."
-                />
-                <button style={styles.addBtn} onClick={addDailyDecision}>
-                  Add
-                </button>
-              </div>
-            </div>
-
-            <div style={styles.sideCard}>
-              <div style={styles.commentList}>
-                {personData.comments.map((comment) => (
-                  <div key={comment.id} style={styles.commentRow}>
-                    <div style={styles.commentAvatar}>
-                      {comment.author.charAt(0)}
-                    </div>
-                    <div style={styles.commentBubble}>
-                      <span style={styles.commentAuthor}>@{comment.author}</span>{" "}
-                      {comment.text}
-                    </div>
-                    <div style={styles.commentTime}>{comment.time}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={styles.commentInputRow}>
-                <input
-                  style={styles.commentInput}
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addComment()}
-                  placeholder="Write a comment..."
-                />
-                <button style={styles.sendBtn} onClick={addComment}>
                   Add
                 </button>
               </div>
@@ -1223,19 +1027,12 @@ const styles = {
     boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
   },
 
-  twoCol: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 20,
+  weeklyOnlyWrap: {
+    maxWidth: 840,
+    margin: "0 auto",
   },
 
   leftCol: {
-    display: "grid",
-    gap: 16,
-    alignContent: "start",
-  },
-
-  rightCol: {
     display: "grid",
     gap: 16,
     alignContent: "start",
