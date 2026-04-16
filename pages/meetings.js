@@ -1,149 +1,76 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-const STORAGE_KEY = "daily-os-meetings-v1";
+const STORAGE_KEY = "daily-os-meetings-v4";
+const WEEKLY_PRIORITIES_KEY = "daily-os-weekly-priorities";
 
-function seedData() {
+function formatDateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function createDailyTemplate() {
   return {
-    activeTab: "Weekly Alignment",
-    selectedOwner: "Mark",
-    sections: [
-      {
-        id: 1,
-        title: "Top Shared Priorities",
-        type: "priority",
-        newItemText: "",
-        items: [
-          { id: 101, text: "Win the week", checked: false },
-          { id: 102, text: "Stay disciplined", checked: false },
-          { id: 103, text: "Stay focused", checked: false },
-        ],
-      },
-      {
-        id: 2,
-        title: "Weekly Calendar Review",
-        type: "calendar",
-        newItemText: "",
-        items: [
-          {
-            id: 201,
-            time: "9:00am",
-            text: "Weekly review with team",
-            meta: "30m",
-            checked: false,
-          },
-          {
-            id: 202,
-            time: "10:15am",
-            text: "New client onboarding call",
-            meta: "45m",
-            checked: false,
-          },
-        ],
-      },
-      {
-        id: 3,
-        title: "Tasks for the Week",
-        type: "task",
-        newItemText: "",
-        items: [
-          {
-            id: 301,
-            text: "Follow up w/ Client X",
-            priority: "High",
-            owner: "Dane",
-            checked: false,
-          },
-          {
-            id: 302,
-            text: "Finish proposal draft",
-            priority: "Medium",
-            owner: "Mark",
-            checked: false,
-          },
-          {
-            id: 303,
-            text: "Review funding round options",
-            priority: "Low",
-            owner: "Mark",
-            checked: false,
-          },
-        ],
-      },
-    ],
-    dailyCalendar: [
-      {
-        id: 1,
-        duration: "30m",
-        text: "Weekly review with team",
-        time: "9:00am",
-        checked: false,
-      },
-      {
-        id: 2,
-        duration: "45m",
-        text: "New client onboarding call",
-        time: "10:15am",
-        checked: false,
-      },
-      {
-        id: 3,
-        duration: "60m",
-        text: "Marketing strategy session",
-        time: "1:00pm",
-        checked: false,
-      },
-    ],
-    todayTasks: [
-      {
-        id: 1,
-        text: "Follow up w Client X",
-        priority: "High",
-        owner: "Dane",
-        checked: false,
-      },
-      {
-        id: 2,
-        text: "Finish proposal draft",
-        priority: "Medium",
-        owner: "Mark",
-        checked: false,
-      },
-      {
-        id: 3,
-        text: "Review funding round options",
-        priority: "Low",
-        owner: "Mark",
-        checked: false,
-      },
-    ],
-    comments: [
-      {
-        id: 1,
-        mention: "@Mark",
-        text: "needed help setting up the new staging environment.",
-        time: "1m ago",
-      },
-      {
-        id: 2,
-        mention: "@Dane",
-        text: "Client asked about a timetable ready for tomorrow.",
-        time: "1m ago",
-      },
-    ],
-    commentInput: "",
+    Mark: {
+      calendar: [],
+      tasks: [],
+      decisions: [],
+      comments: [],
+    },
+    Dane: {
+      calendar: [],
+      tasks: [],
+      decisions: [],
+      comments: [],
+    },
   };
 }
 
-export default function MeetingsPage() {
-  const [data, setData] = useState(seedData);
+function createWeeklyTemplate() {
+  return {
+    priorities: ["Win the week", "Stay disciplined", "Stay focused"],
+    calendarReview: [],
+    tasks: [],
+    decisions: [],
+  };
+}
 
-  const [draggedSectionIndex, setDraggedSectionIndex] = useState(null);
-  const [draggedSectionRow, setDraggedSectionRow] = useState({
-    sectionId: null,
-    rowIndex: null,
+function reorderList(list, fromIndex, toIndex) {
+  const updated = [...list];
+  const [moved] = updated.splice(fromIndex, 1);
+  updated.splice(toIndex, 0, moved);
+  return updated;
+}
+
+export default function MeetingsPage() {
+  const [view, setView] = useState("weekly");
+  const [dailyPerson, setDailyPerson] = useState("Mark");
+  const [selectedDate] = useState(new Date());
+
+  const [data, setData] = useState({
+    weekly: createWeeklyTemplate(),
+    dailyByDate: {
+      [formatDateKey(new Date())]: createDailyTemplate(),
+    },
   });
-  const [draggedDailyRowIndex, setDraggedDailyRowIndex] = useState(null);
-  const [draggedTodayTaskIndex, setDraggedTodayTaskIndex] = useState(null);
+
+  const [dragState, setDragState] = useState(null);
+
+  const [newPriority, setNewPriority] = useState("");
+  const [newWeeklyCalendar, setNewWeeklyCalendar] = useState("");
+  const [newWeeklyTask, setNewWeeklyTask] = useState("");
+  const [newWeeklyTaskOwner, setNewWeeklyTaskOwner] = useState("Mark");
+  const [newWeeklyTaskPriority, setNewWeeklyTaskPriority] = useState("Medium");
+  const [newWeeklyDecision, setNewWeeklyDecision] = useState("");
+
+  const [newDailyCalendar, setNewDailyCalendar] = useState("");
+  const [newDailyTask, setNewDailyTask] = useState("");
+  const [newDailyTaskPriority, setNewDailyTaskPriority] = useState("Medium");
+  const [newDailyDecision, setNewDailyDecision] = useState("");
+  const [newComment, setNewComment] = useState("");
+
+  const dateKey = useMemo(() => formatDateKey(selectedDate), [selectedDate]);
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -156,775 +83,797 @@ export default function MeetingsPage() {
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(
+      WEEKLY_PRIORITIES_KEY,
+      JSON.stringify(data.weekly.priorities)
+    );
   }, [data]);
 
-  const tabs = ["Weekly Alignment", "Daily Huddle"];
-  const owners = ["Mark", "Dane", "Nikita"];
+  useEffect(() => {
+    if (!data.dailyByDate[dateKey]) {
+      setData((prev) => ({
+        ...prev,
+        dailyByDate: {
+          ...prev.dailyByDate,
+          [dateKey]: createDailyTemplate(),
+        },
+      }));
+    }
+  }, [dateKey, data.dailyByDate]);
 
-  function moveItem(list, fromIndex, toIndex) {
-    if (fromIndex === null || toIndex === null || fromIndex === toIndex) return list;
-    const updated = [...list];
-    const dragged = updated[fromIndex];
-    updated.splice(fromIndex, 1);
-    updated.splice(toIndex, 0, dragged);
-    return updated;
+  const activeDaily = useMemo(() => {
+    return data.dailyByDate[dateKey] || createDailyTemplate();
+  }, [data.dailyByDate, dateKey]);
+
+  const personData = activeDaily[dailyPerson];
+
+  function updateWeekly(nextWeekly) {
+    setData((prev) => ({ ...prev, weekly: nextWeekly }));
   }
 
-  function setActiveTab(tab) {
-    setData((prev) => ({ ...prev, activeTab: tab }));
-  }
-
-  function setSelectedOwner(owner) {
-    setData((prev) => ({ ...prev, selectedOwner: owner }));
-  }
-
-  function handleSectionDragStart(index) {
-    setDraggedSectionIndex(index);
-  }
-
-  function handleSectionDrop(dropIndex) {
-    if (draggedSectionIndex === null || draggedSectionIndex === dropIndex) return;
+  function updateDailyPerson(nextPersonData) {
     setData((prev) => ({
       ...prev,
-      sections: moveItem(prev.sections, draggedSectionIndex, dropIndex),
+      dailyByDate: {
+        ...prev.dailyByDate,
+        [dateKey]: {
+          ...(prev.dailyByDate[dateKey] || createDailyTemplate()),
+          [dailyPerson]: nextPersonData,
+        },
+      },
     }));
-    setDraggedSectionIndex(null);
   }
 
-  function handleSectionRowDragStart(sectionId, rowIndex) {
-    setDraggedSectionRow({ sectionId, rowIndex });
+  function handleDragStart(sectionKey, index) {
+    setDragState({ sectionKey, index });
   }
 
-  function handleSectionRowDrop(sectionId, dropIndex) {
-    if (
-      draggedSectionRow.sectionId === null ||
-      draggedSectionRow.rowIndex === null ||
-      draggedSectionRow.sectionId !== sectionId
-    ) {
-      return;
+  function handleDrop(sectionKey, dropIndex) {
+    if (!dragState) return;
+    if (dragState.sectionKey !== sectionKey) return;
+
+    if (view === "weekly") {
+      const current = data.weekly[sectionKey];
+      const updated = reorderList(current, dragState.index, dropIndex);
+      updateWeekly({
+        ...data.weekly,
+        [sectionKey]: updated,
+      });
+    } else {
+      const current = personData[sectionKey];
+      const updated = reorderList(current, dragState.index, dropIndex);
+      updateDailyPerson({
+        ...personData,
+        [sectionKey]: updated,
+      });
     }
 
-    setData((prev) => ({
-      ...prev,
-      sections: prev.sections.map((section) =>
-        section.id === sectionId
-          ? {
-              ...section,
-              items: moveItem(section.items, draggedSectionRow.rowIndex, dropIndex),
-            }
-          : section
-      ),
-    }));
-
-    setDraggedSectionRow({ sectionId: null, rowIndex: null });
+    setDragState(null);
   }
 
-  function handleDailyRowDragStart(index) {
-    setDraggedDailyRowIndex(index);
+  function addPriority() {
+    if (!newPriority.trim()) return;
+    updateWeekly({
+      ...data.weekly,
+      priorities: [...data.weekly.priorities, newPriority.trim()],
+    });
+    setNewPriority("");
   }
 
-  function handleDailyRowDrop(dropIndex) {
-    if (draggedDailyRowIndex === null || draggedDailyRowIndex === dropIndex) return;
-    setData((prev) => ({
-      ...prev,
-      dailyCalendar: moveItem(prev.dailyCalendar, draggedDailyRowIndex, dropIndex),
-    }));
-    setDraggedDailyRowIndex(null);
+  function removePriority(index) {
+    updateWeekly({
+      ...data.weekly,
+      priorities: data.weekly.priorities.filter((_, i) => i !== index),
+    });
   }
 
-  function handleTodayTaskDragStart(index) {
-    setDraggedTodayTaskIndex(index);
+  function addWeeklyCalendar() {
+    if (!newWeeklyCalendar.trim()) return;
+    updateWeekly({
+      ...data.weekly,
+      calendarReview: [
+        ...data.weekly.calendarReview,
+        { id: Date.now(), text: newWeeklyCalendar.trim(), done: false },
+      ],
+    });
+    setNewWeeklyCalendar("");
   }
 
-  function handleTodayTaskDrop(dropIndex) {
-    if (draggedTodayTaskIndex === null || draggedTodayTaskIndex === dropIndex) return;
-    setData((prev) => ({
-      ...prev,
-      todayTasks: moveItem(prev.todayTasks, draggedTodayTaskIndex, dropIndex),
-    }));
-    setDraggedTodayTaskIndex(null);
+  function toggleWeeklyCalendar(index) {
+    const updated = [...data.weekly.calendarReview];
+    updated[index].done = !updated[index].done;
+    updateWeekly({ ...data.weekly, calendarReview: updated });
   }
 
-  function updateSectionNewItemText(sectionId, value) {
-    setData((prev) => ({
-      ...prev,
-      sections: prev.sections.map((section) =>
-        section.id === sectionId ? { ...section, newItemText: value } : section
-      ),
-    }));
+  function removeWeeklyCalendar(index) {
+    updateWeekly({
+      ...data.weekly,
+      calendarReview: data.weekly.calendarReview.filter((_, i) => i !== index),
+    });
   }
 
-  function addItemToSection(sectionId) {
-    setData((prev) => ({
-      ...prev,
-      sections: prev.sections.map((section) => {
-        if (section.id !== sectionId) return section;
-        if (!section.newItemText.trim()) return section;
-
-        const text = section.newItemText.trim();
-        let newItem;
-
-        if (section.type === "priority") {
-          newItem = { id: Date.now(), text, checked: false };
-        } else if (section.type === "calendar") {
-          newItem = {
-            id: Date.now(),
-            time: "9:00am",
-            text,
-            meta: "30m",
-            checked: false,
-          };
-        } else {
-          newItem = {
-            id: Date.now(),
-            text,
-            priority: "Medium",
-            owner: prev.selectedOwner,
-            checked: false,
-          };
-        }
-
-        return {
-          ...section,
-          items: [...section.items, newItem],
-          newItemText: "",
-        };
-      }),
-    }));
-  }
-
-  function deleteSectionItem(sectionId, itemId) {
-    setData((prev) => ({
-      ...prev,
-      sections: prev.sections.map((section) =>
-        section.id === sectionId
-          ? {
-              ...section,
-              items: section.items.filter((item) => item.id !== itemId),
-            }
-          : section
-      ),
-    }));
-  }
-
-  function toggleSectionItemChecked(sectionId, itemId) {
-    setData((prev) => ({
-      ...prev,
-      sections: prev.sections.map((section) =>
-        section.id === sectionId
-          ? {
-              ...section,
-              items: section.items.map((item) =>
-                item.id === itemId ? { ...item, checked: !item.checked } : item
-              ),
-            }
-          : section
-      ),
-    }));
-  }
-
-  function updateSectionItemField(sectionId, itemId, field, value) {
-    setData((prev) => ({
-      ...prev,
-      sections: prev.sections.map((section) =>
-        section.id === sectionId
-          ? {
-              ...section,
-              items: section.items.map((item) =>
-                item.id === itemId ? { ...item, [field]: value } : item
-              ),
-            }
-          : section
-      ),
-    }));
-  }
-
-  function addDailyCalendarItem() {
-    setData((prev) => ({
-      ...prev,
-      dailyCalendar: [
-        ...prev.dailyCalendar,
+  function addWeeklyTask() {
+    if (!newWeeklyTask.trim()) return;
+    updateWeekly({
+      ...data.weekly,
+      tasks: [
+        ...data.weekly.tasks,
         {
           id: Date.now(),
-          duration: "30m",
-          text: "New meeting",
-          time: "9:00am",
-          checked: false,
+          text: newWeeklyTask.trim(),
+          owner: newWeeklyTaskOwner,
+          priority: newWeeklyTaskPriority,
+          done: false,
         },
       ],
-    }));
+    });
+    setNewWeeklyTask("");
+    setNewWeeklyTaskOwner("Mark");
+    setNewWeeklyTaskPriority("Medium");
   }
 
-  function deleteDailyCalendarItem(id) {
-    setData((prev) => ({
-      ...prev,
-      dailyCalendar: prev.dailyCalendar.filter((item) => item.id !== id),
-    }));
+  function toggleWeeklyTask(index) {
+    const updated = [...data.weekly.tasks];
+    updated[index].done = !updated[index].done;
+    updateWeekly({ ...data.weekly, tasks: updated });
   }
 
-  function toggleDailyCalendarItem(id) {
-    setData((prev) => ({
-      ...prev,
-      dailyCalendar: prev.dailyCalendar.map((item) =>
-        item.id === id ? { ...item, checked: !item.checked } : item
-      ),
-    }));
+  function removeWeeklyTask(index) {
+    updateWeekly({
+      ...data.weekly,
+      tasks: data.weekly.tasks.filter((_, i) => i !== index),
+    });
   }
 
-  function updateDailyCalendarField(id, field, value) {
-    setData((prev) => ({
-      ...prev,
-      dailyCalendar: prev.dailyCalendar.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
-      ),
-    }));
+  function addWeeklyDecision() {
+    if (!newWeeklyDecision.trim()) return;
+    updateWeekly({
+      ...data.weekly,
+      decisions: [
+        ...data.weekly.decisions,
+        { id: Date.now(), text: newWeeklyDecision.trim(), done: false },
+      ],
+    });
+    setNewWeeklyDecision("");
   }
 
-  function addTodayTask() {
-    setData((prev) => ({
-      ...prev,
-      todayTasks: [
-        ...prev.todayTasks,
+  function toggleWeeklyDecision(index) {
+    const updated = [...data.weekly.decisions];
+    updated[index].done = !updated[index].done;
+    updateWeekly({ ...data.weekly, decisions: updated });
+  }
+
+  function removeWeeklyDecision(index) {
+    updateWeekly({
+      ...data.weekly,
+      decisions: data.weekly.decisions.filter((_, i) => i !== index),
+    });
+  }
+
+  function addDailyCalendar() {
+    if (!newDailyCalendar.trim()) return;
+    updateDailyPerson({
+      ...personData,
+      calendar: [
+        ...personData.calendar,
+        { id: Date.now(), text: newDailyCalendar.trim(), done: false },
+      ],
+    });
+    setNewDailyCalendar("");
+  }
+
+  function toggleDailyCalendar(index) {
+    const updated = [...personData.calendar];
+    updated[index].done = !updated[index].done;
+    updateDailyPerson({ ...personData, calendar: updated });
+  }
+
+  function removeDailyCalendar(index) {
+    updateDailyPerson({
+      ...personData,
+      calendar: personData.calendar.filter((_, i) => i !== index),
+    });
+  }
+
+  function addDailyTask() {
+    if (!newDailyTask.trim()) return;
+    updateDailyPerson({
+      ...personData,
+      tasks: [
+        ...personData.tasks,
         {
           id: Date.now(),
-          text: "New task",
-          priority: "Medium",
-          owner: prev.selectedOwner,
-          checked: false,
+          text: newDailyTask.trim(),
+          owner: dailyPerson,
+          priority: newDailyTaskPriority,
+          done: false,
         },
       ],
-    }));
+    });
+    setNewDailyTask("");
+    setNewDailyTaskPriority("Medium");
   }
 
-  function deleteTodayTask(id) {
-    setData((prev) => ({
-      ...prev,
-      todayTasks: prev.todayTasks.filter((item) => item.id !== id),
-    }));
+  function toggleDailyTask(index) {
+    const updated = [...personData.tasks];
+    updated[index].done = !updated[index].done;
+    updateDailyPerson({ ...personData, tasks: updated });
   }
 
-  function toggleTodayTask(id) {
-    setData((prev) => ({
-      ...prev,
-      todayTasks: prev.todayTasks.map((item) =>
-        item.id === id ? { ...item, checked: !item.checked } : item
-      ),
-    }));
+  function removeDailyTask(index) {
+    updateDailyPerson({
+      ...personData,
+      tasks: personData.tasks.filter((_, i) => i !== index),
+    });
   }
 
-  function updateTodayTaskField(id, field, value) {
-    setData((prev) => ({
-      ...prev,
-      todayTasks: prev.todayTasks.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
-      ),
-    }));
+  function addDailyDecision() {
+    if (!newDailyDecision.trim()) return;
+    updateDailyPerson({
+      ...personData,
+      decisions: [
+        ...personData.decisions,
+        { id: Date.now(), text: newDailyDecision.trim(), done: false },
+      ],
+    });
+    setNewDailyDecision("");
+  }
+
+  function toggleDailyDecision(index) {
+    const updated = [...personData.decisions];
+    updated[index].done = !updated[index].done;
+    updateDailyPerson({ ...personData, decisions: updated });
+  }
+
+  function removeDailyDecision(index) {
+    updateDailyPerson({
+      ...personData,
+      decisions: personData.decisions.filter((_, i) => i !== index),
+    });
   }
 
   function addComment() {
-    if (!data.commentInput.trim()) return;
-
-    setData((prev) => ({
-      ...prev,
+    if (!newComment.trim()) return;
+    updateDailyPerson({
+      ...personData,
       comments: [
-        ...prev.comments,
+        ...personData.comments,
         {
           id: Date.now(),
-          mention: prev.selectedOwner === "Mark" ? "@Mark" : prev.selectedOwner === "Dane" ? "@Dane" : "@Nikita",
-          text: prev.commentInput.trim(),
+          author: dailyPerson,
+          text: newComment.trim(),
           time: "now",
         },
       ],
-      commentInput: "",
-    }));
+    });
+    setNewComment("");
   }
 
-  function getPriorityStyle(priority) {
+  function priorityStyle(priority) {
     if (priority === "High") {
-      return { background: "#FEE2E2", color: "#B91C1C" };
+      return { background: "#D88470", color: "#FFFFFF" };
     }
-    if (priority === "Medium") {
-      return { background: "#FEF3C7", color: "#92400E" };
+    if (priority === "Low") {
+      return { background: "#8FAA8A", color: "#FFFFFF" };
     }
-    return { background: "#DCFCE7", color: "#166534" };
+    return { background: "#E9D4A7", color: "#6B4E16" };
   }
 
-  function renderCheck(checked, onClick) {
+  function DragRow({ item, index, sectionKey, onToggle, onRemove, right }) {
     return (
-      <button
-        type="button"
-        onClick={onClick}
-        style={{
-          ...styles.checkButton,
-          ...(checked ? styles.checkButtonDone : {}),
-        }}
-      >
-        {checked ? "✓" : ""}
-      </button>
-    );
-  }
-
-  function renderDragHandle() {
-    return <span style={styles.dragHandle}>⋮⋮</span>;
-  }
-
-  function renderSectionRows(section) {
-    if (section.type === "priority") {
-      return section.items.map((item, index) => (
-        <div
-          key={item.id}
-          draggable
-          onDragStart={() => handleSectionRowDragStart(section.id, index)}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={() => handleSectionRowDrop(section.id, index)}
-          onDragEnd={() => setDraggedSectionRow({ sectionId: null, rowIndex: null })}
-          style={{
-            ...styles.itemRow,
-            ...(draggedSectionRow.sectionId === section.id &&
-            draggedSectionRow.rowIndex === index
-              ? styles.draggingRow
-              : {}),
-          }}
-        >
-          <div style={styles.itemMain}>
-            <div style={styles.meetingRowLeft}>
-              {renderDragHandle()}
-              {renderCheck(item.checked, () => toggleSectionItemChecked(section.id, item.id))}
-              <input
-                value={item.text}
-                onChange={(e) =>
-                  updateSectionItemField(section.id, item.id, "text", e.target.value)
-                }
-                style={{
-                  ...styles.inlineEdit,
-                  ...(item.checked ? styles.doneText : {}),
-                }}
-              />
-            </div>
-          </div>
-
-          <div style={styles.actions}>
-            <button
-              style={styles.deleteBtn}
-              onClick={() => deleteSectionItem(section.id, item.id)}
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      ));
-    }
-
-    if (section.type === "calendar") {
-      return section.items.map((item, index) => (
-        <div
-          key={item.id}
-          draggable
-          onDragStart={() => handleSectionRowDragStart(section.id, index)}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={() => handleSectionRowDrop(section.id, index)}
-          onDragEnd={() => setDraggedSectionRow({ sectionId: null, rowIndex: null })}
-          style={{
-            ...styles.itemRow,
-            ...(draggedSectionRow.sectionId === section.id &&
-            draggedSectionRow.rowIndex === index
-              ? styles.draggingRow
-              : {}),
-          }}
-        >
-          <div style={styles.itemMain}>
-            <div style={styles.meetingRowLeft}>
-              {renderDragHandle()}
-              {renderCheck(item.checked, () => toggleSectionItemChecked(section.id, item.id))}
-
-              <input
-                value={item.time}
-                onChange={(e) =>
-                  updateSectionItemField(section.id, item.id, "time", e.target.value)
-                }
-                style={styles.timeInline}
-              />
-
-              <input
-                value={item.text}
-                onChange={(e) =>
-                  updateSectionItemField(section.id, item.id, "text", e.target.value)
-                }
-                style={{
-                  ...styles.inlineEdit,
-                  ...(item.checked ? styles.doneText : {}),
-                }}
-              />
-            </div>
-          </div>
-
-          <div style={styles.actionsRow}>
-            <input
-              value={item.meta}
-              onChange={(e) =>
-                updateSectionItemField(section.id, item.id, "meta", e.target.value)
-              }
-              style={styles.miniInput}
-            />
-            <button
-              style={styles.deleteBtn}
-              onClick={() => deleteSectionItem(section.id, item.id)}
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      ));
-    }
-
-    return section.items.map((item, index) => (
       <div
-        key={item.id}
         draggable
-        onDragStart={() => handleSectionRowDragStart(section.id, index)}
+        onDragStart={() => handleDragStart(sectionKey, index)}
         onDragOver={(e) => e.preventDefault()}
-        onDrop={() => handleSectionRowDrop(section.id, index)}
-        onDragEnd={() => setDraggedSectionRow({ sectionId: null, rowIndex: null })}
+        onDrop={() => handleDrop(sectionKey, index)}
         style={{
-          ...styles.itemRow,
-          ...(draggedSectionRow.sectionId === section.id &&
-          draggedSectionRow.rowIndex === index
-            ? styles.draggingRow
-            : {}),
+          ...styles.row,
+          opacity: item.done ? 0.55 : 1,
         }}
       >
-        <div style={styles.itemMain}>
-          <div style={styles.meetingRowLeft}>
-            {renderDragHandle()}
-            {renderCheck(item.checked, () => toggleSectionItemChecked(section.id, item.id))}
-            <input
-              value={item.text}
-              onChange={(e) =>
-                updateSectionItemField(section.id, item.id, "text", e.target.value)
-              }
-              style={{
-                ...styles.inlineEdit,
-                ...(item.checked ? styles.doneText : {}),
-              }}
-            />
-          </div>
+        <div style={styles.rowLeft} onClick={onToggle}>
+          <span style={styles.checkbox}>{item.done ? "✓" : ""}</span>
+          <span style={styles.rowText}>{item.text}</span>
         </div>
 
-        <div style={styles.actionsRow}>
-          <select
-            value={item.priority}
-            onChange={(e) =>
-              updateSectionItemField(section.id, item.id, "priority", e.target.value)
-            }
-            style={{
-              ...styles.smallSelect,
-              ...getPriorityStyle(item.priority),
-            }}
-          >
-            <option>High</option>
-            <option>Medium</option>
-            <option>Low</option>
-          </select>
-
-          <select
-            value={item.owner}
-            onChange={(e) =>
-              updateSectionItemField(section.id, item.id, "owner", e.target.value)
-            }
-            style={styles.smallSelectNeutral}
-          >
-            {owners.map((owner) => (
-              <option key={owner}>{owner}</option>
-            ))}
-          </select>
-
-          <button
-            style={styles.deleteBtn}
-            onClick={() => deleteSectionItem(section.id, item.id)}
-          >
+        <div style={styles.rowRight}>
+          {right}
+          <button style={styles.deleteBtn} onClick={onRemove}>
             ×
           </button>
         </div>
       </div>
-    ));
+    );
   }
 
   return (
     <div style={styles.page}>
       <div style={styles.header}>
+        <div style={styles.icon}>🗂</div>
         <div>
-          <div style={styles.kicker}>Meetings</div>
-          <h1 style={styles.title}>Weekly alignment, calendars, and task flow</h1>
+          <h1 style={styles.title}>Meetings</h1>
+          <div style={styles.subtitle}>Organize weekly and daily meetings</div>
         </div>
       </div>
 
-      <div style={styles.layout}>
-        <div style={styles.panel}>
-          <div style={styles.panelTop}>
-            <div style={styles.rightToggle}>
-              {tabs.map((tab) => (
-                <button
-                  key={tab}
-                  style={{
-                    ...styles.tabBtn,
-                    ...(data.activeTab === tab ? styles.tabBtnActive : {}),
-                  }}
-                  onClick={() => setActiveTab(tab)}
+      <div style={styles.divider} />
+
+      <div style={styles.centerToggleWrap}>
+        <div style={styles.centerToggle}>
+          <button
+            style={{
+              ...styles.centerToggleBtn,
+              ...(view === "weekly" ? styles.centerToggleBtnActive : {}),
+            }}
+            onClick={() => setView("weekly")}
+          >
+            Weekly Alignment
+          </button>
+          <button
+            style={{
+              ...styles.centerToggleBtn,
+              ...(view === "daily" ? styles.centerToggleBtnActive : {}),
+            }}
+            onClick={() => setView("daily")}
+          >
+            Daily Huddle
+          </button>
+        </div>
+      </div>
+
+      {view === "weekly" ? (
+        <div style={styles.twoCol}>
+          <div style={styles.leftCol}>
+            <div style={styles.card}>
+              <div style={styles.cardTitle}>Top Shared Priorities</div>
+
+              {data.weekly.priorities.map((item, index) => (
+                <div
+                  key={`${item}-${index}`}
+                  draggable
+                  onDragStart={() => handleDragStart("priorities", index)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => handleDrop("priorities", index)}
+                  style={styles.row}
                 >
-                  {tab}
-                </button>
-              ))}
-            </div>
-          </div>
+                  <div style={styles.rowLeft}>
+                    <span style={styles.checkbox}>✓</span>
+                    <span style={styles.rowText}>{item}</span>
+                  </div>
 
-          {data.sections.map((section, sectionIndex) => (
-            <div
-              key={section.id}
-              draggable
-              onDragStart={() => handleSectionDragStart(sectionIndex)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => handleSectionDrop(sectionIndex)}
-              onDragEnd={() => setDraggedSectionIndex(null)}
-              style={{
-                ...styles.sectionCard,
-                ...(draggedSectionIndex === sectionIndex ? styles.draggingSection : {}),
-              }}
-            >
-              <div style={styles.sectionHeader}>
-                <div style={styles.panelTitle}>{section.title}</div>
-                <div style={styles.sectionHeaderRight}>
-                  <span style={styles.dragHandle}>⋮⋮</span>
+                  <div style={styles.rowRight}>
+                    <button
+                      style={styles.deleteBtn}
+                      onClick={() => removePriority(index)}
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ))}
 
-              <div style={styles.list}>{renderSectionRows(section)}</div>
-
-              <div style={styles.quickAddRow}>
+              <div style={styles.inputLine}>
+                <span style={styles.plus}>＋</span>
                 <input
-                  value={section.newItemText}
-                  onChange={(e) => updateSectionNewItemText(section.id, e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") addItemToSection(section.id);
-                  }}
-                  placeholder={
-                    section.type === "priority"
-                      ? "Add priority..."
-                      : section.type === "calendar"
-                      ? "Add meeting..."
-                      : "Add task..."
-                  }
                   style={styles.inlineInput}
+                  value={newPriority}
+                  onChange={(e) => setNewPriority(e.target.value)}
+                  placeholder="Add new priority..."
                 />
-                <button style={styles.addBtn} onClick={() => addItemToSection(section.id)}>
+              </div>
+              <button style={styles.hiddenActionBtn} onClick={addPriority}>
+                Add
+              </button>
+            </div>
+
+            <div style={styles.card}>
+              <div style={styles.cardTitle}>Weekly Calendar Review</div>
+
+              {data.weekly.calendarReview.map((item, index) => (
+                <DragRow
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  sectionKey="calendarReview"
+                  onToggle={() => toggleWeeklyCalendar(index)}
+                  onRemove={() => removeWeeklyCalendar(index)}
+                />
+              ))}
+
+              <div style={styles.inputLine}>
+                <span style={styles.plus}>＋</span>
+                <input
+                  style={styles.inlineInput}
+                  value={newWeeklyCalendar}
+                  onChange={(e) => setNewWeeklyCalendar(e.target.value)}
+                  placeholder="Add new item..."
+                />
+              </div>
+              <button style={styles.hiddenActionBtn} onClick={addWeeklyCalendar}>
+                Add
+              </button>
+            </div>
+
+            <div style={styles.card}>
+              <div style={styles.cardTitle}>Tasks for the Week</div>
+
+              {data.weekly.tasks.map((item, index) => (
+                <DragRow
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  sectionKey="tasks"
+                  onToggle={() => toggleWeeklyTask(index)}
+                  onRemove={() => removeWeeklyTask(index)}
+                  right={
+                    <>
+                      <span
+                        style={{
+                          ...styles.priorityPill,
+                          ...priorityStyle(item.priority),
+                        }}
+                      >
+                        {item.priority}
+                      </span>
+                      <span style={styles.ownerPill}>{item.owner}</span>
+                    </>
+                  }
+                />
+              ))}
+
+              <div style={styles.taskEntryRow}>
+                <input
+                  style={{ ...styles.inlineInput, flex: 1 }}
+                  value={newWeeklyTask}
+                  onChange={(e) => setNewWeeklyTask(e.target.value)}
+                  placeholder="Add new task..."
+                />
+                <select
+                  style={styles.select}
+                  value={newWeeklyTaskPriority}
+                  onChange={(e) => setNewWeeklyTaskPriority(e.target.value)}
+                >
+                  <option>High</option>
+                  <option>Medium</option>
+                  <option>Low</option>
+                </select>
+                <select
+                  style={styles.select}
+                  value={newWeeklyTaskOwner}
+                  onChange={(e) => setNewWeeklyTaskOwner(e.target.value)}
+                >
+                  <option>Mark</option>
+                  <option>Dane</option>
+                </select>
+                <button style={styles.addBtn} onClick={addWeeklyTask}>
                   Add
                 </button>
               </div>
             </div>
-          ))}
-        </div>
 
-        <div style={styles.panel}>
-          <div style={styles.panelTop}>
-            <div style={styles.ownerToggle}>
-              {owners.map((owner) => (
-                <button
-                  key={owner}
-                  style={{
-                    ...styles.ownerToggleBtn,
-                    ...(data.selectedOwner === owner ? styles.ownerToggleBtnActive : {}),
-                  }}
-                  onClick={() => setSelectedOwner(owner)}
-                >
-                  {owner}
-                </button>
+            <div style={styles.card}>
+              <div style={styles.cardTitle}>Decisions Needed</div>
+
+              {data.weekly.decisions.map((item, index) => (
+                <DragRow
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  sectionKey="decisions"
+                  onToggle={() => toggleWeeklyDecision(index)}
+                  onRemove={() => removeWeeklyDecision(index)}
+                />
               ))}
-            </div>
 
-            <div style={styles.timeStub}>
-              {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            </div>
-          </div>
-
-          <div style={styles.panelTitle}>Daily Calendar</div>
-
-          <div style={styles.list}>
-            {data.dailyCalendar.map((item, index) => (
-              <div
-                key={item.id}
-                draggable
-                onDragStart={() => handleDailyRowDragStart(index)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={() => handleDailyRowDrop(index)}
-                onDragEnd={() => setDraggedDailyRowIndex(null)}
-                style={{
-                  ...styles.itemRow,
-                  ...(draggedDailyRowIndex === index ? styles.draggingRow : {}),
-                }}
-              >
-                <div style={styles.itemMain}>
-                  <div style={styles.meetingRowLeft}>
-                    {renderDragHandle()}
-                    {renderCheck(item.checked, () => toggleDailyCalendarItem(item.id))}
-                    <input
-                      value={item.duration}
-                      onChange={(e) =>
-                        updateDailyCalendarField(item.id, "duration", e.target.value)
-                      }
-                      style={styles.durationInline}
-                    />
-                    <input
-                      value={item.text}
-                      onChange={(e) =>
-                        updateDailyCalendarField(item.id, "text", e.target.value)
-                      }
-                      style={{
-                        ...styles.inlineEdit,
-                        ...(item.checked ? styles.doneText : {}),
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div style={styles.actionsRow}>
-                  <input
-                    value={item.time}
-                    onChange={(e) =>
-                      updateDailyCalendarField(item.id, "time", e.target.value)
-                    }
-                    style={styles.timeInline}
-                  />
-                  <button
-                    style={styles.deleteBtn}
-                    onClick={() => deleteDailyCalendarItem(item.id)}
-                  >
-                    ×
-                  </button>
-                </div>
+              <div style={styles.inputLine}>
+                <span style={styles.plus}>＋</span>
+                <input
+                  style={styles.inlineInput}
+                  value={newWeeklyDecision}
+                  onChange={(e) => setNewWeeklyDecision(e.target.value)}
+                  placeholder="Add new decision..."
+                />
               </div>
-            ))}
-
-            <div style={styles.quickAddRow}>
-              <button style={styles.addBtn} onClick={addDailyCalendarItem}>
-                Add item
-              </button>
-            </div>
-          </div>
-
-          <div style={{ ...styles.panelTitle, marginTop: 20 }}>Today’s Tasks</div>
-
-          <div style={styles.list}>
-            {data.todayTasks.map((item, index) => (
-              <div
-                key={item.id}
-                draggable
-                onDragStart={() => handleTodayTaskDragStart(index)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={() => handleTodayTaskDrop(index)}
-                onDragEnd={() => setDraggedTodayTaskIndex(null)}
-                style={{
-                  ...styles.itemRow,
-                  ...(draggedTodayTaskIndex === index ? styles.draggingRow : {}),
-                }}
-              >
-                <div style={styles.itemMain}>
-                  <div style={styles.meetingRowLeft}>
-                    {renderDragHandle()}
-                    {renderCheck(item.checked, () => toggleTodayTask(item.id))}
-                    <input
-                      value={item.text}
-                      onChange={(e) =>
-                        updateTodayTaskField(item.id, "text", e.target.value)
-                      }
-                      style={{
-                        ...styles.inlineEdit,
-                        ...(item.checked ? styles.doneText : {}),
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div style={styles.actionsRow}>
-                  <select
-                    value={item.priority}
-                    onChange={(e) =>
-                      updateTodayTaskField(item.id, "priority", e.target.value)
-                    }
-                    style={{
-                      ...styles.smallSelect,
-                      ...getPriorityStyle(item.priority),
-                    }}
-                  >
-                    <option>High</option>
-                    <option>Medium</option>
-                    <option>Low</option>
-                  </select>
-
-                  <select
-                    value={item.owner}
-                    onChange={(e) =>
-                      updateTodayTaskField(item.id, "owner", e.target.value)
-                    }
-                    style={styles.smallSelectNeutral}
-                  >
-                    {owners.map((owner) => (
-                      <option key={owner}>{owner}</option>
-                    ))}
-                  </select>
-
-                  <button
-                    style={styles.deleteBtn}
-                    onClick={() => deleteTodayTask(item.id)}
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            <div style={styles.quickAddRow}>
-              <button style={styles.addBtn} onClick={addTodayTask}>
-                Add task
-              </button>
-            </div>
-          </div>
-
-          <div style={{ ...styles.panelTitle, marginTop: 20 }}>Comments</div>
-
-          <div style={styles.list}>
-            {data.comments.map((item) => (
-              <div key={item.id} style={styles.commentRow}>
-                <div style={styles.avatar}>
-                  {item.mention.replace("@", "").charAt(0)}
-                </div>
-
-                <div style={styles.itemMain}>
-                  <div style={styles.itemPreview}>
-                    <span style={styles.commentMention}>{item.mention}</span> {item.text}
-                  </div>
-                  <div style={styles.itemTime}>{item.time}</div>
-                </div>
-              </div>
-            ))}
-
-            <div style={styles.quickAddRow}>
-              <input
-                value={data.commentInput}
-                onChange={(e) =>
-                  setData((prev) => ({ ...prev, commentInput: e.target.value }))
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") addComment();
-                }}
-                placeholder="Write a comment..."
-                style={styles.inlineInput}
-              />
-              <button style={styles.addBtn} onClick={addComment}>
+              <button style={styles.hiddenActionBtn} onClick={addWeeklyDecision}>
                 Add
               </button>
             </div>
           </div>
+
+          <div style={styles.rightCol}>
+            <div style={styles.sideTopCard}>
+              <div style={styles.personToggle}>
+                <button
+                  style={{
+                    ...styles.personBtn,
+                    ...(dailyPerson === "Mark" ? styles.personBtnActive : {}),
+                  }}
+                  onClick={() => setDailyPerson("Mark")}
+                >
+                  Mark
+                </button>
+                <button
+                  style={{
+                    ...styles.personBtn,
+                    ...(dailyPerson === "Dane" ? styles.personBtnActive : {}),
+                  }}
+                  onClick={() => setDailyPerson("Dane")}
+                >
+                  Dane
+                </button>
+              </div>
+
+              <div style={styles.timerBox}>{formatPrettyDate(selectedDate)}</div>
+            </div>
+
+            <div style={styles.sideCard}>
+              <div style={styles.cardTitle}>Daily Calendar</div>
+
+              {personData.calendar.map((item, index) => (
+                <DragRow
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  sectionKey="calendar"
+                  onToggle={() => toggleDailyCalendar(index)}
+                  onRemove={() => removeDailyCalendar(index)}
+                />
+              ))}
+
+              <div style={styles.inputLine}>
+                <span style={styles.plus}>＋</span>
+                <input
+                  style={styles.inlineInput}
+                  value={newDailyCalendar}
+                  onChange={(e) => setNewDailyCalendar(e.target.value)}
+                  placeholder="Add new item..."
+                />
+              </div>
+              <button style={styles.hiddenActionBtn} onClick={addDailyCalendar}>
+                Add
+              </button>
+            </div>
+
+            <div style={styles.sideCard}>
+              <div style={styles.cardTitle}>Today's Tasks</div>
+
+              {personData.tasks.map((item, index) => (
+                <DragRow
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  sectionKey="tasks"
+                  onToggle={() => toggleDailyTask(index)}
+                  onRemove={() => removeDailyTask(index)}
+                  right={
+                    <>
+                      <span
+                        style={{
+                          ...styles.priorityPill,
+                          ...priorityStyle(item.priority),
+                        }}
+                      >
+                        {item.priority}
+                      </span>
+                      <span style={styles.ownerPill}>{item.owner}</span>
+                    </>
+                  }
+                />
+              ))}
+
+              <div style={styles.taskEntryRow}>
+                <input
+                  style={{ ...styles.inlineInput, flex: 1 }}
+                  value={newDailyTask}
+                  onChange={(e) => setNewDailyTask(e.target.value)}
+                  placeholder="Add new task..."
+                />
+                <select
+                  style={styles.select}
+                  value={newDailyTaskPriority}
+                  onChange={(e) => setNewDailyTaskPriority(e.target.value)}
+                >
+                  <option>High</option>
+                  <option>Medium</option>
+                  <option>Low</option>
+                </select>
+                <button style={styles.addBtn} onClick={addDailyTask}>
+                  Add
+                </button>
+              </div>
+            </div>
+
+            <div style={styles.sideCard}>
+              <div style={styles.cardTitle}>Decisions Needed</div>
+
+              {personData.decisions.map((item, index) => (
+                <DragRow
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  sectionKey="decisions"
+                  onToggle={() => toggleDailyDecision(index)}
+                  onRemove={() => removeDailyDecision(index)}
+                />
+              ))}
+
+              <div style={styles.inputLine}>
+                <span style={styles.plus}>＋</span>
+                <input
+                  style={styles.inlineInput}
+                  value={newDailyDecision}
+                  onChange={(e) => setNewDailyDecision(e.target.value)}
+                  placeholder="Add new decision..."
+                />
+              </div>
+              <button style={styles.hiddenActionBtn} onClick={addDailyDecision}>
+                Add
+              </button>
+            </div>
+
+            <div style={styles.sideCard}>
+              <div style={styles.commentList}>
+                {personData.comments.map((comment) => (
+                  <div key={comment.id} style={styles.commentRow}>
+                    <div style={styles.commentAvatar}>
+                      {comment.author.charAt(0)}
+                    </div>
+                    <div style={styles.commentBubble}>
+                      <span style={styles.commentAuthor}>@{comment.author}</span>{" "}
+                      {comment.text}
+                    </div>
+                    <div style={styles.commentTime}>{comment.time}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={styles.commentInputRow}>
+                <input
+                  style={styles.commentInput}
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Write a comment..."
+                />
+                <button style={styles.sendBtn} onClick={addComment}>
+                  ➤
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div style={styles.rightOnlyWrap}>
+          <div style={styles.sideTopCard}>
+            <div style={styles.personToggle}>
+              <button
+                style={{
+                  ...styles.personBtn,
+                  ...(dailyPerson === "Mark" ? styles.personBtnActive : {}),
+                }}
+                onClick={() => setDailyPerson("Mark")}
+              >
+                Mark
+              </button>
+              <button
+                style={{
+                  ...styles.personBtn,
+                  ...(dailyPerson === "Dane" ? styles.personBtnActive : {}),
+                }}
+                onClick={() => setDailyPerson("Dane")}
+              >
+                Dane
+              </button>
+            </div>
+
+            <div style={styles.timerBox}>{formatPrettyDate(selectedDate)}</div>
+          </div>
+
+          <div style={styles.sideCard}>
+            <div style={styles.cardTitle}>Daily Calendar</div>
+
+            {personData.calendar.map((item, index) => (
+              <DragRow
+                key={item.id}
+                item={item}
+                index={index}
+                sectionKey="calendar"
+                onToggle={() => toggleDailyCalendar(index)}
+                onRemove={() => removeDailyCalendar(index)}
+              />
+            ))}
+
+            <div style={styles.inputLine}>
+              <span style={styles.plus}>＋</span>
+              <input
+                style={styles.inlineInput}
+                value={newDailyCalendar}
+                onChange={(e) => setNewDailyCalendar(e.target.value)}
+                placeholder="Add new item..."
+              />
+            </div>
+            <button style={styles.hiddenActionBtn} onClick={addDailyCalendar}>
+              Add
+            </button>
+          </div>
+
+          <div style={styles.sideCard}>
+            <div style={styles.cardTitle}>Today's Tasks</div>
+
+            {personData.tasks.map((item, index) => (
+              <DragRow
+                key={item.id}
+                item={item}
+                index={index}
+                sectionKey="tasks"
+                onToggle={() => toggleDailyTask(index)}
+                onRemove={() => removeDailyTask(index)}
+                right={
+                  <>
+                    <span
+                      style={{
+                        ...styles.priorityPill,
+                        ...priorityStyle(item.priority),
+                      }}
+                    >
+                      {item.priority}
+                    </span>
+                    <span style={styles.ownerPill}>{item.owner}</span>
+                  </>
+                }
+              />
+            ))}
+
+            <div style={styles.taskEntryRow}>
+              <input
+                style={{ ...styles.inlineInput, flex: 1 }}
+                value={newDailyTask}
+                onChange={(e) => setNewDailyTask(e.target.value)}
+                placeholder="Add new task..."
+              />
+              <select
+                style={styles.select}
+                value={newDailyTaskPriority}
+                onChange={(e) => setNewDailyTaskPriority(e.target.value)}
+              >
+                <option>High</option>
+                <option>Medium</option>
+                <option>Low</option>
+              </select>
+              <button style={styles.addBtn} onClick={addDailyTask}>
+                Add
+              </button>
+            </div>
+          </div>
+
+          <div style={styles.sideCard}>
+            <div style={styles.cardTitle}>Decisions Needed</div>
+
+            {personData.decisions.map((item, index) => (
+              <DragRow
+                key={item.id}
+                item={item}
+                index={index}
+                sectionKey="decisions"
+                onToggle={() => toggleDailyDecision(index)}
+                onRemove={() => removeDailyDecision(index)}
+              />
+            ))}
+
+            <div style={styles.inputLine}>
+              <span style={styles.plus}>＋</span>
+              <input
+                style={styles.inlineInput}
+                value={newDailyDecision}
+                onChange={(e) => setNewDailyDecision(e.target.value)}
+                placeholder="Add new decision..."
+              />
+            </div>
+            <button style={styles.hiddenActionBtn} onClick={addDailyDecision}>
+              Add
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -933,21 +882,30 @@ const styles = {
   page: {
     background: "#F4F5F7",
     minHeight: "100vh",
-    padding: "36px 48px",
+    padding: "32px 44px",
     fontFamily: "Inter, Arial, sans-serif",
-    color: "#111827",
+    color: "#1F2937",
   },
 
   header: {
-    marginBottom: 20,
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 16,
+    marginBottom: 16,
   },
 
-  kicker: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginBottom: 6,
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
+  icon: {
+    width: 38,
+    height: 38,
+    borderRadius: 999,
+    background: "#7FA3D6",
+    color: "#FFFFFF",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 18,
+    flexShrink: 0,
+    marginTop: 4,
   },
 
   title: {
@@ -957,344 +915,334 @@ const styles = {
     fontWeight: 600,
   },
 
-  layout: {
-    display: "grid",
-    gridTemplateColumns: "1.4fr 1fr",
-    gap: 20,
-  },
-
-  panel: {
-    background: "#FFFFFF",
-    borderRadius: 18,
-    padding: 18,
-    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-  },
-
-  panelTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 16,
-    alignItems: "center",
-  },
-
-  panelTitle: {
-    fontSize: 16,
-    fontWeight: 600,
-    marginBottom: 14,
-  },
-
-  ownerToggle: {
-    display: "inline-flex",
-    background: "#ECEEF2",
-    borderRadius: 12,
-    padding: 4,
-    gap: 4,
-  },
-
-  ownerToggleBtn: {
-    border: "none",
-    background: "transparent",
-    padding: "8px 14px",
-    borderRadius: 10,
-    cursor: "pointer",
+  subtitle: {
+    marginTop: 8,
     fontSize: 14,
     color: "#6B7280",
   },
 
-  ownerToggleBtnActive: {
-    background: "#FFFFFF",
-    color: "#111827",
-    boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+  divider: {
+    height: 1,
+    background: "#E6E8EE",
+    marginBottom: 16,
   },
 
-  rightToggle: {
+  centerToggleWrap: {
+    display: "flex",
+    justifyContent: "center",
+    marginBottom: 18,
+  },
+
+  centerToggle: {
     display: "inline-flex",
     background: "#ECEEF2",
-    borderRadius: 12,
-    padding: 4,
-    gap: 4,
+    borderRadius: 10,
+    padding: 3,
+    gap: 3,
   },
 
-  tabBtn: {
-    border: "1px solid #E5E7EB",
-    background: "#F8FAFC",
-    padding: "8px 12px",
-    borderRadius: 12,
-    cursor: "pointer",
-    fontSize: 13,
-    color: "#6B7280",
-  },
-
-  tabBtnActive: {
-    background: "#FFFFFF",
-    color: "#111827",
-    boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-  },
-
-  sectionCard: {
-    border: "1px solid #F0F1F3",
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 14,
-    background: "#FFFFFF",
-  },
-
-  draggingSection: {
-    opacity: 0.55,
-    background: "#F9FAFB",
-  },
-
-  sectionHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-    marginBottom: 8,
-    cursor: "grab",
-  },
-
-  sectionHeaderRight: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-  },
-
-  quickAddRow: {
-    display: "flex",
-    gap: 8,
-    marginTop: 14,
-  },
-
-  inlineInput: {
-    flex: 1,
-    padding: "12px 12px",
-    borderRadius: 12,
-    border: "1px solid #E5E7EB",
-    background: "#F9FAFB",
-    fontSize: 13,
-    outline: "none",
-  },
-
-  addBtn: {
-    padding: "10px 14px",
-    borderRadius: 12,
+  centerToggleBtn: {
     border: "none",
-    background: "#111827",
-    color: "#FFFFFF",
+    background: "transparent",
+    padding: "10px 22px",
+    borderRadius: 8,
     cursor: "pointer",
-    fontSize: 13,
+    fontSize: 14,
+    color: "#4B5563",
+  },
+
+  centerToggleBtnActive: {
+    background: "#7FA3D6",
+    color: "#FFFFFF",
+  },
+
+  twoCol: {
+    display: "grid",
+    gridTemplateColumns: "1.55fr 1fr",
+    gap: 18,
+    alignItems: "start",
+  },
+
+  leftCol: {
+    display: "grid",
+    gap: 12,
+  },
+
+  rightCol: {
+    display: "grid",
+    gap: 12,
+  },
+
+  rightOnlyWrap: {
+    maxWidth: 620,
+    margin: "0 auto",
+    display: "grid",
+    gap: 12,
+  },
+
+  card: {
+    background: "#FFFFFF",
+    borderRadius: 14,
+    padding: 18,
+    boxShadow: "0 1px 3px rgba(15, 23, 42, 0.05)",
+    border: "1px solid #ECEFF4",
+  },
+
+  sideCard: {
+    background: "#FFFFFF",
+    borderRadius: 14,
+    padding: 18,
+    boxShadow: "0 1px 3px rgba(15, 23, 42, 0.05)",
+    border: "1px solid #ECEFF4",
+  },
+
+  sideTopCard: {
+    background: "#FFFFFF",
+    borderRadius: 14,
+    padding: 14,
+    boxShadow: "0 1px 3px rgba(15, 23, 42, 0.05)",
+    border: "1px solid #ECEFF4",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  personToggle: {
+    display: "inline-flex",
+    background: "#ECEEF2",
+    borderRadius: 10,
+    padding: 3,
+    gap: 3,
+  },
+
+  personBtn: {
+    border: "none",
+    background: "transparent",
+    padding: "10px 18px",
+    borderRadius: 8,
+    cursor: "pointer",
+    fontSize: 14,
+    color: "#4B5563",
+  },
+
+  personBtnActive: {
+    background: "#7FA3D6",
+    color: "#FFFFFF",
+  },
+
+  timerBox: {
+    background: "#78AAA6",
+    color: "#FFFFFF",
+    borderRadius: 8,
+    padding: "10px 18px",
+    fontSize: 17,
+    fontWeight: 600,
     whiteSpace: "nowrap",
   },
 
-  list: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 8,
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 500,
+    marginBottom: 10,
+    color: "#2D3748",
   },
 
-  itemRow: {
+  row: {
     display: "flex",
     justifyContent: "space-between",
-    gap: 12,
-    padding: "12px 0",
-    borderBottom: "1px solid #F0F1F3",
+    alignItems: "center",
+    padding: "10px 0",
+    borderBottom: "1px solid #ECEFF4",
   },
 
-  draggingRow: {
-    opacity: 0.45,
-    background: "#F9FAFB",
-  },
-
-  itemMain: {
-    flex: 1,
-    minWidth: 0,
-  },
-
-  meetingRowLeft: {
+  rowLeft: {
     display: "flex",
     alignItems: "center",
     gap: 10,
     minWidth: 0,
-  },
-
-  dragHandle: {
-    color: "#9CA3AF",
-    fontSize: 14,
-    lineHeight: 1,
-    letterSpacing: "0.06em",
-    cursor: "grab",
-    userSelect: "none",
-    flexShrink: 0,
-  },
-
-  checkButton: {
-    width: 18,
-    height: 18,
-    borderRadius: 6,
-    border: "1px solid #D1D5DB",
-    background: "#FFFFFF",
-    color: "#111827",
-    fontSize: 11,
     cursor: "pointer",
+  },
+
+  rowRight: {
     display: "flex",
     alignItems: "center",
+    gap: 8,
+    flexShrink: 0,
+  },
+
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    border: "1px solid #D7DCE5",
+    display: "inline-flex",
+    alignItems: "center",
     justifyContent: "center",
-    padding: 0,
+    color: "#7B8794",
+    fontSize: 12,
+    background: "#FFFFFF",
     flexShrink: 0,
   },
 
-  checkButtonDone: {
-    background: "#111827",
-    color: "#FFFFFF",
-    border: "1px solid #111827",
+  rowText: {
+    fontSize: 13,
+    color: "#2D3748",
+    lineHeight: 1.45,
   },
 
-  inlineEdit: {
-    flex: 1,
-    minWidth: 0,
-    border: "1px solid transparent",
-    background: "transparent",
-    fontSize: 14,
-    color: "#111827",
-    outline: "none",
-    padding: "6px 8px",
+  priorityPill: {
+    padding: "5px 12px",
     borderRadius: 8,
-  },
-
-  timeInline: {
-    width: 84,
-    padding: "8px 10px",
-    borderRadius: 10,
-    border: "1px solid #E5E7EB",
-    background: "#F9FAFB",
     fontSize: 12,
-    outline: "none",
-    color: "#374151",
-    flexShrink: 0,
-  },
-
-  durationInline: {
-    width: 64,
-    padding: "8px 10px",
-    borderRadius: 10,
-    border: "1px solid #E5E7EB",
-    background: "#F9FAFB",
-    fontSize: 12,
-    outline: "none",
-    color: "#374151",
-    flexShrink: 0,
-  },
-
-  miniInput: {
-    width: 64,
-    padding: "8px 10px",
-    borderRadius: 10,
-    border: "1px solid #E5E7EB",
-    background: "#F9FAFB",
-    fontSize: 12,
-    outline: "none",
-    color: "#374151",
+    minWidth: 56,
     textAlign: "center",
   },
 
-  actions: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-    alignItems: "flex-end",
-  },
-
-  actionsRow: {
-    display: "flex",
-    gap: 8,
-    alignItems: "center",
-    flexShrink: 0,
-  },
-
-  smallSelect: {
-    border: "none",
-    padding: "7px 10px",
-    borderRadius: 999,
-    cursor: "pointer",
-    fontSize: 11,
-    fontWeight: 600,
-    outline: "none",
-  },
-
-  smallSelectNeutral: {
-    border: "1px solid #E5E7EB",
-    background: "#FFFFFF",
-    padding: "7px 10px",
-    borderRadius: 999,
-    cursor: "pointer",
-    fontSize: 11,
-    color: "#374151",
-    outline: "none",
+  ownerPill: {
+    padding: "5px 12px",
+    borderRadius: 8,
+    fontSize: 12,
+    background: "#F2F4F7",
+    color: "#4B5563",
+    border: "1px solid #E2E8F0",
   },
 
   deleteBtn: {
     border: "none",
     background: "transparent",
-    color: "#9CA3AF",
-    fontSize: 22,
+    color: "#B0B7C3",
+    fontSize: 24,
     cursor: "pointer",
+    lineHeight: 1,
+    padding: 0,
+  },
+
+  inputLine: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 12,
+    border: "1px solid #E4E8EF",
+    borderRadius: 8,
+    padding: "10px 12px",
+    background: "#FAFBFC",
+  },
+
+  plus: {
+    color: "#8B95A5",
+    fontSize: 18,
     lineHeight: 1,
   },
 
-  commentRow: {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: 12,
-    padding: "14px 0",
-    borderBottom: "1px solid #F0F1F3",
+  inlineInput: {
+    flex: 1,
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    fontSize: 13,
+    color: "#374151",
   },
 
-  avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: "50%",
-    background: "#E5E7EB",
+  hiddenActionBtn: {
+    display: "none",
+  },
+
+  taskEntryRow: {
+    display: "flex",
+    gap: 8,
+    marginTop: 12,
+  },
+
+  select: {
+    border: "1px solid #E4E8EF",
+    background: "#FAFBFC",
+    borderRadius: 8,
+    padding: "10px 12px",
+    fontSize: 13,
+    color: "#374151",
+    outline: "none",
+  },
+
+  addBtn: {
+    border: "none",
+    background: "#7FA3D6",
+    color: "#FFFFFF",
+    borderRadius: 8,
+    padding: "10px 14px",
+    fontSize: 13,
+    cursor: "pointer",
+  },
+
+  commentList: {
+    display: "grid",
+    gap: 10,
+    marginBottom: 12,
+  },
+
+  commentRow: {
+    display: "grid",
+    gridTemplateColumns: "30px 1fr auto",
+    gap: 10,
+    alignItems: "start",
+  },
+
+  commentAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 999,
+    background: "#D8DEE9",
+    color: "#4B5563",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 13,
-    color: "#374151",
-    flexShrink: 0,
-  },
-
-  commentMention: {
-    fontWeight: 600,
-    color: "#111827",
-  },
-
-  itemPreview: {
-    fontSize: 13,
-    color: "#6B7280",
-    lineHeight: 1.4,
-  },
-
-  itemTime: {
     fontSize: 12,
-    color: "#9CA3AF",
-    whiteSpace: "nowrap",
-    marginTop: 4,
+    marginTop: 2,
   },
 
-  timeStub: {
+  commentBubble: {
+    background: "#F7F8FA",
+    border: "1px solid #ECEFF4",
+    borderRadius: 10,
     padding: "10px 12px",
-    borderRadius: 12,
-    border: "1px solid #E5E7EB",
-    background: "#F9FAFB",
     fontSize: 13,
-    color: "#111827",
-    minWidth: 92,
-    textAlign: "center",
-    fontWeight: 600,
+    lineHeight: 1.45,
+    color: "#374151",
   },
 
-  doneText: {
-    textDecoration: "line-through",
-    color: "#9CA3AF",
+  commentAuthor: {
+    color: "#5B7DB3",
+    fontWeight: 500,
+  },
+
+  commentTime: {
+    fontSize: 12,
+    color: "#9AA3AF",
+    paddingTop: 10,
+  },
+
+  commentInputRow: {
+    display: "flex",
+    gap: 8,
+    border: "1px solid #E4E8EF",
+    borderRadius: 8,
+    padding: "8px 10px",
+    background: "#FAFBFC",
+  },
+
+  commentInput: {
+    flex: 1,
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    fontSize: 13,
+  },
+
+  sendBtn: {
+    border: "none",
+    background: "transparent",
+    color: "#7F8AA1",
+    fontSize: 18,
+    cursor: "pointer",
   },
 };
