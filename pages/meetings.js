@@ -1,421 +1,1034 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+const STORAGE_KEY = "daily-os-meetings-v3";
+const WEEKLY_PRIORITIES_KEY = "daily-os-weekly-priorities";
+
+function formatDateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function formatPrettyDate(date) {
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function shiftDate(date, days) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function createDailyTemplate() {
+  return {
+    Mark: {
+      calendar: [],
+      tasks: [],
+      decisions: [],
+    },
+    Dane: {
+      calendar: [],
+      tasks: [],
+      decisions: [],
+    },
+  };
+}
+
+function createWeeklyTemplate() {
+  return {
+    priorities: ["Win the week", "Stay disciplined", "Stay focused"],
+    calendarReview: [],
+    tasks: [],
+    decisions: [],
+  };
+}
+
+function reorderList(list, fromIndex, toIndex) {
+  const updated = [...list];
+  const [moved] = updated.splice(fromIndex, 1);
+  updated.splice(toIndex, 0, moved);
+  return updated;
+}
 
 export default function MeetingsPage() {
-  const defaultMeetings = [
-    {
-      id: 1,
-      title: "Daily Huddle",
-      owner: "Mark",
-      notes: "Review priority asks, schedule changes, urgent follow-ups.",
-    },
-    {
-      id: 2,
-      title: "Weekly Executive Sync",
-      owner: "Dane",
-      notes: "Strategic updates, approvals, key decisions, and deadlines.",
-    },
-    {
-      id: 3,
-      title: "Inbox / Communication Review",
-      owner: "Nikita",
-      notes: "Review emails, WhatsApp, texts, and incoming requests.",
-    },
-    {
-      id: 4,
-      title: "Pending Decisions",
-      owner: "Mark + Dane",
-      notes: "Items waiting on approval or executive direction.",
-    },
-    {
-      id: 5,
-      title: "Follow-Ups",
-      owner: "Nikita",
-      notes: "Outstanding tasks to chase, delegate, or close.",
-    },
-  ];
+  const [view, setView] = useState("weekly");
+  const [dailyPerson, setDailyPerson] = useState("Mark");
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
-  const [meetingItems, setMeetingItems] = useState(defaultMeetings);
-  const [draggedIndex, setDraggedIndex] = useState(null);
-  const [newTitle, setNewTitle] = useState("");
-  const [newOwner, setNewOwner] = useState("");
-  const [newNotes, setNewNotes] = useState("");
+  const [data, setData] = useState({
+    weekly: createWeeklyTemplate(),
+    dailyByDate: {
+      [formatDateKey(new Date())]: createDailyTemplate(),
+    },
+  });
+
+  const [dragState, setDragState] = useState(null);
+
+  const [newPriority, setNewPriority] = useState("");
+  const [newWeeklyCalendar, setNewWeeklyCalendar] = useState("");
+  const [newWeeklyTask, setNewWeeklyTask] = useState("");
+  const [newWeeklyTaskOwner, setNewWeeklyTaskOwner] = useState("Mark");
+  const [newWeeklyTaskPriority, setNewWeeklyTaskPriority] = useState("Medium");
+  const [newWeeklyDecision, setNewWeeklyDecision] = useState("");
+
+  const [newDailyCalendar, setNewDailyCalendar] = useState("");
+  const [newDailyTask, setNewDailyTask] = useState("");
+  const [newDailyTaskPriority, setNewDailyTaskPriority] = useState("Medium");
+  const [newDailyDecision, setNewDailyDecision] = useState("");
+
+  const dateKey = useMemo(() => formatDateKey(selectedDate), [selectedDate]);
 
   useEffect(() => {
-    const saved = localStorage.getItem("meetingItems");
+    const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      setMeetingItems(JSON.parse(saved));
+      try {
+        setData(JSON.parse(saved));
+      } catch {}
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("meetingItems", JSON.stringify(meetingItems));
-  }, [meetingItems]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(
+      WEEKLY_PRIORITIES_KEY,
+      JSON.stringify(data.weekly.priorities)
+    );
+  }, [data]);
 
-  const handleDragStart = (index) => {
-    setDraggedIndex(index);
-  };
+  useEffect(() => {
+    if (!data.dailyByDate[dateKey]) {
+      setData((prev) => ({
+        ...prev,
+        dailyByDate: {
+          ...prev.dailyByDate,
+          [dateKey]: createDailyTemplate(),
+        },
+      }));
+    }
+  }, [dateKey, data.dailyByDate]);
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
+  const activeDaily = useMemo(() => {
+    return data.dailyByDate[dateKey] || createDailyTemplate();
+  }, [data.dailyByDate, dateKey]);
 
-  const handleDrop = (dropIndex) => {
-    if (draggedIndex === null || draggedIndex === dropIndex) return;
+  const personData = activeDaily[dailyPerson];
 
-    const updated = [...meetingItems];
-    const draggedItem = updated[draggedIndex];
+  const recentDays = Object.keys(data.dailyByDate)
+    .sort((a, b) => (a < b ? 1 : -1))
+    .slice(0, 7);
 
-    updated.splice(draggedIndex, 1);
-    updated.splice(dropIndex, 0, draggedItem);
+  function updateWeekly(nextWeekly) {
+    setData((prev) => ({ ...prev, weekly: nextWeekly }));
+  }
 
-    setMeetingItems(updated);
-    setDraggedIndex(null);
-  };
+  function updateDailyPerson(nextPersonData) {
+    setData((prev) => ({
+      ...prev,
+      dailyByDate: {
+        ...prev.dailyByDate,
+        [dateKey]: {
+          ...(prev.dailyByDate[dateKey] || createDailyTemplate()),
+          [dailyPerson]: nextPersonData,
+        },
+      },
+    }));
+  }
 
-  const handleDragEnd = () => {
-    setDraggedIndex(null);
-  };
+  function handleDragStart(sectionKey, index) {
+    setDragState({ sectionKey, index });
+  }
 
-  const addMeetingItem = () => {
-    if (!newTitle.trim()) return;
+  function handleDrop(sectionKey, dropIndex) {
+    if (!dragState) return;
+    if (dragState.sectionKey !== sectionKey) return;
 
-    const newItem = {
-      id: Date.now(),
-      title: newTitle.trim(),
-      owner: newOwner.trim() || "Unassigned",
-      notes: newNotes.trim() || "No notes added.",
+    if (view === "weekly") {
+      const current = data.weekly[sectionKey];
+      const updated = reorderList(current, dragState.index, dropIndex);
+      updateWeekly({
+        ...data.weekly,
+        [sectionKey]: updated,
+      });
+    } else {
+      const current = personData[sectionKey];
+      const updated = reorderList(current, dragState.index, dropIndex);
+      updateDailyPerson({
+        ...personData,
+        [sectionKey]: updated,
+      });
+    }
+
+    setDragState(null);
+  }
+
+  function addPriority() {
+    if (!newPriority.trim()) return;
+    updateWeekly({
+      ...data.weekly,
+      priorities: [...data.weekly.priorities, newPriority.trim()],
+    });
+    setNewPriority("");
+  }
+
+  function removePriority(index) {
+    updateWeekly({
+      ...data.weekly,
+      priorities: data.weekly.priorities.filter((_, i) => i !== index),
+    });
+  }
+
+  function addWeeklyCalendar() {
+    if (!newWeeklyCalendar.trim()) return;
+    updateWeekly({
+      ...data.weekly,
+      calendarReview: [
+        ...data.weekly.calendarReview,
+        { id: Date.now(), text: newWeeklyCalendar.trim(), done: false },
+      ],
+    });
+    setNewWeeklyCalendar("");
+  }
+
+  function toggleWeeklyCalendar(index) {
+    const updated = [...data.weekly.calendarReview];
+    updated[index].done = !updated[index].done;
+    updateWeekly({ ...data.weekly, calendarReview: updated });
+  }
+
+  function removeWeeklyCalendar(index) {
+    updateWeekly({
+      ...data.weekly,
+      calendarReview: data.weekly.calendarReview.filter((_, i) => i !== index),
+    });
+  }
+
+  function addWeeklyTask() {
+    if (!newWeeklyTask.trim()) return;
+    updateWeekly({
+      ...data.weekly,
+      tasks: [
+        ...data.weekly.tasks,
+        {
+          id: Date.now(),
+          text: newWeeklyTask.trim(),
+          owner: newWeeklyTaskOwner,
+          priority: newWeeklyTaskPriority,
+          done: false,
+        },
+      ],
+    });
+    setNewWeeklyTask("");
+    setNewWeeklyTaskOwner("Mark");
+    setNewWeeklyTaskPriority("Medium");
+  }
+
+  function toggleWeeklyTask(index) {
+    const updated = [...data.weekly.tasks];
+    updated[index].done = !updated[index].done;
+    updateWeekly({ ...data.weekly, tasks: updated });
+  }
+
+  function removeWeeklyTask(index) {
+    updateWeekly({
+      ...data.weekly,
+      tasks: data.weekly.tasks.filter((_, i) => i !== index),
+    });
+  }
+
+  function addWeeklyDecision() {
+    if (!newWeeklyDecision.trim()) return;
+    updateWeekly({
+      ...data.weekly,
+      decisions: [
+        ...data.weekly.decisions,
+        { id: Date.now(), text: newWeeklyDecision.trim(), done: false },
+      ],
+    });
+    setNewWeeklyDecision("");
+  }
+
+  function toggleWeeklyDecision(index) {
+    const updated = [...data.weekly.decisions];
+    updated[index].done = !updated[index].done;
+    updateWeekly({ ...data.weekly, decisions: updated });
+  }
+
+  function removeWeeklyDecision(index) {
+    updateWeekly({
+      ...data.weekly,
+      decisions: data.weekly.decisions.filter((_, i) => i !== index),
+    });
+  }
+
+  function addDailyCalendar() {
+    if (!newDailyCalendar.trim()) return;
+    updateDailyPerson({
+      ...personData,
+      calendar: [
+        ...personData.calendar,
+        { id: Date.now(), text: newDailyCalendar.trim(), done: false },
+      ],
+    });
+    setNewDailyCalendar("");
+  }
+
+  function toggleDailyCalendar(index) {
+    const updated = [...personData.calendar];
+    updated[index].done = !updated[index].done;
+    updateDailyPerson({ ...personData, calendar: updated });
+  }
+
+  function removeDailyCalendar(index) {
+    updateDailyPerson({
+      ...personData,
+      calendar: personData.calendar.filter((_, i) => i !== index),
+    });
+  }
+
+  function addDailyTask() {
+    if (!newDailyTask.trim()) return;
+    updateDailyPerson({
+      ...personData,
+      tasks: [
+        ...personData.tasks,
+        {
+          id: Date.now(),
+          text: newDailyTask.trim(),
+          owner: dailyPerson,
+          priority: newDailyTaskPriority,
+          done: false,
+        },
+      ],
+    });
+    setNewDailyTask("");
+    setNewDailyTaskPriority("Medium");
+  }
+
+  function toggleDailyTask(index) {
+    const updated = [...personData.tasks];
+    updated[index].done = !updated[index].done;
+    updateDailyPerson({ ...personData, tasks: updated });
+  }
+
+  function removeDailyTask(index) {
+    updateDailyPerson({
+      ...personData,
+      tasks: personData.tasks.filter((_, i) => i !== index),
+    });
+  }
+
+  function addDailyDecision() {
+    if (!newDailyDecision.trim()) return;
+    updateDailyPerson({
+      ...personData,
+      decisions: [
+        ...personData.decisions,
+        { id: Date.now(), text: newDailyDecision.trim(), done: false },
+      ],
+    });
+    setNewDailyDecision("");
+  }
+
+  function toggleDailyDecision(index) {
+    const updated = [...personData.decisions];
+    updated[index].done = !updated[index].done;
+    updateDailyPerson({ ...personData, decisions: updated });
+  }
+
+  function removeDailyDecision(index) {
+    updateDailyPerson({
+      ...personData,
+      decisions: personData.decisions.filter((_, i) => i !== index),
+    });
+  }
+
+  function priorityStyle(priority) {
+    if (priority === "High") {
+      return {
+        background: "#FEE2E2",
+        color: "#B91C1C",
+      };
+    }
+    if (priority === "Low") {
+      return {
+        background: "#E0F2FE",
+        color: "#0369A1",
+      };
+    }
+    return {
+      background: "#FEF3C7",
+      color: "#B45309",
     };
+  }
 
-    setMeetingItems([...meetingItems, newItem]);
-    setNewTitle("");
-    setNewOwner("");
-    setNewNotes("");
-  };
+  function DragRow({ item, index, sectionKey, onToggle, onRemove, right }) {
+    return (
+      <div
+        draggable
+        onDragStart={() => handleDragStart(sectionKey, index)}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={() => handleDrop(sectionKey, index)}
+        style={{
+          ...styles.row,
+          opacity: item.done ? 0.5 : 1,
+        }}
+      >
+        <div style={styles.rowLeft} onClick={onToggle}>
+          <span style={styles.dragHandle}>⋮⋮</span>
+          <span style={styles.checkbox}>{item.done ? "✓" : ""}</span>
+          <span
+            style={{
+              ...styles.rowText,
+              textDecoration: item.done ? "line-through" : "none",
+            }}
+          >
+            {item.text}
+          </span>
+        </div>
 
-  const deleteMeetingItem = (id) => {
-    setMeetingItems(meetingItems.filter((item) => item.id !== id));
-  };
+        <div style={styles.rowRight}>
+          {right}
+          <button style={styles.deleteBtn} onClick={onRemove}>
+            ×
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.page}>
-      <div style={styles.overlay} />
-
-      <div style={styles.container}>
-        <div style={styles.topBar}>
-          <div>
-            <p style={styles.eyebrow}>Executive Operating System</p>
-            <h1 style={styles.title}>Meetings</h1>
-            <p style={styles.subtitle}>
-              Reorder items by dragging them into the order you want.
-            </p>
-          </div>
-        </div>
-
-        <div style={styles.contentGrid}>
-          <div style={styles.formCard}>
-            <div style={styles.cardHeader}>
-              <h2 style={styles.sectionTitle}>Add Meeting Item</h2>
-              <p style={styles.sectionSubtitle}>
-                Add a new agenda block, review section, or recurring meeting item.
-              </p>
-            </div>
-
-            <div style={styles.fieldGroup}>
-              <label style={styles.label}>Title</label>
-              <input
-                type="text"
-                placeholder="Meeting title"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                style={styles.input}
-              />
-            </div>
-
-            <div style={styles.fieldGroup}>
-              <label style={styles.label}>Owner</label>
-              <input
-                type="text"
-                placeholder="Owner"
-                value={newOwner}
-                onChange={(e) => setNewOwner(e.target.value)}
-                style={styles.input}
-              />
-            </div>
-
-            <div style={styles.fieldGroup}>
-              <label style={styles.label}>Notes</label>
-              <textarea
-                placeholder="Notes"
-                value={newNotes}
-                onChange={(e) => setNewNotes(e.target.value)}
-                style={styles.textarea}
-              />
-            </div>
-
-            <button onClick={addMeetingItem} style={styles.addButton}>
-              Add Item
-            </button>
-          </div>
-
-          <div style={styles.listPanel}>
-            <div style={styles.cardHeader}>
-              <h2 style={styles.sectionTitle}>Meeting Flow</h2>
-              <p style={styles.sectionSubtitle}>
-                Drag cards to reorder how your meeting page runs.
-              </p>
-            </div>
-
-            <div style={styles.list}>
-              {meetingItems.map((item, index) => (
-                <div
-                  key={item.id}
-                  draggable
-                  onDragStart={() => handleDragStart(index)}
-                  onDragOver={handleDragOver}
-                  onDrop={() => handleDrop(index)}
-                  onDragEnd={handleDragEnd}
-                  style={{
-                    ...styles.card,
-                    ...(draggedIndex === index ? styles.draggingCard : {}),
-                  }}
-                >
-                  <div style={styles.dragHandle}>⋮⋮</div>
-
-                  <div style={styles.cardContent}>
-                    <div style={styles.cardTopRow}>
-                      <div>
-                        <h3 style={styles.cardTitle}>{item.title}</h3>
-                        <div style={styles.ownerBadge}>{item.owner}</div>
-                      </div>
-                    </div>
-
-                    <p style={styles.notes}>{item.notes}</p>
-                  </div>
-
-                  <button
-                    onClick={() => deleteMeetingItem(item.id)}
-                    style={styles.deleteButton}
-                  >
-                    Delete
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+      <div style={styles.header}>
+        <div>
+          <div style={styles.kicker}>Meetings</div>
+          <h1 style={styles.title}>Organize weekly and daily meetings</h1>
         </div>
       </div>
+
+      <div style={styles.topBar}>
+        <div style={styles.topToggle}>
+          <button
+            style={{
+              ...styles.topToggleBtn,
+              ...(view === "weekly" ? styles.topToggleBtnActive : {}),
+            }}
+            onClick={() => setView("weekly")}
+          >
+            Weekly Alignment
+          </button>
+          <button
+            style={{
+              ...styles.topToggleBtn,
+              ...(view === "daily" ? styles.topToggleBtnActive : {}),
+            }}
+            onClick={() => setView("daily")}
+          >
+            Daily Huddle
+          </button>
+        </div>
+      </div>
+
+      {view === "weekly" ? (
+        <div style={styles.stack}>
+          <div style={styles.card}>
+            <div style={styles.sectionTitle}>Top Shared Priorities</div>
+
+            {data.weekly.priorities.map((item, index) => (
+              <div
+                key={`${item}-${index}`}
+                draggable
+                onDragStart={() => handleDragStart("priorities", index)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => handleDrop("priorities", index)}
+                style={styles.row}
+              >
+                <div style={styles.rowLeft}>
+                  <span style={styles.dragHandle}>⋮⋮</span>
+                  <span style={styles.checkbox}>✓</span>
+                  <span style={styles.rowText}>{item}</span>
+                </div>
+
+                <div style={styles.rowRight}>
+                  <button
+                    style={styles.deleteBtn}
+                    onClick={() => removePriority(index)}
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            <div style={styles.inputLine}>
+              <input
+                style={styles.inlineInput}
+                value={newPriority}
+                onChange={(e) => setNewPriority(e.target.value)}
+                placeholder="Add new priority..."
+              />
+              <button style={styles.addGhostBtn} onClick={addPriority}>
+                +
+              </button>
+            </div>
+          </div>
+
+          <div style={styles.card}>
+            <div style={styles.sectionTitle}>Weekly Calendar Review</div>
+
+            {data.weekly.calendarReview.map((item, index) => (
+              <DragRow
+                key={item.id}
+                item={item}
+                index={index}
+                sectionKey="calendarReview"
+                onToggle={() => toggleWeeklyCalendar(index)}
+                onRemove={() => removeWeeklyCalendar(index)}
+              />
+            ))}
+
+            <div style={styles.inputLine}>
+              <input
+                style={styles.inlineInput}
+                value={newWeeklyCalendar}
+                onChange={(e) => setNewWeeklyCalendar(e.target.value)}
+                placeholder="Add new item..."
+              />
+              <button style={styles.addGhostBtn} onClick={addWeeklyCalendar}>
+                +
+              </button>
+            </div>
+          </div>
+
+          <div style={styles.card}>
+            <div style={styles.sectionTitle}>Tasks for the Week</div>
+
+            {data.weekly.tasks.map((item, index) => (
+              <DragRow
+                key={item.id}
+                item={item}
+                index={index}
+                sectionKey="tasks"
+                onToggle={() => toggleWeeklyTask(index)}
+                onRemove={() => removeWeeklyTask(index)}
+                right={
+                  <>
+                    <span
+                      style={{
+                        ...styles.priorityPill,
+                        ...priorityStyle(item.priority),
+                      }}
+                    >
+                      {item.priority}
+                    </span>
+                    <span style={styles.personPill}>{item.owner}</span>
+                  </>
+                }
+              />
+            ))}
+
+            <div style={styles.taskInputRow}>
+              <input
+                style={{ ...styles.inlineInput, flex: 1 }}
+                value={newWeeklyTask}
+                onChange={(e) => setNewWeeklyTask(e.target.value)}
+                placeholder="Add new task..."
+              />
+              <select
+                style={styles.select}
+                value={newWeeklyTaskPriority}
+                onChange={(e) => setNewWeeklyTaskPriority(e.target.value)}
+              >
+                <option>High</option>
+                <option>Medium</option>
+                <option>Low</option>
+              </select>
+              <select
+                style={styles.select}
+                value={newWeeklyTaskOwner}
+                onChange={(e) => setNewWeeklyTaskOwner(e.target.value)}
+              >
+                <option>Mark</option>
+                <option>Dane</option>
+              </select>
+              <button style={styles.smallAddBtn} onClick={addWeeklyTask}>
+                Add
+              </button>
+            </div>
+          </div>
+
+          <div style={styles.card}>
+            <div style={styles.sectionTitle}>Decisions Needed</div>
+
+            {data.weekly.decisions.map((item, index) => (
+              <DragRow
+                key={item.id}
+                item={item}
+                index={index}
+                sectionKey="decisions"
+                onToggle={() => toggleWeeklyDecision(index)}
+                onRemove={() => removeWeeklyDecision(index)}
+              />
+            ))}
+
+            <div style={styles.inputLine}>
+              <input
+                style={styles.inlineInput}
+                value={newWeeklyDecision}
+                onChange={(e) => setNewWeeklyDecision(e.target.value)}
+                placeholder="Add new decision..."
+              />
+              <button style={styles.addGhostBtn} onClick={addWeeklyDecision}>
+                +
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div style={styles.stack}>
+          <div style={styles.dailyTopCard}>
+            <div style={styles.personToggle}>
+              <button
+                style={{
+                  ...styles.personToggleBtn,
+                  ...(dailyPerson === "Mark" ? styles.personToggleBtnActive : {}),
+                }}
+                onClick={() => setDailyPerson("Mark")}
+              >
+                Mark
+              </button>
+              <button
+                style={{
+                  ...styles.personToggleBtn,
+                  ...(dailyPerson === "Dane" ? styles.personToggleBtnActive : {}),
+                }}
+                onClick={() => setDailyPerson("Dane")}
+              >
+                Dane
+              </button>
+            </div>
+
+            <div style={styles.datePill}>
+              <button
+                onClick={() => setSelectedDate((d) => shiftDate(d, -1))}
+                style={styles.dateArrow}
+              >
+                ←
+              </button>
+              <span>{formatPrettyDate(selectedDate)}</span>
+              <button
+                onClick={() => setSelectedDate((d) => shiftDate(d, 1))}
+                style={styles.dateArrow}
+              >
+                →
+              </button>
+            </div>
+          </div>
+
+          <div style={styles.recentDaysRow}>
+            {recentDays.map((day) => (
+              <button
+                key={day}
+                style={{
+                  ...styles.recentDayBtn,
+                  ...(day === dateKey ? styles.recentDayBtnActive : {}),
+                }}
+                onClick={() => setSelectedDate(new Date(`${day}T12:00:00`))}
+              >
+                {day}
+              </button>
+            ))}
+          </div>
+
+          <div style={styles.card}>
+            <div style={styles.sectionTitle}>Daily Calendar</div>
+
+            {personData.calendar.map((item, index) => (
+              <DragRow
+                key={item.id}
+                item={item}
+                index={index}
+                sectionKey="calendar"
+                onToggle={() => toggleDailyCalendar(index)}
+                onRemove={() => removeDailyCalendar(index)}
+              />
+            ))}
+
+            <div style={styles.inputLine}>
+              <input
+                style={styles.inlineInput}
+                value={newDailyCalendar}
+                onChange={(e) => setNewDailyCalendar(e.target.value)}
+                placeholder="Add new item..."
+              />
+              <button style={styles.addGhostBtn} onClick={addDailyCalendar}>
+                +
+              </button>
+            </div>
+          </div>
+
+          <div style={styles.card}>
+            <div style={styles.sectionTitle}>Today's Tasks</div>
+
+            {personData.tasks.map((item, index) => (
+              <DragRow
+                key={item.id}
+                item={item}
+                index={index}
+                sectionKey="tasks"
+                onToggle={() => toggleDailyTask(index)}
+                onRemove={() => removeDailyTask(index)}
+                right={
+                  <>
+                    <span
+                      style={{
+                        ...styles.priorityPill,
+                        ...priorityStyle(item.priority),
+                      }}
+                    >
+                      {item.priority}
+                    </span>
+                    <span style={styles.personPill}>{item.owner}</span>
+                  </>
+                }
+              />
+            ))}
+
+            <div style={styles.taskInputRow}>
+              <input
+                style={{ ...styles.inlineInput, flex: 1 }}
+                value={newDailyTask}
+                onChange={(e) => setNewDailyTask(e.target.value)}
+                placeholder="Add new task..."
+              />
+              <select
+                style={styles.select}
+                value={newDailyTaskPriority}
+                onChange={(e) => setNewDailyTaskPriority(e.target.value)}
+              >
+                <option>High</option>
+                <option>Medium</option>
+                <option>Low</option>
+              </select>
+              <button style={styles.smallAddBtn} onClick={addDailyTask}>
+                Add
+              </button>
+            </div>
+          </div>
+
+          <div style={styles.card}>
+            <div style={styles.sectionTitle}>Decisions Needed</div>
+
+            {personData.decisions.map((item, index) => (
+              <DragRow
+                key={item.id}
+                item={item}
+                index={index}
+                sectionKey="decisions"
+                onToggle={() => toggleDailyDecision(index)}
+                onRemove={() => removeDailyDecision(index)}
+              />
+            ))}
+
+            <div style={styles.inputLine}>
+              <input
+                style={styles.inlineInput}
+                value={newDailyDecision}
+                onChange={(e) => setNewDailyDecision(e.target.value)}
+                placeholder="Add new decision..."
+              />
+              <button style={styles.addGhostBtn} onClick={addDailyDecision}>
+                +
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 const styles = {
   page: {
+    background: "#F4F5F7",
     minHeight: "100vh",
-    background:
-      "linear-gradient(180deg, #f7f8fa 0%, #eef1f5 100%)",
-    padding: "36px 20px 48px",
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif',
-    position: "relative",
-    overflow: "hidden",
+    padding: "36px 48px",
+    fontFamily: "Inter, Arial, sans-serif",
+    color: "#111827",
   },
-  overlay: {
-    position: "absolute",
-    inset: 0,
-    background:
-      "radial-gradient(circle at top left, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 35%)",
-    pointerEvents: "none",
+
+  header: {
+    marginBottom: 18,
   },
-  container: {
-    maxWidth: "1180px",
-    margin: "0 auto",
-    position: "relative",
-    zIndex: 1,
-  },
-  topBar: {
-    marginBottom: "24px",
-  },
-  eyebrow: {
-    margin: "0 0 8px 0",
-    fontSize: "12px",
-    letterSpacing: "0.12em",
+
+  kicker: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginBottom: 6,
     textTransform: "uppercase",
-    color: "#7b8190",
-    fontWeight: 700,
+    letterSpacing: "0.08em",
   },
+
   title: {
-    margin: 0,
-    fontSize: "40px",
-    lineHeight: 1.05,
-    color: "#101114",
-    fontWeight: 750,
-  },
-  subtitle: {
-    marginTop: "10px",
-    color: "#666f7d",
-    fontSize: "16px",
-    maxWidth: "560px",
-    lineHeight: 1.5,
-  },
-  contentGrid: {
-    display: "grid",
-    gridTemplateColumns: "360px 1fr",
-    gap: "22px",
-    alignItems: "start",
-  },
-  formCard: {
-    background: "rgba(255,255,255,0.82)",
-    backdropFilter: "blur(12px)",
-    borderRadius: "24px",
-    padding: "22px",
-    border: "1px solid rgba(16,17,20,0.07)",
-    boxShadow: "0 18px 50px rgba(16, 17, 20, 0.08)",
-    position: "sticky",
-    top: "24px",
-  },
-  listPanel: {
-    background: "rgba(255,255,255,0.72)",
-    backdropFilter: "blur(12px)",
-    borderRadius: "24px",
-    padding: "22px",
-    border: "1px solid rgba(16,17,20,0.07)",
-    boxShadow: "0 18px 50px rgba(16, 17, 20, 0.06)",
-  },
-  cardHeader: {
-    marginBottom: "18px",
-  },
-  sectionTitle: {
-    margin: 0,
-    fontSize: "20px",
-    color: "#111318",
-    fontWeight: 700,
-  },
-  sectionSubtitle: {
-    margin: "8px 0 0 0",
-    fontSize: "14px",
-    color: "#707887",
-    lineHeight: 1.5,
-  },
-  fieldGroup: {
-    marginBottom: "14px",
-  },
-  label: {
-    display: "block",
-    fontSize: "13px",
-    color: "#5f6775",
-    fontWeight: 600,
-    marginBottom: "8px",
-  },
-  input: {
-    width: "100%",
-    padding: "13px 14px",
-    borderRadius: "14px",
-    border: "1px solid #d9dee7",
-    background: "#ffffff",
-    fontSize: "15px",
-    outline: "none",
-    boxSizing: "border-box",
-    color: "#111318",
-  },
-  textarea: {
-    width: "100%",
-    minHeight: "110px",
-    padding: "13px 14px",
-    borderRadius: "14px",
-    border: "1px solid #d9dee7",
-    background: "#ffffff",
-    fontSize: "15px",
-    outline: "none",
-    resize: "vertical",
-    boxSizing: "border-box",
-    color: "#111318",
-  },
-  addButton: {
-    width: "100%",
-    background: "#111318",
-    color: "#ffffff",
-    border: "none",
-    padding: "14px 18px",
-    borderRadius: "14px",
-    cursor: "pointer",
-    fontSize: "15px",
-    fontWeight: 700,
-    marginTop: "6px",
-    boxShadow: "0 10px 22px rgba(17,19,24,0.18)",
-  },
-  list: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "14px",
-  },
-  card: {
-    display: "grid",
-    gridTemplateColumns: "28px 1fr auto",
-    alignItems: "start",
-    gap: "16px",
-    background: "#ffffff",
-    border: "1px solid rgba(16,17,20,0.08)",
-    borderRadius: "20px",
-    padding: "18px",
-    boxShadow: "0 10px 30px rgba(16,17,20,0.05)",
-    cursor: "grab",
-    transition: "transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease",
-  },
-  draggingCard: {
-    opacity: 0.55,
-    transform: "scale(0.99)",
-    background: "#f3f6fb",
-  },
-  dragHandle: {
-    fontSize: "18px",
-    color: "#98a0ae",
-    userSelect: "none",
+    fontSize: 28,
     lineHeight: 1.2,
-    paddingTop: "4px",
-    letterSpacing: "1px",
+    margin: 0,
+    fontWeight: 600,
   },
-  cardContent: {
-    minWidth: 0,
+
+  topBar: {
+    display: "flex",
+    justifyContent: "center",
+    marginBottom: 20,
   },
-  cardTopRow: {
+
+  topToggle: {
+    display: "inline-flex",
+    background: "#ECEEF2",
+    borderRadius: 14,
+    padding: 4,
+    gap: 4,
+  },
+
+  topToggleBtn: {
+    border: "none",
+    background: "transparent",
+    padding: "10px 18px",
+    borderRadius: 12,
+    cursor: "pointer",
+    fontSize: 14,
+    color: "#6B7280",
+  },
+
+  topToggleBtnActive: {
+    background: "#FFFFFF",
+    color: "#111827",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+  },
+
+  stack: {
+    display: "grid",
+    gap: 16,
+    maxWidth: 980,
+    margin: "0 auto",
+  },
+
+  dailyTopCard: {
+    background: "#FFFFFF",
+    borderRadius: 18,
+    padding: 16,
+    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
     display: "flex",
     justifyContent: "space-between",
-    gap: "12px",
-    marginBottom: "10px",
+    alignItems: "center",
+    gap: 12,
   },
-  cardTitle: {
-    margin: 0,
-    fontSize: "19px",
-    color: "#12141a",
-    fontWeight: 700,
-    lineHeight: 1.2,
-  },
-  ownerBadge: {
+
+  personToggle: {
     display: "inline-flex",
-    marginTop: "8px",
-    padding: "6px 10px",
-    borderRadius: "999px",
-    background: "#f2f4f7",
-    color: "#444c59",
-    fontSize: "12px",
-    fontWeight: 700,
+    background: "#ECEEF2",
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
   },
-  notes: {
-    margin: 0,
-    color: "#687181",
-    lineHeight: 1.6,
-    fontSize: "14px",
-  },
-  deleteButton: {
-    background: "#f04f55",
-    color: "#fff",
+
+  personToggleBtn: {
     border: "none",
-    padding: "10px 14px",
-    borderRadius: "12px",
+    background: "transparent",
+    padding: "8px 16px",
+    borderRadius: 10,
     cursor: "pointer",
-    fontSize: "13px",
-    fontWeight: 700,
-    alignSelf: "start",
-    boxShadow: "0 8px 18px rgba(240,79,85,0.2)",
+    fontSize: 14,
+    color: "#6B7280",
+  },
+
+  personToggleBtnActive: {
+    background: "#FFFFFF",
+    color: "#111827",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+  },
+
+  datePill: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 10,
+    background: "#F3F4F6",
+    borderRadius: 999,
+    padding: "8px 12px",
+    fontSize: 13,
+    color: "#374151",
+  },
+
+  dateArrow: {
+    border: "none",
+    background: "transparent",
+    cursor: "pointer",
+    fontSize: 14,
+    color: "#6B7280",
+  },
+
+  recentDaysRow: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap",
+    maxWidth: 980,
+    margin: "0 auto",
+  },
+
+  recentDayBtn: {
+    border: "1px solid #E5E7EB",
+    background: "#FFFFFF",
+    padding: "8px 12px",
+    borderRadius: 999,
+    cursor: "pointer",
+    fontSize: 12,
+    color: "#6B7280",
+  },
+
+  recentDayBtnActive: {
+    background: "#E9EEF9",
+    color: "#111827",
+    border: "1px solid #D7E1F5",
+  },
+
+  card: {
+    background: "#FFFFFF",
+    borderRadius: 18,
+    padding: 18,
+    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+  },
+
+  sectionTitle: {
+    fontSize: 12,
+    color: "#6B7280",
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+
+  row: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "12px 0",
+    borderBottom: "1px solid #F0F1F3",
+  },
+
+  rowLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    cursor: "pointer",
+    minWidth: 0,
+  },
+
+  rowText: {
+    fontSize: 13,
+    lineHeight: 1.4,
+  },
+
+  rowRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 0,
+  },
+
+  dragHandle: {
+    color: "#9CA3AF",
+    fontSize: 14,
+    cursor: "grab",
+  },
+
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    border: "1px solid #D8DEE7",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 12,
+    color: "#6B7280",
+    background: "#FFFFFF",
+  },
+
+  priorityPill: {
+    padding: "4px 10px",
+    borderRadius: 999,
+    fontSize: 11,
+  },
+
+  personPill: {
+    padding: "4px 10px",
+    borderRadius: 999,
+    fontSize: 11,
+    background: "#EEF2FF",
+    color: "#4F46E5",
+  },
+
+  deleteBtn: {
+    border: "none",
+    background: "transparent",
+    color: "#9CA3AF",
+    fontSize: 22,
+    cursor: "pointer",
+    lineHeight: 1,
+  },
+
+  inputLine: {
+    display: "flex",
+    gap: 8,
+    marginTop: 12,
+  },
+
+  inlineInput: {
+    flex: 1,
+    padding: "12px 12px",
+    borderRadius: 12,
+    border: "1px solid #E5E7EB",
+    background: "#F9FAFB",
+    fontSize: 13,
+    outline: "none",
+  },
+
+  addGhostBtn: {
+    width: 42,
+    borderRadius: 12,
+    border: "1px solid #E5E7EB",
+    background: "#FFFFFF",
+    cursor: "pointer",
+    fontSize: 22,
+    color: "#6B7280",
+  },
+
+  taskInputRow: {
+    display: "flex",
+    gap: 8,
+    marginTop: 12,
+  },
+
+  select: {
+    padding: "10px 12px",
+    borderRadius: 12,
+    border: "1px solid #E5E7EB",
+    background: "#FFFFFF",
+    fontSize: 13,
+    outline: "none",
+  },
+
+  smallAddBtn: {
+    padding: "10px 14px",
+    borderRadius: 12,
+    border: "none",
+    background: "#111827",
+    color: "#FFFFFF",
+    cursor: "pointer",
+    fontSize: 13,
   },
 };
