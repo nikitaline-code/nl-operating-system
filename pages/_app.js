@@ -1,4 +1,4 @@
-import "../style.css";
+import "../globals.css";
 import AppShell from "../components/AppShell";
 
 export default function App({ Component, pageProps }) {
