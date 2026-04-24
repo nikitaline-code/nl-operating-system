@@ -1,15 +1,8 @@
 import { useEffect, useState } from "react";
 
-const defaultTasks = [
-  { id: 1, title: "Review daily priorities", assignedFrom: "Mark", urgency: "High", dueDate: "", complete: false },
-  { id: 2, title: "Follow up on open dealer items", assignedFrom: "Dane", urgency: "Medium", dueDate: "", complete: false },
-];
+const defaultTasks = [];
 
-const defaultPriorities = [
-  "Keep executive asks routed through EA intake",
-  "Prepare weekly priority list",
-  "Follow up on outstanding communication items",
-];
+const defaultPriorities = ["", "", ""];
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState(defaultTasks);
@@ -56,7 +49,11 @@ export default function TasksPage() {
   }
 
   function toggleTask(id) {
-    setTasks(tasks.map((task) => task.id === id ? { ...task, complete: !task.complete } : task));
+    setTasks(
+      tasks.map((task) =>
+        task.id === id ? { ...task, complete: !task.complete } : task
+      )
+    );
   }
 
   function deleteTask(id) {
@@ -77,7 +74,9 @@ export default function TasksPage() {
     setPriorities(priorities.filter((_, i) => i !== index));
   }
 
-  const visibleTasks = hideCompleted ? tasks.filter((task) => !task.complete) : tasks;
+  const visibleTasks = hideCompleted
+    ? tasks.filter((task) => !task.complete)
+    : tasks;
 
   return (
     <div className="tasksPage">
@@ -105,18 +104,22 @@ export default function TasksPage() {
                 <h2>Weekly Priorities</h2>
                 <p>Top focus items</p>
               </div>
-              <button onClick={addPriority}>+</button>
+              <button className="smallBlackBtn" onClick={addPriority}>
+                +
+              </button>
             </div>
 
             <div className="priorityList">
               {priorities.map((priority, index) => (
                 <div className="priorityItem" key={index}>
                   <span>{index + 1}</span>
-                  <textarea
+
+                  <input
                     value={priority}
                     onChange={(e) => updatePriority(index, e.target.value)}
                     placeholder="Add priority..."
                   />
+
                   <button onClick={() => deletePriority(index)}>×</button>
                 </div>
               ))}
@@ -139,21 +142,33 @@ export default function TasksPage() {
                 }}
               />
 
-              <select value={assignedFrom} onChange={(e) => setAssignedFrom(e.target.value)}>
+              <select
+                value={assignedFrom}
+                onChange={(e) => setAssignedFrom(e.target.value)}
+              >
                 <option>Mark</option>
                 <option>Dane</option>
                 <option>Nikita</option>
               </select>
 
-              <select value={urgency} onChange={(e) => setUrgency(e.target.value)}>
+              <select
+                value={urgency}
+                onChange={(e) => setUrgency(e.target.value)}
+              >
                 <option>High</option>
                 <option>Medium</option>
                 <option>Low</option>
               </select>
 
-              <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+              />
 
-              <button className="addTaskBtn" onClick={addTask}>Add</button>
+              <button className="addTaskBtn" onClick={addTask}>
+                Add
+              </button>
             </div>
           </section>
 
@@ -165,9 +180,16 @@ export default function TasksPage() {
 
             <div className="taskList">
               {visibleTasks.map((task) => (
-                <div className={`taskItem ${task.complete ? "completed" : ""}`} key={task.id}>
+                <div
+                  className={`taskItem ${task.complete ? "completed" : ""}`}
+                  key={task.id}
+                >
                   <div className="taskLeft">
-                    <input type="checkbox" checked={task.complete} onChange={() => toggleTask(task.id)} />
+                    <input
+                      type="checkbox"
+                      checked={task.complete}
+                      onChange={() => toggleTask(task.id)}
+                    />
 
                     <div>
                       <div className="taskTitle">{task.title}</div>
@@ -266,44 +288,42 @@ export default function TasksPage() {
         .taskList {
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 7px;
         }
 
         .priorityItem {
           display: grid;
-          grid-template-columns: 24px 1fr 30px;
-          gap: 8px;
-          align-items: start;
+          grid-template-columns: 20px 1fr 24px;
+          gap: 7px;
+          align-items: center;
           background: #f9fafb;
           border: 1px solid #eeeeee;
-          border-radius: 14px;
-          padding: 10px;
+          border-radius: 12px;
+          padding: 7px 8px;
+          min-height: 38px;
         }
 
         .priorityItem span {
-          width: 24px;
-          height: 24px;
-          border-radius: 8px;
+          width: 20px;
+          height: 20px;
+          border-radius: 7px;
           background: #111;
           color: #fff;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 700;
         }
 
-        textarea {
-          width: 100%;
-          resize: vertical;
-          min-height: 54px;
+        .priorityItem input {
           border: none;
           background: transparent;
-          outline: none;
+          padding: 4px 2px;
           font-size: 13px;
           color: #111;
-          font-family: inherit;
-          line-height: 1.35;
+          outline: none;
+          min-width: 0;
         }
 
         .hideToggle {
@@ -333,6 +353,12 @@ export default function TasksPage() {
           color: #111;
         }
 
+        input:focus,
+        select:focus {
+          border-color: #111;
+          background: #fff;
+        }
+
         button {
           border: none;
           background: #111;
@@ -349,13 +375,23 @@ export default function TasksPage() {
           opacity: 0.9;
         }
 
+        .smallBlackBtn {
+          width: 34px;
+          height: 34px;
+          padding: 0;
+          border-radius: 11px;
+          font-size: 16px;
+        }
+
         .priorityItem button,
         .taskRight button {
           background: #f3f4f6;
           color: #111;
-          width: 30px;
-          height: 30px;
+          width: 24px;
+          height: 24px;
           padding: 0;
+          border-radius: 8px;
+          font-size: 13px;
         }
 
         .taskItem {
