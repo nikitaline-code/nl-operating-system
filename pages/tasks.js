@@ -1,698 +1,442 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-function formatDateKey(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
+const defaultTasks = [
+  {
+    id: 1,
+    title: "Review daily priorities",
+    assignedFrom: "Mark",
+    urgency: "High",
+    dueDate: "",
+    complete: false,
+  },
+  {
+    id: 2,
+    title: "Follow up on open dealer items",
+    assignedFrom: "Dane",
+    urgency: "Medium",
+    dueDate: "",
+    complete: false,
+  },
+];
 
-function formatPrettyDate(date) {
-  return date.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function shiftDate(date, days) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function makeDefaultHabits() {
-  return [
-    { name: "Pray", done: false },
-    { name: "Read", done: false },
-    { name: "Run", done: false },
-  ];
-}
+const defaultPriorities = [
+  "Keep executive asks routed through EA intake",
+  "Prepare weekly priority list",
+  "Follow up on outstanding communication items",
+];
 
 export default function TasksPage() {
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const dateKey = useMemo(() => formatDateKey(selectedDate), [selectedDate]);
-
-  const [tasksByDate, setTasksByDate] = useState({});
-  const [habitsByDate, setHabitsByDate] = useState({});
-
-  const [taskText, setTaskText] = useState("");
-  const [person, setPerson] = useState("Mark");
-  const [priority, setPriority] = useState("Medium");
+  const [tasks, setTasks] = useState(defaultTasks);
+  const [priorities, setPriorities] = useState(defaultPriorities);
+  const [newTask, setNewTask] = useState("");
+  const [assignedFrom, setAssignedFrom] = useState("Mark");
+  const [urgency, setUrgency] = useState("Medium");
   const [dueDate, setDueDate] = useState("");
   const [hideCompleted, setHideCompleted] = useState(false);
-  const [dragIndex, setDragIndex] = useState(null);
-
-  const weeklyPriorities = useMemo(
-    () => ["Win the week", "Stay disciplined", "Stay focused"],
-    []
-  );
 
   useEffect(() => {
-    const savedTasks = localStorage.getItem("daily-os-tasks-by-date");
-    const savedHabits = localStorage.getItem("daily-os-habits-by-date");
+    const savedTasks = localStorage.getItem("tasks");
+    const savedPriorities = localStorage.getItem("weeklyPriorities");
 
-    if (savedTasks) {
-      try {
-        setTasksByDate(JSON.parse(savedTasks));
-      } catch {}
-    }
-
-    if (savedHabits) {
-      try {
-        setHabitsByDate(JSON.parse(savedHabits));
-      } catch {}
-    }
+    if (savedTasks) setTasks(JSON.parse(savedTasks));
+    if (savedPriorities) setPriorities(JSON.parse(savedPriorities));
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("daily-os-tasks-by-date", JSON.stringify(tasksByDate));
-  }, [tasksByDate]);
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+  }, [tasks]);
 
   useEffect(() => {
-    localStorage.setItem("daily-os-habits-by-date", JSON.stringify(habitsByDate));
-  }, [habitsByDate]);
-
-  useEffect(() => {
-    if (!habitsByDate[dateKey]) {
-      setHabitsByDate((prev) => ({
-        ...prev,
-        [dateKey]: makeDefaultHabits(),
-      }));
-    }
-  }, [dateKey, habitsByDate]);
-
-  const tasks = tasksByDate[dateKey] || [];
-  const habits = habitsByDate[dateKey] || makeDefaultHabits();
-
-  const openCount = tasks.filter((t) => !t.done).length;
-  const completedCount = tasks.filter((t) => t.done).length;
-  const completedHabits = habits.filter((h) => h.done).length;
-  const habitProgress = habits.length
-    ? Math.round((completedHabits / habits.length) * 100)
-    : 0;
-
-  const recentDays = Object.keys(tasksByDate)
-    .sort((a, b) => (a < b ? 1 : -1))
-    .slice(0, 7);
-
-  const visibleTasks = tasks.filter((t) => (hideCompleted ? !t.done : true));
+    localStorage.setItem("weeklyPriorities", JSON.stringify(priorities));
+  }, [priorities]);
 
   function addTask() {
-    if (!taskText.trim()) return;
+    if (!newTask.trim()) return;
 
-    const nextTasks = [
-      ...tasks,
-      {
-        id: Date.now(),
-        text: taskText.trim(),
-        person,
-        priority,
-        dueDate: dueDate || "",
-        done: false,
-      },
-    ];
-
-    setTasksByDate((prev) => ({
-      ...prev,
-      [dateKey]: nextTasks,
-    }));
-
-    setTaskText("");
-    setPriority("Medium");
-    setPerson("Mark");
-    setDueDate("");
-  }
-
-  function toggleTask(index) {
-    const updated = [...tasks];
-    updated[index].done = !updated[index].done;
-
-    setTasksByDate((prev) => ({
-      ...prev,
-      [dateKey]: updated,
-    }));
-  }
-
-  function toggleHabit(index) {
-    const updated = [...habits];
-    updated[index].done = !updated[index].done;
-
-    setHabitsByDate((prev) => ({
-      ...prev,
-      [dateKey]: updated,
-    }));
-  }
-
-  function handleDragStart(index) {
-    setDragIndex(index);
-  }
-
-  function handleDrop(dropIndex) {
-    if (dragIndex === null) return;
-
-    const updated = [...tasks];
-    const draggedItem = updated[dragIndex];
-
-    updated.splice(dragIndex, 1);
-    updated.splice(dropIndex, 0, draggedItem);
-
-    setTasksByDate((prev) => ({
-      ...prev,
-      [dateKey]: updated,
-    }));
-
-    setDragIndex(null);
-  }
-
-  function handleDatePick(dayKey) {
-    setSelectedDate(new Date(`${dayKey}T12:00:00`));
-  }
-
-  function getPriorityStyle(value) {
-    if (value === "High") {
-      return {
-        background: "#FEE2E2",
-        color: "#B91C1C",
-      };
-    }
-    if (value === "Low") {
-      return {
-        background: "#E0F2FE",
-        color: "#0369A1",
-      };
-    }
-    return {
-      background: "#FEF3C7",
-      color: "#B45309",
+    const task = {
+      id: Date.now(),
+      title: newTask,
+      assignedFrom,
+      urgency,
+      dueDate,
+      complete: false,
     };
+
+    setTasks([task, ...tasks]);
+    setNewTask("");
+    setDueDate("");
+    setUrgency("Medium");
+    setAssignedFrom("Mark");
   }
+
+  function toggleTask(id) {
+    setTasks(
+      tasks.map((task) =>
+        task.id === id ? { ...task, complete: !task.complete } : task
+      )
+    );
+  }
+
+  function deleteTask(id) {
+    setTasks(tasks.filter((task) => task.id !== id));
+  }
+
+  function updatePriority(index, value) {
+    const updated = [...priorities];
+    updated[index] = value;
+    setPriorities(updated);
+  }
+
+  function addPriority() {
+    setPriorities([...priorities, ""]);
+  }
+
+  function deletePriority(index) {
+    setPriorities(priorities.filter((_, i) => i !== index));
+  }
+
+  const visibleTasks = hideCompleted
+    ? tasks.filter((task) => !task.complete)
+    : tasks;
 
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
+    <div className="tasksPage">
+      <div className="tasksHeader">
         <div>
-          <div style={styles.kicker}>Daily page</div>
-          <h1 style={styles.title}>Focused execution for today</h1>
+          <h1>Tasks</h1>
+          <p>One clean place for priorities, delegated items, and follow-ups.</p>
         </div>
+
+        <label className="hideToggle">
+          <input
+            type="checkbox"
+            checked={hideCompleted}
+            onChange={() => setHideCompleted(!hideCompleted)}
+          />
+          Hide completed
+        </label>
       </div>
 
-      <div style={styles.topRow}>
-        <div style={styles.selectedDayCard}>
-          <div style={styles.cardLabel}>SELECTED DAY</div>
-          <div style={styles.dateRow}>
-            <button
-              style={styles.dateNavButton}
-              onClick={() => setSelectedDate((d) => shiftDate(d, -1))}
+      <section className="taskCard">
+        <div className="sectionHeader">
+          <h2>Weekly Priorities</h2>
+          <button onClick={addPriority}>+ Add Priority</button>
+        </div>
+
+        <div className="priorityList">
+          {priorities.map((priority, index) => (
+            <div className="priorityItem" key={index}>
+              <input
+                value={priority}
+                onChange={(e) => updatePriority(index, e.target.value)}
+                placeholder="Add weekly priority..."
+              />
+              <button onClick={() => deletePriority(index)}>×</button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="taskCard">
+        <h2>Add Task</h2>
+
+        <div className="addTaskGrid">
+          <input
+            className="taskInput"
+            value={newTask}
+            onChange={(e) => setNewTask(e.target.value)}
+            placeholder="Add a new task..."
+            onKeyDown={(e) => {
+              if (e.key === "Enter") addTask();
+            }}
+          />
+
+          <select
+            value={assignedFrom}
+            onChange={(e) => setAssignedFrom(e.target.value)}
+          >
+            <option>Mark</option>
+            <option>Dane</option>
+            <option>Nikita</option>
+          </select>
+
+          <select value={urgency} onChange={(e) => setUrgency(e.target.value)}>
+            <option>High</option>
+            <option>Medium</option>
+            <option>Low</option>
+          </select>
+
+          <input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+          />
+
+          <button className="addTaskBtn" onClick={addTask}>
+            Add
+          </button>
+        </div>
+      </section>
+
+      <section className="taskCard">
+        <div className="sectionHeader">
+          <h2>Task List</h2>
+          <span>{visibleTasks.length} items</span>
+        </div>
+
+        <div className="taskList">
+          {visibleTasks.map((task) => (
+            <div
+              className={`taskItem ${task.complete ? "completed" : ""}`}
+              key={task.id}
             >
-              ←
-            </button>
-
-            <div style={styles.dateText}>{formatPrettyDate(selectedDate)}</div>
-
-            <button
-              style={styles.dateNavButton}
-              onClick={() => setSelectedDate((d) => shiftDate(d, 1))}
-            >
-              →
-            </button>
-          </div>
-        </div>
-
-        <div style={styles.statCard}>
-          <div style={styles.cardLabel}>OPEN TASKS</div>
-          <div style={styles.statNumber}>{openCount}</div>
-        </div>
-
-        <div style={styles.statCard}>
-          <div style={styles.cardLabel}>COMPLETED</div>
-          <div style={styles.statNumber}>{completedCount}</div>
-        </div>
-      </div>
-
-      <div style={styles.mainGrid}>
-        <div style={styles.leftPanel}>
-          <div style={styles.panelSection}>
-            <div style={styles.sectionLabel}>DAILY HABITS</div>
-
-            <div style={styles.progressWrap}>
-              <div style={styles.progressTrack}>
-                <div
-                  style={{
-                    ...styles.progressFill,
-                    width: `${habitProgress}%`,
-                  }}
+              <div className="taskLeft">
+                <input
+                  type="checkbox"
+                  checked={task.complete}
+                  onChange={() => toggleTask(task.id)}
                 />
+
+                <div>
+                  <div className="taskTitle">{task.title}</div>
+                  <div className="taskMeta">
+                    <span>From: {task.assignedFrom}</span>
+                    {task.dueDate && <span>Due: {task.dueDate}</span>}
+                  </div>
+                </div>
               </div>
-              <div style={styles.progressText}>
-                {completedHabits}/{habits.length} completed
+
+              <div className="taskRight">
+                <span className={`urgencyBadge ${task.urgency.toLowerCase()}`}>
+                  {task.urgency}
+                </span>
+                <button onClick={() => deleteTask(task.id)}>×</button>
               </div>
             </div>
+          ))}
 
-            {habits.map((habit, i) => (
-              <div
-                key={habit.name}
-                style={{
-                  ...styles.habitItem,
-                  opacity: habit.done ? 0.55 : 1,
-                  textDecoration: habit.done ? "line-through" : "none",
-                }}
-                onClick={() => toggleHabit(i)}
-              >
-                <span>{habit.name}</span>
-                <span style={styles.checkMark}>{habit.done ? "✓" : ""}</span>
-              </div>
-            ))}
-          </div>
-
-          <div style={styles.panelSection}>
-            <div style={styles.sectionLabel}>WEEKLY PRIORITIES</div>
-            {weeklyPriorities.map((item) => (
-              <div key={item} style={styles.priorityBlock}>
-                {item}
-              </div>
-            ))}
-          </div>
-
-          <div style={styles.panelSection}>
-            <div style={styles.sectionLabel}>RECENT DAYS</div>
-            {recentDays.length === 0 ? (
-              <div style={styles.recentDayMuted}>No saved days yet</div>
-            ) : (
-              recentDays.map((day) => (
-                <div
-                  key={day}
-                  style={{
-                    ...styles.recentDay,
-                    background: day === dateKey ? "#E9EEF9" : "#F2F4F7",
-                    border: day === dateKey ? "1px solid #D7E1F5" : "1px solid transparent",
-                  }}
-                  onClick={() => handleDatePick(day)}
-                >
-                  {day}
-                </div>
-              ))
-            )}
-          </div>
+          {visibleTasks.length === 0 && (
+            <div className="emptyState">No tasks showing.</div>
+          )}
         </div>
+      </section>
 
-        <div style={styles.rightPanel}>
-          <div style={styles.toolbar}>
-            <div style={styles.sectionLabel}>DAILY TASKS</div>
+      <style jsx>{`
+        .tasksPage {
+          padding: 32px;
+          max-width: 1180px;
+          margin: 0 auto;
+          color: #111;
+        }
 
-            <button
-              onClick={() => setHideCompleted((v) => !v)}
-              style={styles.hideCompletedButton}
-            >
-              {hideCompleted ? "Show Completed" : "Hide Completed"}
-            </button>
-          </div>
+        .tasksHeader {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 20px;
+          margin-bottom: 24px;
+        }
 
-          <div style={styles.inputShell}>
-            <input
-              value={taskText}
-              onChange={(e) => setTaskText(e.target.value)}
-              placeholder="Add task..."
-              style={styles.taskInput}
-            />
+        h1 {
+          margin: 0;
+          font-size: 34px;
+          letter-spacing: -0.04em;
+        }
 
-            <select
-              value={person}
-              onChange={(e) => setPerson(e.target.value)}
-              style={styles.select}
-            >
-              <option>Mark</option>
-              <option>Dane</option>
-            </select>
+        p {
+          margin: 8px 0 0;
+          color: #6b7280;
+          font-size: 14px;
+        }
 
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value)}
-              style={styles.select}
-            >
-              <option>High</option>
-              <option>Medium</option>
-              <option>Low</option>
-            </select>
+        .hideToggle {
+          font-size: 13px;
+          color: #555;
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          margin-top: 8px;
+        }
 
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              style={styles.dateInput}
-            />
+        .taskCard {
+          background: #ffffff;
+          border: 1px solid #e5e7eb;
+          border-radius: 18px;
+          padding: 20px;
+          margin-bottom: 18px;
+          box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
+        }
 
-            <button onClick={addTask} style={styles.addButton}>
-              Add task
-            </button>
-          </div>
+        .sectionHeader {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 16px;
+          margin-bottom: 14px;
+        }
 
-          <div style={styles.taskList}>
-            {visibleTasks.length === 0 ? (
-              <div style={styles.emptyState}>No tasks for this day yet.</div>
-            ) : (
-              visibleTasks.map((task, i) => (
-                <div
-                  key={task.id}
-                  draggable
-                  onDragStart={() => handleDragStart(i)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => handleDrop(i)}
-                  style={{
-                    ...styles.taskRow,
-                    opacity: task.done ? 0.45 : 1,
-                  }}
-                >
-                  <div
-                    style={{
-                      ...styles.taskName,
-                      textDecoration: task.done ? "line-through" : "none",
-                    }}
-                    onClick={() => {
-                      const originalIndex = tasks.findIndex((t) => t.id === task.id);
-                      if (originalIndex !== -1) toggleTask(originalIndex);
-                    }}
-                  >
-                    {task.text}
-                  </div>
+        h2 {
+          margin: 0;
+          font-size: 17px;
+          letter-spacing: -0.02em;
+        }
 
-                  <div style={styles.taskMeta}>
-                    <span
-                      style={{
-                        ...styles.priorityPill,
-                        ...getPriorityStyle(task.priority),
-                      }}
-                    >
-                      {task.priority}
-                    </span>
+        button {
+          border: none;
+          background: #111;
+          color: #fff;
+          border-radius: 10px;
+          padding: 9px 12px;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.18s ease;
+        }
 
-                    {task.dueDate ? (
-                      <span style={styles.dueDatePill}>{task.dueDate}</span>
-                    ) : null}
+        button:hover {
+          transform: translateY(-1px);
+          opacity: 0.9;
+        }
 
-                    <span style={styles.personPill}>{task.person}</span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
+        .priorityList {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .priorityItem {
+          display: flex;
+          gap: 10px;
+        }
+
+        .priorityItem input {
+          flex: 1;
+        }
+
+        .priorityItem button,
+        .taskRight button {
+          background: #f3f4f6;
+          color: #111;
+          width: 36px;
+          padding: 0;
+        }
+
+        .addTaskGrid {
+          display: grid;
+          grid-template-columns: 1fr 130px 130px 150px 80px;
+          gap: 10px;
+          margin-top: 14px;
+        }
+
+        input,
+        select {
+          border: 1px solid #e5e7eb;
+          background: #f9fafb;
+          border-radius: 12px;
+          padding: 11px 12px;
+          font-size: 14px;
+          outline: none;
+          color: #111;
+        }
+
+        input:focus,
+        select:focus {
+          border-color: #111;
+          background: #fff;
+        }
+
+        .taskList {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .taskItem {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 16px;
+          background: #f9fafb;
+          border: 1px solid #eeeeee;
+          border-radius: 14px;
+          padding: 14px;
+        }
+
+        .taskItem.completed {
+          opacity: 0.55;
+        }
+
+        .taskItem.completed .taskTitle {
+          text-decoration: line-through;
+        }
+
+        .taskLeft {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+        }
+
+        .taskTitle {
+          font-size: 14px;
+          font-weight: 600;
+        }
+
+        .taskMeta {
+          display: flex;
+          gap: 12px;
+          margin-top: 5px;
+          color: #6b7280;
+          font-size: 12px;
+        }
+
+        .taskRight {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .urgencyBadge {
+          font-size: 12px;
+          padding: 6px 10px;
+          border-radius: 999px;
+          font-weight: 600;
+        }
+
+        .urgencyBadge.high {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+
+        .urgencyBadge.medium {
+          background: #fef3c7;
+          color: #92400e;
+        }
+
+        .urgencyBadge.low {
+          background: #dcfce7;
+          color: #166534;
+        }
+
+        .emptyState {
+          padding: 24px;
+          text-align: center;
+          color: #777;
+          font-size: 14px;
+        }
+
+        @media (max-width: 900px) {
+          .tasksPage {
+            padding: 20px;
+          }
+
+          .tasksHeader {
+            flex-direction: column;
+          }
+
+          .addTaskGrid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
     </div>
   );
 }
-
-const styles = {
-  page: {
-    background: "#F4F5F7",
-    minHeight: "100vh",
-    padding: "36px 48px",
-    fontFamily: "Inter, Arial, sans-serif",
-    color: "#111827",
-  },
-
-  header: {
-    marginBottom: 18,
-  },
-
-  kicker: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginBottom: 6,
-    textTransform: "uppercase",
-    letterSpacing: "0.06em",
-  },
-
-  title: {
-    fontSize: 28,
-    lineHeight: 1.2,
-    margin: 0,
-    fontWeight: 600,
-  },
-
-  topRow: {
-    display: "grid",
-    gridTemplateColumns: "2fr 1fr 1fr",
-    gap: 18,
-    marginBottom: 20,
-  },
-
-  selectedDayCard: {
-    background: "#E8EAEE",
-    borderRadius: 18,
-    padding: 20,
-    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-  },
-
-  statCard: {
-    background: "#FFFFFF",
-    borderRadius: 18,
-    padding: 20,
-    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-  },
-
-  cardLabel: {
-    fontSize: 11,
-    color: "#6B7280",
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-    marginBottom: 10,
-  },
-
-  dateRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-  },
-
-  dateText: {
-    fontSize: 24,
-    fontWeight: 600,
-  },
-
-  dateNavButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    border: "1px solid #D6DAE1",
-    background: "#FFFFFF",
-    cursor: "pointer",
-    fontSize: 16,
-  },
-
-  statNumber: {
-    fontSize: 28,
-    fontWeight: 600,
-  },
-
-  mainGrid: {
-    display: "grid",
-    gridTemplateColumns: "290px 1fr",
-    gap: 20,
-  },
-
-  leftPanel: {
-    background: "#FFFFFF",
-    borderRadius: 18,
-    padding: 20,
-    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-  },
-
-  rightPanel: {
-    background: "#FFFFFF",
-    borderRadius: 18,
-    padding: 20,
-    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-  },
-
-  panelSection: {
-    marginBottom: 24,
-  },
-
-  sectionLabel: {
-    fontSize: 11,
-    color: "#6B7280",
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-    marginBottom: 10,
-  },
-
-  progressWrap: {
-    marginBottom: 12,
-  },
-
-  progressTrack: {
-    height: 6,
-    borderRadius: 999,
-    background: "#E5E7EB",
-    overflow: "hidden",
-  },
-
-  progressFill: {
-    height: "100%",
-    background: "#111827",
-    borderRadius: 999,
-  },
-
-  progressText: {
-    fontSize: 11,
-    color: "#6B7280",
-    marginTop: 6,
-  },
-
-  habitItem: {
-    background: "#F1F2F4",
-    borderRadius: 12,
-    padding: "10px 12px",
-    marginBottom: 8,
-    fontSize: 13,
-    cursor: "pointer",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  checkMark: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
-
-  priorityBlock: {
-    background: "#F1F2F4",
-    borderRadius: 12,
-    padding: "10px 12px",
-    marginBottom: 8,
-    fontSize: 13,
-  },
-
-  recentDay: {
-    borderRadius: 12,
-    padding: "10px 12px",
-    marginBottom: 8,
-    cursor: "pointer",
-    fontSize: 13,
-  },
-
-  recentDayMuted: {
-    fontSize: 13,
-    color: "#6B7280",
-  },
-
-  toolbar: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-
-  hideCompletedButton: {
-    background: "#FFFFFF",
-    border: "1px solid #E5E7EB",
-    padding: "8px 14px",
-    borderRadius: 999,
-    cursor: "pointer",
-    fontSize: 12,
-    color: "#374151",
-  },
-
-  inputShell: {
-    display: "flex",
-    gap: 10,
-    marginBottom: 18,
-    background: "#F8FAFC",
-    border: "1px solid #EEF2F7",
-    padding: 10,
-    borderRadius: 14,
-  },
-
-  taskInput: {
-    flex: 1,
-    padding: "12px 12px",
-    borderRadius: 12,
-    border: "1px solid #E5E7EB",
-    background: "#FFFFFF",
-    fontSize: 13,
-    outline: "none",
-  },
-
-  select: {
-    padding: "10px 12px",
-    borderRadius: 12,
-    border: "1px solid #E5E7EB",
-    background: "#FFFFFF",
-    fontSize: 13,
-    outline: "none",
-  },
-
-  dateInput: {
-    padding: "10px 12px",
-    borderRadius: 12,
-    border: "1px solid #E5E7EB",
-    background: "#FFFFFF",
-    fontSize: 13,
-    outline: "none",
-  },
-
-  addButton: {
-    background: "#111827",
-    color: "#FFFFFF",
-    border: "none",
-    padding: "10px 16px",
-    borderRadius: 12,
-    cursor: "pointer",
-    fontSize: 13,
-  },
-
-  taskList: {
-    marginTop: 8,
-  },
-
-  emptyState: {
-    color: "#6B7280",
-    fontSize: 13,
-    padding: "8px 0",
-  },
-
-  taskRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "14px 0",
-    borderBottom: "1px solid #F0F1F3",
-    cursor: "grab",
-  },
-
-  taskName: {
-    fontSize: 13,
-    cursor: "pointer",
-  },
-
-  taskMeta: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-  },
-
-  priorityPill: {
-    padding: "4px 10px",
-    borderRadius: 999,
-    fontSize: 12,
-  },
-
-  dueDatePill: {
-    padding: "4px 10px",
-    borderRadius: 999,
-    fontSize: 12,
-    background: "#F3F4F6",
-    color: "#6B7280",
-  },
-
-  personPill: {
-    padding: "4px 10px",
-    borderRadius: 999,
-    fontSize: 12,
-    background: "#EEF2FF",
-    color: "#4F46E5",
-  },
-};
