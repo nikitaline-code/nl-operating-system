@@ -1,22 +1,8 @@
 import { useEffect, useState } from "react";
 
 const defaultTasks = [
-  {
-    id: 1,
-    title: "Review daily priorities",
-    assignedFrom: "Mark",
-    urgency: "High",
-    dueDate: "",
-    complete: false,
-  },
-  {
-    id: 2,
-    title: "Follow up on open dealer items",
-    assignedFrom: "Dane",
-    urgency: "Medium",
-    dueDate: "",
-    complete: false,
-  },
+  { id: 1, title: "Review daily priorities", assignedFrom: "Mark", urgency: "High", dueDate: "", complete: false },
+  { id: 2, title: "Follow up on open dealer items", assignedFrom: "Dane", urgency: "Medium", dueDate: "", complete: false },
 ];
 
 const defaultPriorities = [
@@ -70,11 +56,7 @@ export default function TasksPage() {
   }
 
   function toggleTask(id) {
-    setTasks(
-      tasks.map((task) =>
-        task.id === id ? { ...task, complete: !task.complete } : task
-      )
-    );
+    setTasks(tasks.map((task) => task.id === id ? { ...task, complete: !task.complete } : task));
   }
 
   function deleteTask(id) {
@@ -95,9 +77,7 @@ export default function TasksPage() {
     setPriorities(priorities.filter((_, i) => i !== index));
   }
 
-  const visibleTasks = hideCompleted
-    ? tasks.filter((task) => !task.complete)
-    : tasks;
+  const visibleTasks = hideCompleted ? tasks.filter((task) => !task.complete) : tasks;
 
   return (
     <div className="tasksPage">
@@ -117,114 +97,108 @@ export default function TasksPage() {
         </label>
       </div>
 
-      <section className="taskCard">
-        <div className="sectionHeader">
-          <h2>Weekly Priorities</h2>
-          <button onClick={addPriority}>+ Add Priority</button>
-        </div>
-
-        <div className="priorityList">
-          {priorities.map((priority, index) => (
-            <div className="priorityItem" key={index}>
-              <input
-                value={priority}
-                onChange={(e) => updatePriority(index, e.target.value)}
-                placeholder="Add weekly priority..."
-              />
-              <button onClick={() => deletePriority(index)}>×</button>
+      <div className="tasksLayout">
+        <aside className="prioritySide">
+          <div className="sideCard">
+            <div className="sectionHeader">
+              <div>
+                <h2>Weekly Priorities</h2>
+                <p>Top focus items</p>
+              </div>
+              <button onClick={addPriority}>+</button>
             </div>
-          ))}
-        </div>
-      </section>
 
-      <section className="taskCard">
-        <h2>Add Task</h2>
+            <div className="priorityList">
+              {priorities.map((priority, index) => (
+                <div className="priorityItem" key={index}>
+                  <span>{index + 1}</span>
+                  <textarea
+                    value={priority}
+                    onChange={(e) => updatePriority(index, e.target.value)}
+                    placeholder="Add priority..."
+                  />
+                  <button onClick={() => deletePriority(index)}>×</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </aside>
 
-        <div className="addTaskGrid">
-          <input
-            className="taskInput"
-            value={newTask}
-            onChange={(e) => setNewTask(e.target.value)}
-            placeholder="Add a new task..."
-            onKeyDown={(e) => {
-              if (e.key === "Enter") addTask();
-            }}
-          />
+        <main className="taskMain">
+          <section className="taskCard">
+            <h2>Add Task</h2>
 
-          <select
-            value={assignedFrom}
-            onChange={(e) => setAssignedFrom(e.target.value)}
-          >
-            <option>Mark</option>
-            <option>Dane</option>
-            <option>Nikita</option>
-          </select>
+            <div className="addTaskGrid">
+              <input
+                className="taskInput"
+                value={newTask}
+                onChange={(e) => setNewTask(e.target.value)}
+                placeholder="Add a new task..."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") addTask();
+                }}
+              />
 
-          <select value={urgency} onChange={(e) => setUrgency(e.target.value)}>
-            <option>High</option>
-            <option>Medium</option>
-            <option>Low</option>
-          </select>
+              <select value={assignedFrom} onChange={(e) => setAssignedFrom(e.target.value)}>
+                <option>Mark</option>
+                <option>Dane</option>
+                <option>Nikita</option>
+              </select>
 
-          <input
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-          />
+              <select value={urgency} onChange={(e) => setUrgency(e.target.value)}>
+                <option>High</option>
+                <option>Medium</option>
+                <option>Low</option>
+              </select>
 
-          <button className="addTaskBtn" onClick={addTask}>
-            Add
-          </button>
-        </div>
-      </section>
+              <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
 
-      <section className="taskCard">
-        <div className="sectionHeader">
-          <h2>Task List</h2>
-          <span>{visibleTasks.length} items</span>
-        </div>
+              <button className="addTaskBtn" onClick={addTask}>Add</button>
+            </div>
+          </section>
 
-        <div className="taskList">
-          {visibleTasks.map((task) => (
-            <div
-              className={`taskItem ${task.complete ? "completed" : ""}`}
-              key={task.id}
-            >
-              <div className="taskLeft">
-                <input
-                  type="checkbox"
-                  checked={task.complete}
-                  onChange={() => toggleTask(task.id)}
-                />
+          <section className="taskCard">
+            <div className="sectionHeader">
+              <h2>Task List</h2>
+              <span>{visibleTasks.length} items</span>
+            </div>
 
-                <div>
-                  <div className="taskTitle">{task.title}</div>
-                  <div className="taskMeta">
-                    <span>From: {task.assignedFrom}</span>
-                    {task.dueDate && <span>Due: {task.dueDate}</span>}
+            <div className="taskList">
+              {visibleTasks.map((task) => (
+                <div className={`taskItem ${task.complete ? "completed" : ""}`} key={task.id}>
+                  <div className="taskLeft">
+                    <input type="checkbox" checked={task.complete} onChange={() => toggleTask(task.id)} />
+
+                    <div>
+                      <div className="taskTitle">{task.title}</div>
+                      <div className="taskMeta">
+                        <span>From: {task.assignedFrom}</span>
+                        {task.dueDate && <span>Due: {task.dueDate}</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="taskRight">
+                    <span className={`urgencyBadge ${task.urgency.toLowerCase()}`}>
+                      {task.urgency}
+                    </span>
+                    <button onClick={() => deleteTask(task.id)}>×</button>
                   </div>
                 </div>
-              </div>
+              ))}
 
-              <div className="taskRight">
-                <span className={`urgencyBadge ${task.urgency.toLowerCase()}`}>
-                  {task.urgency}
-                </span>
-                <button onClick={() => deleteTask(task.id)}>×</button>
-              </div>
+              {visibleTasks.length === 0 && (
+                <div className="emptyState">No tasks showing.</div>
+              )}
             </div>
-          ))}
-
-          {visibleTasks.length === 0 && (
-            <div className="emptyState">No tasks showing.</div>
-          )}
-        </div>
-      </section>
+          </section>
+        </main>
+      </div>
 
       <style jsx>{`
         .tasksPage {
           padding: 32px;
-          max-width: 1180px;
+          max-width: 1280px;
           margin: 0 auto;
           color: #111;
         }
@@ -243,10 +217,93 @@ export default function TasksPage() {
           letter-spacing: -0.04em;
         }
 
+        h2 {
+          margin: 0;
+          font-size: 16px;
+          letter-spacing: -0.02em;
+        }
+
         p {
-          margin: 8px 0 0;
+          margin: 6px 0 0;
           color: #6b7280;
-          font-size: 14px;
+          font-size: 13px;
+        }
+
+        .tasksLayout {
+          display: grid;
+          grid-template-columns: 310px 1fr;
+          gap: 20px;
+          align-items: start;
+        }
+
+        .prioritySide {
+          position: sticky;
+          top: 24px;
+        }
+
+        .sideCard,
+        .taskCard {
+          background: #ffffff;
+          border: 1px solid #e5e7eb;
+          border-radius: 18px;
+          padding: 20px;
+          box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
+        }
+
+        .taskCard {
+          margin-bottom: 18px;
+        }
+
+        .sectionHeader {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 14px;
+        }
+
+        .priorityList,
+        .taskList {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .priorityItem {
+          display: grid;
+          grid-template-columns: 24px 1fr 30px;
+          gap: 8px;
+          align-items: start;
+          background: #f9fafb;
+          border: 1px solid #eeeeee;
+          border-radius: 14px;
+          padding: 10px;
+        }
+
+        .priorityItem span {
+          width: 24px;
+          height: 24px;
+          border-radius: 8px;
+          background: #111;
+          color: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        textarea {
+          width: 100%;
+          resize: vertical;
+          min-height: 54px;
+          border: none;
+          background: transparent;
+          outline: none;
+          font-size: 13px;
+          color: #111;
+          font-family: inherit;
+          line-height: 1.35;
         }
 
         .hideToggle {
@@ -256,68 +313,6 @@ export default function TasksPage() {
           gap: 8px;
           align-items: center;
           margin-top: 8px;
-        }
-
-        .taskCard {
-          background: #ffffff;
-          border: 1px solid #e5e7eb;
-          border-radius: 18px;
-          padding: 20px;
-          margin-bottom: 18px;
-          box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
-        }
-
-        .sectionHeader {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 16px;
-          margin-bottom: 14px;
-        }
-
-        h2 {
-          margin: 0;
-          font-size: 17px;
-          letter-spacing: -0.02em;
-        }
-
-        button {
-          border: none;
-          background: #111;
-          color: #fff;
-          border-radius: 10px;
-          padding: 9px 12px;
-          font-size: 13px;
-          cursor: pointer;
-          transition: all 0.18s ease;
-        }
-
-        button:hover {
-          transform: translateY(-1px);
-          opacity: 0.9;
-        }
-
-        .priorityList {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        .priorityItem {
-          display: flex;
-          gap: 10px;
-        }
-
-        .priorityItem input {
-          flex: 1;
-        }
-
-        .priorityItem button,
-        .taskRight button {
-          background: #f3f4f6;
-          color: #111;
-          width: 36px;
-          padding: 0;
         }
 
         .addTaskGrid {
@@ -338,16 +333,29 @@ export default function TasksPage() {
           color: #111;
         }
 
-        input:focus,
-        select:focus {
-          border-color: #111;
-          background: #fff;
+        button {
+          border: none;
+          background: #111;
+          color: #fff;
+          border-radius: 10px;
+          padding: 9px 12px;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.18s ease;
         }
 
-        .taskList {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
+        button:hover {
+          transform: translateY(-1px);
+          opacity: 0.9;
+        }
+
+        .priorityItem button,
+        .taskRight button {
+          background: #f3f4f6;
+          color: #111;
+          width: 30px;
+          height: 30px;
+          padding: 0;
         }
 
         .taskItem {
@@ -423,13 +431,13 @@ export default function TasksPage() {
           font-size: 14px;
         }
 
-        @media (max-width: 900px) {
-          .tasksPage {
-            padding: 20px;
+        @media (max-width: 1000px) {
+          .tasksLayout {
+            grid-template-columns: 1fr;
           }
 
-          .tasksHeader {
-            flex-direction: column;
+          .prioritySide {
+            position: static;
           }
 
           .addTaskGrid {
