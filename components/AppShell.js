@@ -14,25 +14,25 @@ export default function AppShell({ children }) {
   const router = useRouter();
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="sidebar-logo">
-          <div className="logo-mark">N</div>
+    <div className="appShell">
+      <aside className="sideNav">
+        <div className="sideHeader">
+          <div className="sideLogo">N</div>
           <div>
-            <div className="logo-title">Operating System</div>
-            <div className="logo-subtitle">Nikita</div>
+            <div className="sideTitle">Operating System</div>
+            <div className="sideSub">Nikita</div>
           </div>
         </div>
 
-        <nav className="sidebar-nav">
+        <nav className="sideLinks">
           {navItems.map((item) => {
-            const active = router.pathname === item.href;
+            const isActive = router.pathname === item.href;
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`sidebar-link ${active ? "active" : ""}`}
+                className={isActive ? "sideLink active" : "sideLink"}
               >
                 {item.label}
               </Link>
@@ -41,7 +41,7 @@ export default function AppShell({ children }) {
         </nav>
       </aside>
 
-      <main className="main-content">{children}</main>
+      <main className="pageArea">{children}</main>
     </div>
   );
 }
