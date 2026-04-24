@@ -241,20 +241,20 @@ export default function TasksPage() {
 
         h2 {
           margin: 0;
-          font-size: 16px;
+          font-size: 15px;
           letter-spacing: -0.02em;
         }
 
         p {
-          margin: 6px 0 0;
+          margin: 4px 0 0;
           color: #6b7280;
-          font-size: 13px;
+          font-size: 12px;
         }
 
         .tasksLayout {
           display: grid;
-          grid-template-columns: 310px 1fr;
-          gap: 20px;
+          grid-template-columns: 280px 1fr;
+          gap: 18px;
           align-items: start;
         }
 
@@ -267,9 +267,9 @@ export default function TasksPage() {
         .taskCard {
           background: #ffffff;
           border: 1px solid #e5e7eb;
-          border-radius: 18px;
-          padding: 20px;
-          box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
+          border-radius: 14px;
+          padding: 14px;
+          box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035);
         }
 
         .taskCard {
@@ -280,8 +280,8 @@ export default function TasksPage() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 14px;
-          margin-bottom: 14px;
+          gap: 10px;
+          margin-bottom: 10px;
         }
 
         .priorityList,
@@ -291,7 +291,7 @@ export default function TasksPage() {
         }
 
         .priorityList {
-          gap: 4px;
+          gap: 3px;
         }
 
         .taskList {
@@ -300,26 +300,26 @@ export default function TasksPage() {
 
         .priorityItem {
           display: grid;
-          grid-template-columns: 18px 1fr 22px;
-          gap: 6px;
+          grid-template-columns: 16px 1fr 18px;
+          gap: 5px;
           align-items: center;
           background: transparent;
           border: 1px solid #e5e7eb;
-          border-radius: 10px;
-          padding: 6px 8px;
-          height: 40px;
+          border-radius: 8px;
+          padding: 4px 6px;
+          height: 32px;
         }
 
         .priorityItem span {
-          width: 18px;
-          height: 18px;
-          border-radius: 6px;
+          width: 14px;
+          height: 14px;
+          border-radius: 4px;
           background: #111;
           color: #fff;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 10px;
+          font-size: 9px;
           font-weight: 700;
         }
 
@@ -327,7 +327,7 @@ export default function TasksPage() {
           border: none;
           background: transparent;
           padding: 0;
-          font-size: 14px;
+          font-size: 12px;
           height: 100%;
           color: #111;
           outline: none;
@@ -337,11 +337,12 @@ export default function TasksPage() {
         .priorityItem button {
           background: #f3f4f6;
           color: #111;
-          width: 20px;
-          height: 20px;
-          border-radius: 6px;
-          font-size: 11px;
+          width: 16px;
+          height: 16px;
+          border-radius: 5px;
+          font-size: 10px;
           padding: 0;
+          line-height: 1;
         }
 
         .hideToggle {
@@ -394,11 +395,11 @@ export default function TasksPage() {
         }
 
         .smallBlackBtn {
-          width: 34px;
-          height: 34px;
+          width: 28px;
+          height: 28px;
           padding: 0;
-          border-radius: 11px;
-          font-size: 16px;
+          border-radius: 9px;
+          font-size: 14px;
         }
 
         .taskItem {
