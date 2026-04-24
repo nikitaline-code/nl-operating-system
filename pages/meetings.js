@@ -4,28 +4,52 @@ export default function MeetingsPage() {
   const [mode, setMode] = useState("weekly");
   const [dailyPerson, setDailyPerson] = useState("Mark");
 
-  const [weeklyTasks, setWeeklyTasks] = useState([""]);
-  const [markDailyTasks, setMarkDailyTasks] = useState([""]);
-  const [daneDailyTasks, setDaneDailyTasks] = useState([""]);
+  const [weeklyTasks, setWeeklyTasks] = useState([
+    { title: "", urgency: "Medium" },
+  ]);
 
-  const [weeklyPriorities, setWeeklyPriorities] = useState(["", "", ""]);
-  const [calendarReview, setCalendarReview] = useState("");
-  const [decisionsNeeded, setDecisionsNeeded] = useState("");
+  const [markDailyTasks, setMarkDailyTasks] = useState([
+    { title: "", urgency: "Medium" },
+  ]);
+
+  const [daneDailyTasks, setDaneDailyTasks] = useState([
+    { title: "", urgency: "Medium" },
+  ]);
+
+  const [weeklyNotes, setWeeklyNotes] = useState({
+    calendar: "",
+    email: "",
+    decisions: "",
+    priorities: "",
+  });
+
+  const [dailyNotes, setDailyNotes] = useState({
+    Mark: {
+      calendar: "",
+      email: "",
+      decisions: "",
+      priorities: "",
+    },
+    Dane: {
+      calendar: "",
+      email: "",
+      decisions: "",
+      priorities: "",
+    },
+  });
 
   useEffect(() => {
     const savedWeeklyTasks = localStorage.getItem("meetingWeeklyTasks");
     const savedMarkDaily = localStorage.getItem("meetingMarkDailyTasks");
     const savedDaneDaily = localStorage.getItem("meetingDaneDailyTasks");
-    const savedPriorities = localStorage.getItem("weeklyPriorities");
-    const savedCalendar = localStorage.getItem("meetingCalendarReview");
-    const savedDecisions = localStorage.getItem("meetingDecisionsNeeded");
+    const savedWeeklyNotes = localStorage.getItem("meetingWeeklyNotes");
+    const savedDailyNotes = localStorage.getItem("meetingDailyNotes");
 
     if (savedWeeklyTasks) setWeeklyTasks(JSON.parse(savedWeeklyTasks));
     if (savedMarkDaily) setMarkDailyTasks(JSON.parse(savedMarkDaily));
     if (savedDaneDaily) setDaneDailyTasks(JSON.parse(savedDaneDaily));
-    if (savedPriorities) setWeeklyPriorities(JSON.parse(savedPriorities));
-    if (savedCalendar) setCalendarReview(savedCalendar);
-    if (savedDecisions) setDecisionsNeeded(savedDecisions);
+    if (savedWeeklyNotes) setWeeklyNotes(JSON.parse(savedWeeklyNotes));
+    if (savedDailyNotes) setDailyNotes(JSON.parse(savedDailyNotes));
   }, []);
 
   useEffect(() => {
@@ -41,18 +65,14 @@ export default function MeetingsPage() {
   }, [daneDailyTasks]);
 
   useEffect(() => {
-    localStorage.setItem("weeklyPriorities", JSON.stringify(weeklyPriorities));
-  }, [weeklyPriorities]);
+    localStorage.setItem("meetingWeeklyNotes", JSON.stringify(weeklyNotes));
+  }, [weeklyNotes]);
 
   useEffect(() => {
-    localStorage.setItem("meetingCalendarReview", calendarReview);
-  }, [calendarReview]);
+    localStorage.setItem("meetingDailyNotes", JSON.stringify(dailyNotes));
+  }, [dailyNotes]);
 
-  useEffect(() => {
-    localStorage.setItem("meetingDecisionsNeeded", decisionsNeeded);
-  }, [decisionsNeeded]);
-
-  function sendMeetingTaskToTasks(taskTitle, assignedFrom = "Meetings", urgency = "Medium") {
+  function sendMeetingTaskToTasks(taskTitle, assignedFrom, urgency) {
     if (!taskTitle.trim()) return;
 
     const existingTasks = JSON.parse(localStorage.getItem("tasks") || "[]");
@@ -70,29 +90,52 @@ export default function MeetingsPage() {
     localStorage.setItem("tasks", JSON.stringify([newTask, ...existingTasks]));
   }
 
-  function updateArrayItem(array, setArray, index, value) {
+  function updateTaskItem(array, setArray, index, field, value) {
     const updated = [...array];
-    updated[index] = value;
+    updated[index] = {
+      ...updated[index],
+      [field]: value,
+    };
     setArray(updated);
   }
 
-  function addArrayItem(array, setArray) {
-    setArray([...array, ""]);
+  function addTaskRow(array, setArray) {
+    setArray([...array, { title: "", urgency: "Medium" }]);
   }
 
-  function deleteArrayItem(array, setArray, index) {
+  function deleteTaskRow(array, setArray, index) {
     setArray(array.filter((_, i) => i !== index));
   }
 
-  const activeDailyTasks = dailyPerson === "Mark" ? markDailyTasks : daneDailyTasks;
-  const setActiveDailyTasks = dailyPerson === "Mark" ? setMarkDailyTasks : setDaneDailyTasks;
+  function updateWeeklyNote(section, value) {
+    setWeeklyNotes({
+      ...weeklyNotes,
+      [section]: value,
+    });
+  }
+
+  function updateDailyNote(section, value) {
+    setDailyNotes({
+      ...dailyNotes,
+      [dailyPerson]: {
+        ...dailyNotes[dailyPerson],
+        [section]: value,
+      },
+    });
+  }
+
+  const activeDailyTasks =
+    dailyPerson === "Mark" ? markDailyTasks : daneDailyTasks;
+
+  const setActiveDailyTasks =
+    dailyPerson === "Mark" ? setMarkDailyTasks : setDaneDailyTasks;
 
   return (
     <div className="meetingsPage">
       <div className="meetingsHeader">
         <div>
           <h1>Meetings</h1>
-          <p>Daily and weekly meeting notes, priorities, decisions, and task flow.</p>
+          <p>Daily and weekly notes, decisions, priorities, and task flow.</p>
         </div>
 
         <div className="topToggle">
@@ -112,37 +155,107 @@ export default function MeetingsPage() {
       </div>
 
       {mode === "weekly" && (
-        <div className="meetingGrid">
-          <section className="meetingCard sideCard">
+        <>
+          <div className="sectionsGrid">
+            <section className="meetingCard">
+              <h2>Weekly Calendar Review</h2>
+              <textarea
+                value={weeklyNotes.calendar}
+                onChange={(e) => updateWeeklyNote("calendar", e.target.value)}
+                placeholder="Review the week’s calendar, conflicts, key meetings, prep needed, and follow-ups..."
+              />
+            </section>
+
+            <section className="meetingCard">
+              <h2>Email Review</h2>
+              <textarea
+                value={weeklyNotes.email}
+                onChange={(e) => updateWeeklyNote("email", e.target.value)}
+                placeholder="Review email asks, replies needed, dealer items, and items to route..."
+              />
+            </section>
+
+            <section className="meetingCard">
+              <h2>Decisions Needed</h2>
+              <textarea
+                value={weeklyNotes.decisions}
+                onChange={(e) => updateWeeklyNote("decisions", e.target.value)}
+                placeholder="List decisions needed from Mark/Dane..."
+              />
+            </section>
+
+            <section className="meetingCard">
+              <h2>Top Priorities</h2>
+              <textarea
+                value={weeklyNotes.priorities}
+                onChange={(e) => updateWeeklyNote("priorities", e.target.value)}
+                placeholder="List the top priorities for the week..."
+              />
+            </section>
+          </div>
+
+          <section className="meetingCard taskCard">
             <div className="sectionHeader">
               <div>
-                <h2>Weekly Priorities</h2>
-                <p>Flows to Tasks page priorities</p>
+                <h2>Weekly Tasks</h2>
+                <p>Send weekly meeting items directly to Tasks page</p>
               </div>
-              <button onClick={() => addArrayItem(weeklyPriorities, setWeeklyPriorities)}>
+
+              <button onClick={() => addTaskRow(weeklyTasks, setWeeklyTasks)}>
                 +
               </button>
             </div>
 
-            <div className="compactList">
-              {weeklyPriorities.map((priority, index) => (
-                <div className="compactRow" key={index}>
-                  <span>{index + 1}</span>
+            <div className="taskFlowList">
+              {weeklyTasks.map((task, index) => (
+                <div className="taskFlowRow" key={index}>
                   <input
-                    value={priority}
+                    value={task.title}
                     onChange={(e) =>
-                      updateArrayItem(
-                        weeklyPriorities,
-                        setWeeklyPriorities,
+                      updateTaskItem(
+                        weeklyTasks,
+                        setWeeklyTasks,
                         index,
+                        "title",
                         e.target.value
                       )
                     }
-                    placeholder="Add priority..."
+                    placeholder="Add weekly task..."
                   />
+
+                  <select
+                    value={task.urgency}
+                    onChange={(e) =>
+                      updateTaskItem(
+                        weeklyTasks,
+                        setWeeklyTasks,
+                        index,
+                        "urgency",
+                        e.target.value
+                      )
+                    }
+                  >
+                    <option>High</option>
+                    <option>Medium</option>
+                    <option>Low</option>
+                  </select>
+
                   <button
                     onClick={() =>
-                      deleteArrayItem(weeklyPriorities, setWeeklyPriorities, index)
+                      sendMeetingTaskToTasks(
+                        task.title,
+                        "Weekly Meeting",
+                        task.urgency
+                      )
+                    }
+                  >
+                    Send
+                  </button>
+
+                  <button
+                    className="deleteBtn"
+                    onClick={() =>
+                      deleteTaskRow(weeklyTasks, setWeeklyTasks, index)
                     }
                   >
                     ×
@@ -151,72 +264,11 @@ export default function MeetingsPage() {
               ))}
             </div>
           </section>
-
-          <main className="mainColumn">
-            <section className="meetingCard">
-              <h2>Calendar Review</h2>
-              <textarea
-                value={calendarReview}
-                onChange={(e) => setCalendarReview(e.target.value)}
-                placeholder="Review key meetings, conflicts, prep needed, and follow-ups..."
-              />
-            </section>
-
-            <section className="meetingCard">
-              <h2>Decisions Needed</h2>
-              <textarea
-                value={decisionsNeeded}
-                onChange={(e) => setDecisionsNeeded(e.target.value)}
-                placeholder="List decisions that need Mark/Dane input..."
-              />
-            </section>
-
-            <section className="meetingCard">
-              <div className="sectionHeader">
-                <div>
-                  <h2>Weekly Tasks</h2>
-                  <p>Send items directly to Tasks page</p>
-                </div>
-                <button onClick={() => addArrayItem(weeklyTasks, setWeeklyTasks)}>
-                  +
-                </button>
-              </div>
-
-              <div className="taskFlowList">
-                {weeklyTasks.map((task, index) => (
-                  <div className="taskFlowRow" key={index}>
-                    <input
-                      value={task}
-                      onChange={(e) =>
-                        updateArrayItem(weeklyTasks, setWeeklyTasks, index, e.target.value)
-                      }
-                      placeholder="Add weekly meeting task..."
-                    />
-
-                    <button
-                      onClick={() =>
-                        sendMeetingTaskToTasks(task, "Weekly Meeting", "Medium")
-                      }
-                    >
-                      Send
-                    </button>
-
-                    <button
-                      className="deleteBtn"
-                      onClick={() => deleteArrayItem(weeklyTasks, setWeeklyTasks, index)}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </main>
-        </div>
+        </>
       )}
 
       {mode === "daily" && (
-        <div>
+        <>
           <div className="personToggle">
             <button
               className={dailyPerson === "Mark" ? "active" : ""}
@@ -232,65 +284,115 @@ export default function MeetingsPage() {
             </button>
           </div>
 
-          <div className="dailyGrid">
+          <div className="sectionsGrid">
             <section className="meetingCard">
-              <h2>{dailyPerson} Daily Huddle</h2>
-              <p className="miniText">
-                Daily Calendar Review · Email Review · Decisions Needed · Top Priorities
-              </p>
-
-              <textarea placeholder={`Add ${dailyPerson}'s daily meeting notes...`} />
+              <h2>Daily Calendar Review</h2>
+              <textarea
+                value={dailyNotes[dailyPerson]?.calendar || ""}
+                onChange={(e) => updateDailyNote("calendar", e.target.value)}
+                placeholder={`Review ${dailyPerson}'s calendar, conflicts, prep, and follow-ups...`}
+              />
             </section>
 
             <section className="meetingCard">
-              <div className="sectionHeader">
-                <div>
-                  <h2>{dailyPerson} Daily Tasks</h2>
-                  <p>Send daily meeting items directly to Tasks page</p>
-                </div>
-                <button onClick={() => addArrayItem(activeDailyTasks, setActiveDailyTasks)}>
-                  +
-                </button>
-              </div>
+              <h2>Email Review</h2>
+              <textarea
+                value={dailyNotes[dailyPerson]?.email || ""}
+                onChange={(e) => updateDailyNote("email", e.target.value)}
+                placeholder={`Review ${dailyPerson}'s email asks, replies needed, and items to route...`}
+              />
+            </section>
 
-              <div className="taskFlowList">
-                {activeDailyTasks.map((task, index) => (
-                  <div className="taskFlowRow" key={index}>
-                    <input
-                      value={task}
-                      onChange={(e) =>
-                        updateArrayItem(
-                          activeDailyTasks,
-                          setActiveDailyTasks,
-                          index,
-                          e.target.value
-                        )
-                      }
-                      placeholder={`Add ${dailyPerson} task...`}
-                    />
+            <section className="meetingCard">
+              <h2>Decisions Needed</h2>
+              <textarea
+                value={dailyNotes[dailyPerson]?.decisions || ""}
+                onChange={(e) => updateDailyNote("decisions", e.target.value)}
+                placeholder={`List decisions needed from ${dailyPerson}...`}
+              />
+            </section>
 
-                    <button
-                      onClick={() =>
-                        sendMeetingTaskToTasks(task, dailyPerson, "Medium")
-                      }
-                    >
-                      Send
-                    </button>
-
-                    <button
-                      className="deleteBtn"
-                      onClick={() =>
-                        deleteArrayItem(activeDailyTasks, setActiveDailyTasks, index)
-                      }
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
+            <section className="meetingCard">
+              <h2>Top Priorities</h2>
+              <textarea
+                value={dailyNotes[dailyPerson]?.priorities || ""}
+                onChange={(e) => updateDailyNote("priorities", e.target.value)}
+                placeholder={`List ${dailyPerson}'s top priorities for the day...`}
+              />
             </section>
           </div>
-        </div>
+
+          <section className="meetingCard taskCard">
+            <div className="sectionHeader">
+              <div>
+                <h2>{dailyPerson} Daily Tasks</h2>
+                <p>Send daily meeting items directly to Tasks page</p>
+              </div>
+
+              <button onClick={() => addTaskRow(activeDailyTasks, setActiveDailyTasks)}>
+                +
+              </button>
+            </div>
+
+            <div className="taskFlowList">
+              {activeDailyTasks.map((task, index) => (
+                <div className="taskFlowRow" key={index}>
+                  <input
+                    value={task.title}
+                    onChange={(e) =>
+                      updateTaskItem(
+                        activeDailyTasks,
+                        setActiveDailyTasks,
+                        index,
+                        "title",
+                        e.target.value
+                      )
+                    }
+                    placeholder={`Add ${dailyPerson} task...`}
+                  />
+
+                  <select
+                    value={task.urgency}
+                    onChange={(e) =>
+                      updateTaskItem(
+                        activeDailyTasks,
+                        setActiveDailyTasks,
+                        index,
+                        "urgency",
+                        e.target.value
+                      )
+                    }
+                  >
+                    <option>High</option>
+                    <option>Medium</option>
+                    <option>Low</option>
+                  </select>
+
+                  <button
+                    onClick={() =>
+                      sendMeetingTaskToTasks(
+                        task.title,
+                        dailyPerson,
+                        task.urgency
+                      )
+                    }
+                  >
+                    Send
+                  </button>
+
+                  <button
+                    className="deleteBtn"
+                    onClick={() =>
+                      deleteTaskRow(activeDailyTasks, setActiveDailyTasks, index)
+                    }
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
       )}
 
       <style jsx>{`
@@ -327,23 +429,11 @@ export default function MeetingsPage() {
           font-size: 12px;
         }
 
-        .meetingGrid {
+        .sectionsGrid {
           display: grid;
-          grid-template-columns: 280px 1fr;
+          grid-template-columns: 1fr 1fr;
           gap: 18px;
-          align-items: start;
-        }
-
-        .mainColumn {
-          display: flex;
-          flex-direction: column;
-          gap: 18px;
-        }
-
-        .dailyGrid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 18px;
+          margin-bottom: 18px;
         }
 
         .meetingCard {
@@ -354,9 +444,8 @@ export default function MeetingsPage() {
           box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035);
         }
 
-        .sideCard {
-          position: sticky;
-          top: 24px;
+        .taskCard {
+          margin-top: 0;
         }
 
         .sectionHeader {
@@ -412,7 +501,7 @@ export default function MeetingsPage() {
 
         textarea {
           width: 100%;
-          min-height: 120px;
+          min-height: 95px;
           margin-top: 12px;
           border: 1px solid #e5e7eb;
           background: #f9fafb;
@@ -425,7 +514,8 @@ export default function MeetingsPage() {
           color: #111;
         }
 
-        input {
+        input,
+        select {
           border: 1px solid #e5e7eb;
           background: #f9fafb;
           border-radius: 10px;
@@ -436,58 +526,10 @@ export default function MeetingsPage() {
         }
 
         input:focus,
+        select:focus,
         textarea:focus {
           border-color: #111;
           background: #fff;
-        }
-
-        .compactList {
-          display: flex;
-          flex-direction: column;
-          gap: 3px;
-        }
-
-        .compactRow {
-          display: grid;
-          grid-template-columns: 16px 1fr 18px;
-          gap: 5px;
-          align-items: center;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          padding: 4px 6px;
-          height: 32px;
-        }
-
-        .compactRow span {
-          width: 14px;
-          height: 14px;
-          border-radius: 4px;
-          background: #111;
-          color: #fff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 9px;
-          font-weight: 700;
-        }
-
-        .compactRow input {
-          border: none;
-          background: transparent;
-          padding: 0;
-          font-size: 12px;
-          height: 100%;
-          min-width: 0;
-        }
-
-        .compactRow button {
-          background: #f3f4f6;
-          color: #111;
-          width: 16px;
-          height: 16px;
-          border-radius: 5px;
-          font-size: 10px;
-          padding: 0;
         }
 
         .taskFlowList {
@@ -498,7 +540,7 @@ export default function MeetingsPage() {
 
         .taskFlowRow {
           display: grid;
-          grid-template-columns: 1fr 70px 32px;
+          grid-template-columns: 1fr 110px 70px 32px;
           gap: 8px;
           align-items: center;
         }
@@ -511,17 +553,9 @@ export default function MeetingsPage() {
           padding: 0;
         }
 
-        .miniText {
-          margin-top: 8px;
-        }
-
         @media (max-width: 1000px) {
-          .meetingGrid {
+          .sectionsGrid {
             grid-template-columns: 1fr;
-          }
-
-          .sideCard {
-            position: static;
           }
 
           .meetingsHeader {
