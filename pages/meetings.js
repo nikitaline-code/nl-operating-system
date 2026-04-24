@@ -1,8 +1,15 @@
 import { useEffect, useState } from "react";
 
+const today = new Date().toISOString().slice(0, 10);
+
 export default function MeetingsPage() {
   const [mode, setMode] = useState("weekly");
   const [dailyPerson, setDailyPerson] = useState("Mark");
+  const [selectedDate, setSelectedDate] = useState(today);
+
+  const [weeklyPriorities, setWeeklyPriorities] = useState(["", "", ""]);
+  const [calendarReview, setCalendarReview] = useState("");
+  const [decisionsNeeded, setDecisionsNeeded] = useState("");
 
   const [weeklyTasks, setWeeklyTasks] = useState([
     { title: "", urgency: "Medium" },
@@ -16,61 +23,87 @@ export default function MeetingsPage() {
     { title: "", urgency: "Medium" },
   ]);
 
-  const [weeklyNotes, setWeeklyNotes] = useState({
-    calendar: "",
-    email: "",
-    decisions: "",
-    priorities: "",
-  });
-
   const [dailyNotes, setDailyNotes] = useState({
-    Mark: {
-      calendar: "",
-      email: "",
-      decisions: "",
-      priorities: "",
-    },
-    Dane: {
-      calendar: "",
-      email: "",
-      decisions: "",
-      priorities: "",
-    },
+    Mark: "",
+    Dane: "",
   });
 
   useEffect(() => {
+    const savedPriorities = localStorage.getItem("weeklyPriorities");
+    const savedCalendar = localStorage.getItem("meetingCalendarReview");
+    const savedDecisions = localStorage.getItem("meetingDecisionsNeeded");
     const savedWeeklyTasks = localStorage.getItem("meetingWeeklyTasks");
-    const savedMarkDaily = localStorage.getItem("meetingMarkDailyTasks");
-    const savedDaneDaily = localStorage.getItem("meetingDaneDailyTasks");
-    const savedWeeklyNotes = localStorage.getItem("meetingWeeklyNotes");
-    const savedDailyNotes = localStorage.getItem("meetingDailyNotes");
 
+    if (savedPriorities) setWeeklyPriorities(JSON.parse(savedPriorities));
+    if (savedCalendar) setCalendarReview(savedCalendar);
+    if (savedDecisions) setDecisionsNeeded(savedDecisions);
     if (savedWeeklyTasks) setWeeklyTasks(JSON.parse(savedWeeklyTasks));
-    if (savedMarkDaily) setMarkDailyTasks(JSON.parse(savedMarkDaily));
-    if (savedDaneDaily) setDaneDailyTasks(JSON.parse(savedDaneDaily));
-    if (savedWeeklyNotes) setWeeklyNotes(JSON.parse(savedWeeklyNotes));
-    if (savedDailyNotes) setDailyNotes(JSON.parse(savedDailyNotes));
   }, []);
+
+  useEffect(() => {
+    const savedDailyNotes = localStorage.getItem(
+      `meetingDailyNotes-${selectedDate}`
+    );
+    const savedMarkDaily = localStorage.getItem(
+      `meetingMarkDailyTasks-${selectedDate}`
+    );
+    const savedDaneDaily = localStorage.getItem(
+      `meetingDaneDailyTasks-${selectedDate}`
+    );
+
+    setDailyNotes(savedDailyNotes ? JSON.parse(savedDailyNotes) : { Mark: "", Dane: "" });
+
+    setMarkDailyTasks(
+      savedMarkDaily ? JSON.parse(savedMarkDaily) : [{ title: "", urgency: "Medium" }]
+    );
+
+    setDaneDailyTasks(
+      savedDaneDaily ? JSON.parse(savedDaneDaily) : [{ title: "", urgency: "Medium" }]
+    );
+  }, [selectedDate]);
+
+  useEffect(() => {
+    localStorage.setItem("weeklyPriorities", JSON.stringify(weeklyPriorities));
+  }, [weeklyPriorities]);
+
+  useEffect(() => {
+    localStorage.setItem("meetingCalendarReview", calendarReview);
+  }, [calendarReview]);
+
+  useEffect(() => {
+    localStorage.setItem("meetingDecisionsNeeded", decisionsNeeded);
+  }, [decisionsNeeded]);
 
   useEffect(() => {
     localStorage.setItem("meetingWeeklyTasks", JSON.stringify(weeklyTasks));
   }, [weeklyTasks]);
 
   useEffect(() => {
-    localStorage.setItem("meetingMarkDailyTasks", JSON.stringify(markDailyTasks));
-  }, [markDailyTasks]);
+    localStorage.setItem(
+      `meetingDailyNotes-${selectedDate}`,
+      JSON.stringify(dailyNotes)
+    );
+  }, [dailyNotes, selectedDate]);
 
   useEffect(() => {
-    localStorage.setItem("meetingDaneDailyTasks", JSON.stringify(daneDailyTasks));
-  }, [daneDailyTasks]);
+    localStorage.setItem(
+      `meetingMarkDailyTasks-${selectedDate}`,
+      JSON.stringify(markDailyTasks)
+    );
+  }, [markDailyTasks, selectedDate]);
 
   useEffect(() => {
-    localStorage.setItem("meetingWeeklyNotes", JSON.stringify(weeklyNotes));
-  }, [weeklyNotes]);
+    localStorage.setItem(
+      `meetingDaneDailyTasks-${selectedDate}`,
+      JSON.stringify(daneDailyTasks)
+    );
+  }, [daneDailyTasks, selectedDate]);
 
-  useEffect(() => {
-    localStorage.setItem("meetingDailyNotes", JSON.stringify(dailyNotes));
-  }, [dailyNotes]);
+  function changeDay(amount) {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + amount);
+    setSelectedDate(d.toISOString().slice(0, 10));
+  }
 
   function sendMeetingTaskToTasks(taskTitle, assignedFrom, urgency) {
     if (!taskTitle.trim()) return;
@@ -82,7 +115,7 @@ export default function MeetingsPage() {
       title: taskTitle,
       assignedFrom,
       urgency,
-      dueDate: "",
+      dueDate: selectedDate,
       complete: false,
       source: "Meetings",
     };
@@ -90,12 +123,23 @@ export default function MeetingsPage() {
     localStorage.setItem("tasks", JSON.stringify([newTask, ...existingTasks]));
   }
 
-  function updateTaskItem(array, setArray, index, field, value) {
+  function updatePriority(index, value) {
+    const updated = [...weeklyPriorities];
+    updated[index] = value;
+    setWeeklyPriorities(updated);
+  }
+
+  function addPriority() {
+    setWeeklyPriorities([...weeklyPriorities, ""]);
+  }
+
+  function deletePriority(index) {
+    setWeeklyPriorities(weeklyPriorities.filter((_, i) => i !== index));
+  }
+
+  function updateTaskRow(array, setArray, index, field, value) {
     const updated = [...array];
-    updated[index] = {
-      ...updated[index],
-      [field]: value,
-    };
+    updated[index] = { ...updated[index], [field]: value };
     setArray(updated);
   }
 
@@ -105,23 +149,6 @@ export default function MeetingsPage() {
 
   function deleteTaskRow(array, setArray, index) {
     setArray(array.filter((_, i) => i !== index));
-  }
-
-  function updateWeeklyNote(section, value) {
-    setWeeklyNotes({
-      ...weeklyNotes,
-      [section]: value,
-    });
-  }
-
-  function updateDailyNote(section, value) {
-    setDailyNotes({
-      ...dailyNotes,
-      [dailyPerson]: {
-        ...dailyNotes[dailyPerson],
-        [section]: value,
-      },
-    });
   }
 
   const activeDailyTasks =
@@ -135,7 +162,7 @@ export default function MeetingsPage() {
       <div className="meetingsHeader">
         <div>
           <h1>Meetings</h1>
-          <p>Daily and weekly notes, decisions, priorities, and task flow.</p>
+          <p>Weekly alignment and daily huddle items.</p>
         </div>
 
         <div className="topToggle">
@@ -155,120 +182,144 @@ export default function MeetingsPage() {
       </div>
 
       {mode === "weekly" && (
-        <>
-          <div className="sectionsGrid">
-            <section className="meetingCard">
-              <h2>Weekly Calendar Review</h2>
-              <textarea
-                value={weeklyNotes.calendar}
-                onChange={(e) => updateWeeklyNote("calendar", e.target.value)}
-                placeholder="Review the week’s calendar, conflicts, key meetings, prep needed, and follow-ups..."
-              />
-            </section>
+        <div className="meetingGrid">
+          <aside className="prioritySide">
+            <div className="meetingCard">
+              <div className="sectionHeader">
+                <div>
+                  <h2>Weekly Priorities</h2>
+                  <p>Top focus items</p>
+                </div>
+                <button className="smallBtn" onClick={addPriority}>
+                  +
+                </button>
+              </div>
 
+              <div className="priorityList">
+                {weeklyPriorities.map((priority, index) => (
+                  <div className="priorityItem" key={index}>
+                    <span>{index + 1}</span>
+                    <input
+                      value={priority}
+                      onChange={(e) => updatePriority(index, e.target.value)}
+                      placeholder="Add priority..."
+                    />
+                    <button onClick={() => deletePriority(index)}>×</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </aside>
+
+          <main className="mainColumn">
             <section className="meetingCard">
-              <h2>Email Review</h2>
+              <h2>Calendar Review</h2>
               <textarea
-                value={weeklyNotes.email}
-                onChange={(e) => updateWeeklyNote("email", e.target.value)}
-                placeholder="Review email asks, replies needed, dealer items, and items to route..."
+                value={calendarReview}
+                onChange={(e) => setCalendarReview(e.target.value)}
+                placeholder="Review key meetings, conflicts, prep needed, and follow-ups..."
               />
             </section>
 
             <section className="meetingCard">
               <h2>Decisions Needed</h2>
               <textarea
-                value={weeklyNotes.decisions}
-                onChange={(e) => updateWeeklyNote("decisions", e.target.value)}
+                value={decisionsNeeded}
+                onChange={(e) => setDecisionsNeeded(e.target.value)}
                 placeholder="List decisions needed from Mark/Dane..."
               />
             </section>
 
             <section className="meetingCard">
-              <h2>Top Priorities</h2>
-              <textarea
-                value={weeklyNotes.priorities}
-                onChange={(e) => updateWeeklyNote("priorities", e.target.value)}
-                placeholder="List the top priorities for the week..."
-              />
-            </section>
-          </div>
-
-          <section className="meetingCard taskCard">
-            <div className="sectionHeader">
-              <div>
-                <h2>Weekly Tasks</h2>
-                <p>Send weekly meeting items directly to Tasks page</p>
+              <div className="sectionHeader">
+                <div>
+                  <h2>Weekly Tasks</h2>
+                  <p>Send items directly to Tasks page</p>
+                </div>
+                <button
+                  className="smallBtn"
+                  onClick={() => addTaskRow(weeklyTasks, setWeeklyTasks)}
+                >
+                  +
+                </button>
               </div>
 
-              <button onClick={() => addTaskRow(weeklyTasks, setWeeklyTasks)}>
-                +
-              </button>
-            </div>
+              <div className="taskFlowList">
+                {weeklyTasks.map((task, index) => (
+                  <div className="taskFlowRow" key={index}>
+                    <input
+                      value={task.title}
+                      onChange={(e) =>
+                        updateTaskRow(
+                          weeklyTasks,
+                          setWeeklyTasks,
+                          index,
+                          "title",
+                          e.target.value
+                        )
+                      }
+                      placeholder="Add weekly task..."
+                    />
 
-            <div className="taskFlowList">
-              {weeklyTasks.map((task, index) => (
-                <div className="taskFlowRow" key={index}>
-                  <input
-                    value={task.title}
-                    onChange={(e) =>
-                      updateTaskItem(
-                        weeklyTasks,
-                        setWeeklyTasks,
-                        index,
-                        "title",
-                        e.target.value
-                      )
-                    }
-                    placeholder="Add weekly task..."
-                  />
+                    <select
+                      value={task.urgency}
+                      onChange={(e) =>
+                        updateTaskRow(
+                          weeklyTasks,
+                          setWeeklyTasks,
+                          index,
+                          "urgency",
+                          e.target.value
+                        )
+                      }
+                    >
+                      <option>High</option>
+                      <option>Medium</option>
+                      <option>Low</option>
+                    </select>
 
-                  <select
-                    value={task.urgency}
-                    onChange={(e) =>
-                      updateTaskItem(
-                        weeklyTasks,
-                        setWeeklyTasks,
-                        index,
-                        "urgency",
-                        e.target.value
-                      )
-                    }
-                  >
-                    <option>High</option>
-                    <option>Medium</option>
-                    <option>Low</option>
-                  </select>
+                    <button
+                      onClick={() =>
+                        sendMeetingTaskToTasks(
+                          task.title,
+                          "Weekly Meeting",
+                          task.urgency
+                        )
+                      }
+                    >
+                      Send
+                    </button>
 
-                  <button
-                    onClick={() =>
-                      sendMeetingTaskToTasks(
-                        task.title,
-                        "Weekly Meeting",
-                        task.urgency
-                      )
-                    }
-                  >
-                    Send
-                  </button>
-
-                  <button
-                    className="deleteBtn"
-                    onClick={() =>
-                      deleteTaskRow(weeklyTasks, setWeeklyTasks, index)
-                    }
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-        </>
+                    <button
+                      className="deleteBtn"
+                      onClick={() =>
+                        deleteTaskRow(weeklyTasks, setWeeklyTasks, index)
+                      }
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </main>
+        </div>
       )}
 
       {mode === "daily" && (
         <>
+          <div className="dateBar">
+            <button onClick={() => changeDay(-1)}>← Previous Day</button>
+
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
+
+            <button onClick={() => changeDay(1)}>Next Day →</button>
+          </div>
+
           <div className="personToggle">
             <button
               className={dailyPerson === "Mark" ? "active" : ""}
@@ -284,52 +335,32 @@ export default function MeetingsPage() {
             </button>
           </div>
 
-          <div className="sectionsGrid">
-            <section className="meetingCard">
-              <h2>Daily Calendar Review</h2>
-              <textarea
-                value={dailyNotes[dailyPerson]?.calendar || ""}
-                onChange={(e) => updateDailyNote("calendar", e.target.value)}
-                placeholder={`Review ${dailyPerson}'s calendar, conflicts, prep, and follow-ups...`}
-              />
-            </section>
+          <section className="meetingCard">
+            <h2>{dailyPerson} Daily Huddle</h2>
+            <p>Daily Calendar Review · Email Review · Decisions Needed · Top Priorities</p>
 
-            <section className="meetingCard">
-              <h2>Email Review</h2>
-              <textarea
-                value={dailyNotes[dailyPerson]?.email || ""}
-                onChange={(e) => updateDailyNote("email", e.target.value)}
-                placeholder={`Review ${dailyPerson}'s email asks, replies needed, and items to route...`}
-              />
-            </section>
+            <textarea
+              value={dailyNotes[dailyPerson] || ""}
+              onChange={(e) =>
+                setDailyNotes({
+                  ...dailyNotes,
+                  [dailyPerson]: e.target.value,
+                })
+              }
+              placeholder={`Add ${dailyPerson}'s daily meeting notes...`}
+            />
+          </section>
 
-            <section className="meetingCard">
-              <h2>Decisions Needed</h2>
-              <textarea
-                value={dailyNotes[dailyPerson]?.decisions || ""}
-                onChange={(e) => updateDailyNote("decisions", e.target.value)}
-                placeholder={`List decisions needed from ${dailyPerson}...`}
-              />
-            </section>
-
-            <section className="meetingCard">
-              <h2>Top Priorities</h2>
-              <textarea
-                value={dailyNotes[dailyPerson]?.priorities || ""}
-                onChange={(e) => updateDailyNote("priorities", e.target.value)}
-                placeholder={`List ${dailyPerson}'s top priorities for the day...`}
-              />
-            </section>
-          </div>
-
-          <section className="meetingCard taskCard">
+          <section className="meetingCard dailyTasksCard">
             <div className="sectionHeader">
               <div>
                 <h2>{dailyPerson} Daily Tasks</h2>
-                <p>Send daily meeting items directly to Tasks page</p>
+                <p>Send daily huddle items directly to Tasks page</p>
               </div>
-
-              <button onClick={() => addTaskRow(activeDailyTasks, setActiveDailyTasks)}>
+              <button
+                className="smallBtn"
+                onClick={() => addTaskRow(activeDailyTasks, setActiveDailyTasks)}
+              >
                 +
               </button>
             </div>
@@ -340,7 +371,7 @@ export default function MeetingsPage() {
                   <input
                     value={task.title}
                     onChange={(e) =>
-                      updateTaskItem(
+                      updateTaskRow(
                         activeDailyTasks,
                         setActiveDailyTasks,
                         index,
@@ -354,7 +385,7 @@ export default function MeetingsPage() {
                   <select
                     value={task.urgency}
                     onChange={(e) =>
-                      updateTaskItem(
+                      updateTaskRow(
                         activeDailyTasks,
                         setActiveDailyTasks,
                         index,
@@ -429,11 +460,22 @@ export default function MeetingsPage() {
           font-size: 12px;
         }
 
-        .sectionsGrid {
+        .meetingGrid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 280px 1fr;
           gap: 18px;
-          margin-bottom: 18px;
+          align-items: start;
+        }
+
+        .prioritySide {
+          position: sticky;
+          top: 24px;
+        }
+
+        .mainColumn {
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
         }
 
         .meetingCard {
@@ -442,10 +484,7 @@ export default function MeetingsPage() {
           border-radius: 14px;
           padding: 14px;
           box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035);
-        }
-
-        .taskCard {
-          margin-top: 0;
+          margin-bottom: 18px;
         }
 
         .sectionHeader {
@@ -457,7 +496,8 @@ export default function MeetingsPage() {
         }
 
         .topToggle,
-        .personToggle {
+        .personToggle,
+        .dateBar {
           display: flex;
           gap: 6px;
           background: #ffffff;
@@ -466,9 +506,18 @@ export default function MeetingsPage() {
           padding: 5px;
         }
 
-        .personToggle {
+        .personToggle,
+        .dateBar {
           width: fit-content;
           margin-bottom: 18px;
+        }
+
+        .dateBar {
+          align-items: center;
+        }
+
+        .dateBar input {
+          width: 160px;
         }
 
         button {
@@ -479,12 +528,12 @@ export default function MeetingsPage() {
           padding: 8px 12px;
           font-size: 13px;
           cursor: pointer;
-          transition: all 0.18s ease;
         }
 
-        button:hover {
-          transform: translateY(-1px);
-          opacity: 0.9;
+        .smallBtn {
+          width: 28px;
+          height: 28px;
+          padding: 0;
         }
 
         .topToggle button,
@@ -501,7 +550,7 @@ export default function MeetingsPage() {
 
         textarea {
           width: 100%;
-          min-height: 95px;
+          min-height: 120px;
           margin-top: 12px;
           border: 1px solid #e5e7eb;
           background: #f9fafb;
@@ -525,11 +574,53 @@ export default function MeetingsPage() {
           color: #111;
         }
 
-        input:focus,
-        select:focus,
-        textarea:focus {
-          border-color: #111;
-          background: #fff;
+        .priorityList {
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+
+        .priorityItem {
+          display: grid;
+          grid-template-columns: 16px 1fr 18px;
+          gap: 5px;
+          align-items: center;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 4px 6px;
+          height: 32px;
+        }
+
+        .priorityItem span {
+          width: 14px;
+          height: 14px;
+          border-radius: 4px;
+          background: #111;
+          color: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 9px;
+          font-weight: 700;
+        }
+
+        .priorityItem input {
+          border: none;
+          background: transparent;
+          padding: 0;
+          font-size: 12px;
+          height: 100%;
+          min-width: 0;
+        }
+
+        .priorityItem button {
+          background: #f3f4f6;
+          color: #111;
+          width: 16px;
+          height: 16px;
+          border-radius: 5px;
+          font-size: 10px;
+          padding: 0;
         }
 
         .taskFlowList {
@@ -545,7 +636,7 @@ export default function MeetingsPage() {
           align-items: center;
         }
 
-        .taskFlowRow .deleteBtn {
+        .deleteBtn {
           background: #f3f4f6;
           color: #111;
           width: 32px;
@@ -553,17 +644,29 @@ export default function MeetingsPage() {
           padding: 0;
         }
 
+        .dailyTasksCard {
+          margin-top: 18px;
+        }
+
         @media (max-width: 1000px) {
-          .sectionsGrid {
+          .meetingGrid {
             grid-template-columns: 1fr;
           }
 
-          .meetingsHeader {
+          .prioritySide {
+            position: static;
+          }
+
+          .taskFlowRow,
+          .dateBar {
+            grid-template-columns: 1fr;
             flex-direction: column;
+            align-items: stretch;
+            width: 100%;
           }
 
-          .taskFlowRow {
-            grid-template-columns: 1fr;
+          .dateBar input {
+            width: 100%;
           }
         }
       `}</style>
