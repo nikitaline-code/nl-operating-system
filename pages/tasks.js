@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
 const defaultTasks = [];
-
 const defaultPriorities = ["", "", ""];
 
 export default function TasksPage() {
@@ -104,6 +103,7 @@ export default function TasksPage() {
                 <h2>Weekly Priorities</h2>
                 <p>Top focus items</p>
               </div>
+
               <button className="smallBlackBtn" onClick={addPriority}>
                 +
               </button>
@@ -288,42 +288,60 @@ export default function TasksPage() {
         .taskList {
           display: flex;
           flex-direction: column;
+        }
+
+        .priorityList {
+          gap: 4px;
+        }
+
+        .taskList {
           gap: 7px;
         }
 
         .priorityItem {
           display: grid;
-          grid-template-columns: 20px 1fr 24px;
-          gap: 7px;
+          grid-template-columns: 18px 1fr 22px;
+          gap: 6px;
           align-items: center;
-          background: #f9fafb;
-          border: 1px solid #eeeeee;
-          border-radius: 12px;
-          padding: 7px 8px;
-          min-height: 38px;
+          background: transparent;
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          padding: 6px 8px;
+          height: 40px;
         }
 
         .priorityItem span {
-          width: 20px;
-          height: 20px;
-          border-radius: 7px;
+          width: 18px;
+          height: 18px;
+          border-radius: 6px;
           background: #111;
           color: #fff;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 700;
         }
 
         .priorityItem input {
           border: none;
           background: transparent;
-          padding: 4px 2px;
-          font-size: 13px;
+          padding: 0;
+          font-size: 14px;
+          height: 100%;
           color: #111;
           outline: none;
           min-width: 0;
+        }
+
+        .priorityItem button {
+          background: #f3f4f6;
+          color: #111;
+          width: 20px;
+          height: 20px;
+          border-radius: 6px;
+          font-size: 11px;
+          padding: 0;
         }
 
         .hideToggle {
@@ -383,17 +401,6 @@ export default function TasksPage() {
           font-size: 16px;
         }
 
-        .priorityItem button,
-        .taskRight button {
-          background: #f3f4f6;
-          color: #111;
-          width: 24px;
-          height: 24px;
-          padding: 0;
-          border-radius: 8px;
-          font-size: 13px;
-        }
-
         .taskItem {
           display: flex;
           justify-content: space-between;
@@ -436,6 +443,16 @@ export default function TasksPage() {
           display: flex;
           align-items: center;
           gap: 10px;
+        }
+
+        .taskRight button {
+          background: #f3f4f6;
+          color: #111;
+          width: 24px;
+          height: 24px;
+          padding: 0;
+          border-radius: 8px;
+          font-size: 13px;
         }
 
         .urgencyBadge {
