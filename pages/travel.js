@@ -6,7 +6,7 @@ const starterDealers = [
     name: "Roblin Vet",
     location: "Virden, MB",
     contact: "",
-    notes: "Exclusive / important partner. Add address, phone, and visit notes here.",
+    notes: "Exclusive / important partner.",
   },
 ];
 
@@ -16,7 +16,7 @@ const starterTrips = [
     name: "Dealer Visit - Manitoba",
     date: "May 14 - May 16",
     status: "Planning",
-    dealerId: 1,
+    dealerIds: [1],
   },
 ];
 
@@ -39,33 +39,13 @@ const starterItinerary = [
   },
 ];
 
-const starterHotels = [
-  {
-    id: 1,
-    name: "",
-    location: "",
-    rate: "",
-    notes: "",
-  },
-];
-
-const starterCars = [
-  {
-    id: 1,
-    company: "",
-    pickup: "",
-    dropoff: "",
-    confirmation: "",
-  },
-];
-
 export default function TravelPage() {
   const [dealers, setDealers] = useState(starterDealers);
   const [trips, setTrips] = useState(starterTrips);
   const [selectedTrip, setSelectedTrip] = useState(starterTrips[0]);
   const [itinerary, setItinerary] = useState(starterItinerary);
-  const [hotels, setHotels] = useState(starterHotels);
-  const [cars, setCars] = useState(starterCars);
+  const [hotels, setHotels] = useState([]);
+  const [cars, setCars] = useState([]);
   const [tripTasks, setTripTasks] = useState([]);
   const [tripNotes, setTripNotes] = useState("");
   const [newTripTask, setNewTripTask] = useState("");
@@ -74,14 +54,14 @@ export default function TravelPage() {
   const [taskDueDate, setTaskDueDate] = useState("");
   const [draggedItem, setDraggedItem] = useState(null);
 
-  const selectedDealer = dealers.find((d) => d.id === selectedTrip?.dealerId);
+  const selectedDealers = dealers.filter((d) =>
+    selectedTrip?.dealerIds?.includes(d.id)
+  );
 
   useEffect(() => {
     const savedTravel = localStorage.getItem("travelPageData");
-
     if (savedTravel) {
       const parsed = JSON.parse(savedTravel);
-
       if (parsed.dealers) setDealers(parsed.dealers);
       if (parsed.trips) setTrips(parsed.trips);
       if (parsed.selectedTrip) setSelectedTrip(parsed.selectedTrip);
@@ -115,13 +95,22 @@ export default function TravelPage() {
     setTrips(trips.map((trip) => (trip.id === updatedTrip.id ? updatedTrip : trip)));
   };
 
+  const toggleDealerForTrip = (dealerId) => {
+    const current = selectedTrip?.dealerIds || [];
+    const updatedDealerIds = current.includes(dealerId)
+      ? current.filter((id) => id !== dealerId)
+      : [...current, dealerId];
+
+    updateTrip("dealerIds", updatedDealerIds);
+  };
+
   const addTrip = () => {
     const newTrip = {
       id: Date.now(),
       name: "New Trip",
       date: "Add dates",
       status: "Planning",
-      dealerId: dealers[0]?.id || null,
+      dealerIds: [],
     };
 
     setTrips([...trips, newTrip]);
@@ -277,25 +266,111 @@ export default function TravelPage() {
     );
   };
 
+  const csvSafe = (value) => {
+    const text = String(value || "").replace(/"/g, '""');
+    return `"${text}"`;
+  };
+
+  const downloadExcelCSV = () => {
+    const rows = [];
+
+    rows.push(["Travel Itinerary"]);
+    rows.push(["Trip Name", selectedTrip?.name || ""]);
+    rows.push(["Trip Dates", selectedTrip?.date || ""]);
+    rows.push(["Status", selectedTrip?.status || ""]);
+    rows.push([]);
+
+    rows.push(["Dealers"]);
+    rows.push(["Dealer", "Location", "Contact", "Notes"]);
+    selectedDealers.forEach((dealer) => {
+      rows.push([dealer.name, dealer.location, dealer.contact, dealer.notes]);
+    });
+    rows.push([]);
+
+    rows.push(["Itinerary"]);
+    rows.push(["Time", "Title", "Type", "Notes"]);
+    itinerary.forEach((item) => {
+      rows.push([item.time, item.title, item.type, item.notes]);
+    });
+    rows.push([]);
+
+    rows.push(["Hotels"]);
+    rows.push(["Hotel", "Location", "Rate / Link", "Notes"]);
+    hotels.forEach((hotel) => {
+      rows.push([hotel.name, hotel.location, hotel.rate, hotel.notes]);
+    });
+    rows.push([]);
+
+    rows.push(["Rental Cars"]);
+    rows.push(["Company", "Pickup", "Drop-off", "Confirmation / Notes"]);
+    cars.forEach((car) => {
+      rows.push([car.company, car.pickup, car.dropoff, car.confirmation]);
+    });
+    rows.push([]);
+
+    rows.push(["Trip Tasks"]);
+    rows.push(["Task", "Assigned From", "Urgency", "Due Date"]);
+    tripTasks.forEach((task) => {
+      rows.push([task.title, task.assignedFrom, task.urgency, task.dueDate]);
+    });
+    rows.push([]);
+
+    rows.push(["General Notes"]);
+    rows.push([tripNotes]);
+
+    const csv = rows.map((row) => row.map(csvSafe).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const fileName = `${selectedTrip?.name || "travel-itinerary"}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${fileName}.csv`;
+    link.click();
+
+    URL.revokeObjectURL(url);
+  };
+
+  const printPDF = () => {
+    window.print();
+  };
+
   return (
     <div className="page">
       <div className="shell">
-        <header className="topHeader">
+        <header className="topHeader noPrint">
           <div>
             <p className="eyebrow">Travel Planning</p>
             <h1>Trips</h1>
             <p className="subtext">
-              Plan dealer visits, hotels, rental cars, tasks, notes, and daily travel details.
+              Plan dealer visits, hotels, rental cars, tasks, notes, and itineraries.
             </p>
           </div>
 
-          <button className="primaryBtn" onClick={addTrip}>
-            + New Trip
-          </button>
+          <div className="headerActions">
+            <button className="secondaryBtn" onClick={downloadExcelCSV}>
+              Download Excel
+            </button>
+            <button className="secondaryBtn" onClick={printPDF}>
+              Print / PDF
+            </button>
+            <button className="primaryBtn" onClick={addTrip}>
+              + New Trip
+            </button>
+          </div>
         </header>
 
+        <div className="printOnly printHeader">
+          <h1>{selectedTrip?.name}</h1>
+          <p>{selectedTrip?.date}</p>
+        </div>
+
         <div className="layout">
-          <aside className="sidebarCard">
+          <aside className="sidebarCard noPrint">
             <h2>Upcoming Trips</h2>
 
             {trips.map((trip) => (
@@ -316,11 +391,11 @@ export default function TravelPage() {
               <div className="sectionHeader">
                 <div>
                   <h2>Trip Overview</h2>
-                  <p>Choose the dealer from your directory, then plan the visit.</p>
+                  <p>Select all dealers included in this trip.</p>
                 </div>
               </div>
 
-              <div className="formGrid">
+              <div className="formGrid noPrint">
                 <input
                   value={selectedTrip?.name || ""}
                   onChange={(e) => updateTrip("name", e.target.value)}
@@ -334,21 +409,45 @@ export default function TravelPage() {
                 />
 
                 <select
-                  value={selectedTrip?.dealerId || ""}
-                  onChange={(e) => updateTrip("dealerId", Number(e.target.value))}
+                  value={selectedTrip?.status || "Planning"}
+                  onChange={(e) => updateTrip("status", e.target.value)}
                 >
-                  {dealers.map((dealer) => (
-                    <option key={dealer.id} value={dealer.id}>
-                      {dealer.name}
-                    </option>
-                  ))}
+                  <option>Planning</option>
+                  <option>Booked</option>
+                  <option>In Progress</option>
+                  <option>Completed</option>
                 </select>
+              </div>
 
-                <input
-                  value={selectedDealer?.location || ""}
-                  readOnly
-                  placeholder="Dealer location"
-                />
+              <div className="selectedDealersPrint">
+                <h3>Dealers Included</h3>
+                {selectedDealers.length === 0 && (
+                  <p className="emptySmall">No dealers selected.</p>
+                )}
+
+                {selectedDealers.map((dealer) => (
+                  <div className="summaryLine" key={dealer.id}>
+                    <strong>{dealer.name}</strong>
+                    <span>{dealer.location}</span>
+                    <span>{dealer.contact}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="dealerSelectGrid noPrint">
+                {dealers.map((dealer) => (
+                  <label className="dealerSelect" key={dealer.id}>
+                    <input
+                      type="checkbox"
+                      checked={selectedTrip?.dealerIds?.includes(dealer.id) || false}
+                      onChange={() => toggleDealerForTrip(dealer.id)}
+                    />
+                    <span>
+                      <strong>{dealer.name}</strong>
+                      <small>{dealer.location || "No location added"}</small>
+                    </span>
+                  </label>
+                ))}
               </div>
             </section>
 
@@ -356,10 +455,10 @@ export default function TravelPage() {
               <div className="sectionHeader">
                 <div>
                   <h2>Trip Plan</h2>
-                  <p>Drag items to reorder. Click notes to expand details.</p>
+                  <p className="noPrint">Drag items to reorder. Click notes to expand details.</p>
                 </div>
 
-                <button className="smallBtn" onClick={addItineraryItem}>
+                <button className="smallBtn noPrint" onClick={addItineraryItem}>
                   + Add Item
                 </button>
               </div>
@@ -374,7 +473,7 @@ export default function TravelPage() {
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => handleDrop(item)}
                   >
-                    <div className="dragHandle">⋮⋮</div>
+                    <div className="dragHandle noPrint">⋮⋮</div>
 
                     <input
                       className="timeInput"
@@ -391,7 +490,7 @@ export default function TravelPage() {
                     />
 
                     <select
-                      className="typeSelect"
+                      className="typeSelect noPrint"
                       value={item.type}
                       onChange={(e) => updateItinerary(item.id, "type", e.target.value)}
                     >
@@ -403,15 +502,17 @@ export default function TravelPage() {
                       <option>Food / Break</option>
                     </select>
 
-                    <button className="notesBtn" onClick={() => toggleNotes(item.id)}>
+                    <span className="printType printOnly">{item.type}</span>
+
+                    <button className="notesBtn noPrint" onClick={() => toggleNotes(item.id)}>
                       {item.open ? "Hide" : "Notes"}
                     </button>
 
-                    <button className="deleteBtn" onClick={() => deleteItinerary(item.id)}>
+                    <button className="deleteBtn noPrint" onClick={() => deleteItinerary(item.id)}>
                       ×
                     </button>
 
-                    {item.open && (
+                    {(item.open || item.notes) && (
                       <textarea
                         className="notesBox"
                         value={item.notes}
@@ -427,6 +528,104 @@ export default function TravelPage() {
             </section>
 
             <section className="card wide">
+              <div className="sectionHeader">
+                <div>
+                  <h2>Recommended Hotels</h2>
+                  <p className="noPrint">Add each hotel as its own line.</p>
+                </div>
+
+                <button className="smallBtn noPrint" onClick={addHotel}>
+                  + Add Hotel
+                </button>
+              </div>
+
+              <div className="lineList">
+                {hotels.map((hotel) => (
+                  <div className="hotelLine" key={hotel.id}>
+                    <input
+                      value={hotel.name}
+                      onChange={(e) => updateHotel(hotel.id, "name", e.target.value)}
+                      placeholder="Hotel name"
+                    />
+
+                    <input
+                      value={hotel.location}
+                      onChange={(e) =>
+                        updateHotel(hotel.id, "location", e.target.value)
+                      }
+                      placeholder="Location"
+                    />
+
+                    <input
+                      value={hotel.rate}
+                      onChange={(e) => updateHotel(hotel.id, "rate", e.target.value)}
+                      placeholder="Rate / booking link"
+                    />
+
+                    <input
+                      value={hotel.notes}
+                      onChange={(e) => updateHotel(hotel.id, "notes", e.target.value)}
+                      placeholder="Notes"
+                    />
+
+                    <button className="deleteBtn noPrint" onClick={() => deleteHotel(hotel.id)}>
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="card wide">
+              <div className="sectionHeader">
+                <div>
+                  <h2>Rental Cars</h2>
+                  <p className="noPrint">Add each rental option as its own line.</p>
+                </div>
+
+                <button className="smallBtn noPrint" onClick={addCar}>
+                  + Add Rental
+                </button>
+              </div>
+
+              <div className="lineList">
+                {cars.map((car) => (
+                  <div className="carLine" key={car.id}>
+                    <input
+                      value={car.company}
+                      onChange={(e) => updateCar(car.id, "company", e.target.value)}
+                      placeholder="Company"
+                    />
+
+                    <input
+                      value={car.pickup}
+                      onChange={(e) => updateCar(car.id, "pickup", e.target.value)}
+                      placeholder="Pickup"
+                    />
+
+                    <input
+                      value={car.dropoff}
+                      onChange={(e) => updateCar(car.id, "dropoff", e.target.value)}
+                      placeholder="Drop-off"
+                    />
+
+                    <input
+                      value={car.confirmation}
+                      onChange={(e) =>
+                        updateCar(car.id, "confirmation", e.target.value)
+                      }
+                      placeholder="Confirmation / notes"
+                    />
+
+                    <button className="deleteBtn noPrint" onClick={() => deleteCar(car.id)}>
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="card wide noPrint">
               <div className="sectionHeader">
                 <div>
                   <h2>Trip Tasks & Notes</h2>
@@ -503,6 +702,21 @@ export default function TravelPage() {
             <section className="card wide">
               <div className="sectionHeader">
                 <div>
+                  <h2>General Trip Notes</h2>
+                </div>
+              </div>
+
+              <textarea
+                className="tripNotesBox"
+                value={tripNotes}
+                onChange={(e) => setTripNotes(e.target.value)}
+                placeholder="General trip notes..."
+              />
+            </section>
+
+            <section className="card wide noPrint">
+              <div className="sectionHeader">
+                <div>
                   <h2>Dealer Directory</h2>
                   <p>Add dealer locations once, then pull them into any trip.</p>
                 </div>
@@ -548,104 +762,6 @@ export default function TravelPage() {
                 ))}
               </div>
             </section>
-
-            <section className="card wide">
-              <div className="sectionHeader">
-                <div>
-                  <h2>Recommended Hotels</h2>
-                  <p>Add each hotel as its own line.</p>
-                </div>
-
-                <button className="smallBtn" onClick={addHotel}>
-                  + Add Hotel
-                </button>
-              </div>
-
-              <div className="lineList">
-                {hotels.map((hotel) => (
-                  <div className="hotelLine" key={hotel.id}>
-                    <input
-                      value={hotel.name}
-                      onChange={(e) => updateHotel(hotel.id, "name", e.target.value)}
-                      placeholder="Hotel name"
-                    />
-
-                    <input
-                      value={hotel.location}
-                      onChange={(e) =>
-                        updateHotel(hotel.id, "location", e.target.value)
-                      }
-                      placeholder="Location"
-                    />
-
-                    <input
-                      value={hotel.rate}
-                      onChange={(e) => updateHotel(hotel.id, "rate", e.target.value)}
-                      placeholder="Rate / booking link"
-                    />
-
-                    <input
-                      value={hotel.notes}
-                      onChange={(e) => updateHotel(hotel.id, "notes", e.target.value)}
-                      placeholder="Notes"
-                    />
-
-                    <button className="deleteBtn" onClick={() => deleteHotel(hotel.id)}>
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="card wide">
-              <div className="sectionHeader">
-                <div>
-                  <h2>Rental Cars</h2>
-                  <p>Add each rental option as its own line.</p>
-                </div>
-
-                <button className="smallBtn" onClick={addCar}>
-                  + Add Rental
-                </button>
-              </div>
-
-              <div className="lineList">
-                {cars.map((car) => (
-                  <div className="carLine" key={car.id}>
-                    <input
-                      value={car.company}
-                      onChange={(e) => updateCar(car.id, "company", e.target.value)}
-                      placeholder="Company"
-                    />
-
-                    <input
-                      value={car.pickup}
-                      onChange={(e) => updateCar(car.id, "pickup", e.target.value)}
-                      placeholder="Pickup"
-                    />
-
-                    <input
-                      value={car.dropoff}
-                      onChange={(e) => updateCar(car.id, "dropoff", e.target.value)}
-                      placeholder="Drop-off"
-                    />
-
-                    <input
-                      value={car.confirmation}
-                      onChange={(e) =>
-                        updateCar(car.id, "confirmation", e.target.value)
-                      }
-                      placeholder="Confirmation / notes"
-                    />
-
-                    <button className="deleteBtn" onClick={() => deleteCar(car.id)}>
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
           </main>
         </div>
       </div>
@@ -671,6 +787,13 @@ export default function TravelPage() {
           margin-bottom: 22px;
         }
 
+        .headerActions {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+
         .eyebrow {
           margin: 0 0 7px;
           font-size: 10px;
@@ -689,6 +812,11 @@ export default function TravelPage() {
           margin: 0;
           font-size: 14px;
           letter-spacing: -0.02em;
+        }
+
+        h3 {
+          margin: 0 0 8px;
+          font-size: 12px;
         }
 
         .subtext,
@@ -794,21 +922,32 @@ export default function TravelPage() {
         }
 
         .primaryBtn,
-        .smallBtn {
+        .smallBtn,
+        .secondaryBtn {
           border: none;
-          background: #111;
-          color: #fff;
           border-radius: 999px;
           cursor: pointer;
           font-weight: 700;
         }
 
         .primaryBtn {
+          background: #111;
+          color: #fff;
+          padding: 9px 14px;
+          font-size: 12px;
+        }
+
+        .secondaryBtn {
+          background: #fff;
+          color: #111;
+          border: 1px solid #e5e7eb;
           padding: 9px 14px;
           font-size: 12px;
         }
 
         .smallBtn {
+          background: #111;
+          color: #fff;
           padding: 8px 11px;
           font-size: 11px;
           white-space: nowrap;
@@ -817,8 +956,59 @@ export default function TravelPage() {
         .formGrid,
         .taskAddGrid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1fr 1fr 140px;
           gap: 10px;
+        }
+
+        .dealerSelectGrid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+          margin-top: 12px;
+        }
+
+        .dealerSelect {
+          display: flex;
+          gap: 8px;
+          align-items: flex-start;
+          background: #fafafa;
+          border: 1px solid #eceef2;
+          border-radius: 14px;
+          padding: 10px;
+          cursor: pointer;
+        }
+
+        .dealerSelect strong,
+        .dealerSelect small {
+          display: block;
+        }
+
+        .dealerSelect strong {
+          font-size: 12px;
+        }
+
+        .dealerSelect small {
+          font-size: 11px;
+          color: #6b7280;
+          margin-top: 3px;
+        }
+
+        .selectedDealersPrint {
+          margin-top: 12px;
+        }
+
+        .summaryLine {
+          display: grid;
+          grid-template-columns: 1.2fr 1fr 1fr;
+          gap: 8px;
+          padding: 8px 0;
+          border-bottom: 1px solid #f0f0f0;
+          font-size: 12px;
+        }
+
+        .emptySmall {
+          font-size: 12px;
+          color: #777;
         }
 
         .taskAddGrid {
@@ -948,6 +1138,11 @@ export default function TravelPage() {
           background: #fff;
         }
 
+        .printType {
+          font-size: 12px;
+          color: #555;
+        }
+
         .notesBtn {
           height: 30px;
           border: 1px solid #e5e7eb;
@@ -999,12 +1194,17 @@ export default function TravelPage() {
           min-width: 0;
         }
 
+        .printOnly {
+          display: none;
+        }
+
         @media (max-width: 1050px) {
           .layout,
           .mainGrid,
           .formGrid,
           .dealerGrid,
-          .taskAddGrid {
+          .taskAddGrid,
+          .dealerSelectGrid {
             grid-template-columns: 1fr;
           }
 
@@ -1025,6 +1225,68 @@ export default function TravelPage() {
           .topHeader {
             flex-direction: column;
             gap: 14px;
+          }
+        }
+
+        @media print {
+          .noPrint {
+            display: none !important;
+          }
+
+          .printOnly {
+            display: block !important;
+          }
+
+          .page {
+            background: #fff;
+            padding: 0;
+          }
+
+          .shell {
+            max-width: none;
+          }
+
+          .layout,
+          .mainGrid {
+            display: block;
+          }
+
+          .card {
+            box-shadow: none;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            page-break-inside: avoid;
+          }
+
+          input,
+          textarea {
+            border: none;
+            background: transparent;
+            padding: 0;
+          }
+
+          textarea {
+            min-height: auto;
+          }
+
+          .itineraryItem,
+          .hotelLine,
+          .carLine {
+            border-radius: 8px;
+            background: #fff;
+          }
+
+          .itineraryItem {
+            grid-template-columns: 80px 1fr 120px;
+          }
+
+          .notesBox {
+            grid-column: 2 / 4;
+          }
+
+          .printHeader {
+            margin-bottom: 18px;
           }
         }
       `}</style>
