@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const starterDealers = [
   {
@@ -42,8 +42,8 @@ const starterItinerary = [
 const starterHotels = [
   {
     id: 1,
-    name: "Hotel Name",
-    location: "City / area",
+    name: "",
+    location: "",
     rate: "",
     notes: "",
   },
@@ -52,9 +52,9 @@ const starterHotels = [
 const starterCars = [
   {
     id: 1,
-    company: "Rental Company",
-    pickup: "Pickup location",
-    dropoff: "Drop-off location",
+    company: "",
+    pickup: "",
+    dropoff: "",
     confirmation: "",
   },
 ];
@@ -66,9 +66,48 @@ export default function TravelPage() {
   const [itinerary, setItinerary] = useState(starterItinerary);
   const [hotels, setHotels] = useState(starterHotels);
   const [cars, setCars] = useState(starterCars);
+  const [tripTasks, setTripTasks] = useState([]);
+  const [tripNotes, setTripNotes] = useState("");
+  const [newTripTask, setNewTripTask] = useState("");
+  const [taskAssignedFrom, setTaskAssignedFrom] = useState("Mark");
+  const [taskUrgency, setTaskUrgency] = useState("Medium");
+  const [taskDueDate, setTaskDueDate] = useState("");
   const [draggedItem, setDraggedItem] = useState(null);
 
   const selectedDealer = dealers.find((d) => d.id === selectedTrip?.dealerId);
+
+  useEffect(() => {
+    const savedTravel = localStorage.getItem("travelPageData");
+
+    if (savedTravel) {
+      const parsed = JSON.parse(savedTravel);
+
+      if (parsed.dealers) setDealers(parsed.dealers);
+      if (parsed.trips) setTrips(parsed.trips);
+      if (parsed.selectedTrip) setSelectedTrip(parsed.selectedTrip);
+      if (parsed.itinerary) setItinerary(parsed.itinerary);
+      if (parsed.hotels) setHotels(parsed.hotels);
+      if (parsed.cars) setCars(parsed.cars);
+      if (parsed.tripTasks) setTripTasks(parsed.tripTasks);
+      if (parsed.tripNotes) setTripNotes(parsed.tripNotes);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(
+      "travelPageData",
+      JSON.stringify({
+        dealers,
+        trips,
+        selectedTrip,
+        itinerary,
+        hotels,
+        cars,
+        tripTasks,
+        tripNotes,
+      })
+    );
+  }, [dealers, trips, selectedTrip, itinerary, hotels, cars, tripTasks, tripNotes]);
 
   const updateTrip = (field, value) => {
     const updatedTrip = { ...selectedTrip, [field]: value };
@@ -204,6 +243,40 @@ export default function TravelPage() {
     setCars(cars.filter((car) => car.id !== id));
   };
 
+  const addTripTask = () => {
+    if (!newTripTask.trim()) return;
+
+    const task = {
+      id: Date.now(),
+      title: newTripTask,
+      assignedFrom: taskAssignedFrom,
+      urgency: taskUrgency,
+      dueDate: taskDueDate,
+      complete: false,
+      source: "Travel",
+      tripName: selectedTrip?.name || "",
+    };
+
+    const savedTasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+    localStorage.setItem("tasks", JSON.stringify([task, ...savedTasks]));
+
+    setTripTasks([task, ...tripTasks]);
+    setNewTripTask("");
+    setTaskAssignedFrom("Mark");
+    setTaskUrgency("Medium");
+    setTaskDueDate("");
+  };
+
+  const deleteTripTask = (id) => {
+    setTripTasks(tripTasks.filter((task) => task.id !== id));
+
+    const savedTasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+    localStorage.setItem(
+      "tasks",
+      JSON.stringify(savedTasks.filter((task) => task.id !== id))
+    );
+  };
+
   return (
     <div className="page">
       <div className="shell">
@@ -212,7 +285,7 @@ export default function TravelPage() {
             <p className="eyebrow">Travel Planning</p>
             <h1>Trips</h1>
             <p className="subtext">
-              Plan dealer visits, hotels, rental cars, locations, and daily travel details.
+              Plan dealer visits, hotels, rental cars, tasks, notes, and daily travel details.
             </p>
           </div>
 
@@ -351,6 +424,80 @@ export default function TravelPage() {
                   </div>
                 ))}
               </div>
+            </section>
+
+            <section className="card wide">
+              <div className="sectionHeader">
+                <div>
+                  <h2>Trip Tasks & Notes</h2>
+                  <p>Tasks added here also show on your main Tasks page.</p>
+                </div>
+              </div>
+
+              <div className="taskAddGrid">
+                <input
+                  value={newTripTask}
+                  onChange={(e) => setNewTripTask(e.target.value)}
+                  placeholder="Add a trip task..."
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") addTripTask();
+                  }}
+                />
+
+                <select
+                  value={taskAssignedFrom}
+                  onChange={(e) => setTaskAssignedFrom(e.target.value)}
+                >
+                  <option>Mark</option>
+                  <option>Dane</option>
+                  <option>Nikita</option>
+                </select>
+
+                <select
+                  value={taskUrgency}
+                  onChange={(e) => setTaskUrgency(e.target.value)}
+                >
+                  <option>High</option>
+                  <option>Medium</option>
+                  <option>Low</option>
+                </select>
+
+                <input
+                  type="date"
+                  value={taskDueDate}
+                  onChange={(e) => setTaskDueDate(e.target.value)}
+                />
+
+                <button className="smallBtn" onClick={addTripTask}>
+                  Add
+                </button>
+              </div>
+
+              <div className="tripTaskList">
+                {tripTasks.map((task) => (
+                  <div className="tripTaskItem" key={task.id}>
+                    <div>
+                      <div className="tripTaskTitle">{task.title}</div>
+                      <div className="tripTaskMeta">
+                        <span>From: {task.assignedFrom}</span>
+                        <span>{task.urgency}</span>
+                        {task.dueDate && <span>Due: {task.dueDate}</span>}
+                      </div>
+                    </div>
+
+                    <button className="deleteBtn" onClick={() => deleteTripTask(task.id)}>
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <textarea
+                className="tripNotesBox"
+                value={tripNotes}
+                onChange={(e) => setTripNotes(e.target.value)}
+                placeholder="Add general trip notes, dealer follow-ups, reminders, hotel notes, visit details..."
+              />
             </section>
 
             <section className="card wide">
@@ -667,10 +814,16 @@ export default function TravelPage() {
           white-space: nowrap;
         }
 
-        .formGrid {
+        .formGrid,
+        .taskAddGrid {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 10px;
+        }
+
+        .taskAddGrid {
+          grid-template-columns: 1fr 120px 120px 140px 70px;
+          margin-bottom: 10px;
         }
 
         input,
@@ -708,7 +861,8 @@ export default function TravelPage() {
         }
 
         .itineraryList,
-        .lineList {
+        .lineList,
+        .tripTaskList {
           display: flex;
           flex-direction: column;
           gap: 8px;
@@ -735,6 +889,36 @@ export default function TravelPage() {
           background: #fafafa;
           border: 1px solid #eceef2;
           border-radius: 14px;
+        }
+
+        .tripTaskItem {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 10px;
+          padding: 9px 10px;
+          background: #fafafa;
+          border: 1px solid #eceef2;
+          border-radius: 14px;
+        }
+
+        .tripTaskTitle {
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .tripTaskMeta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 4px;
+          font-size: 11px;
+          color: #6b7280;
+        }
+
+        .tripNotesBox {
+          margin-top: 10px;
+          min-height: 70px;
         }
 
         .dragHandle {
@@ -783,6 +967,7 @@ export default function TravelPage() {
           cursor: pointer;
           font-size: 15px;
           color: #555;
+          padding: 0;
         }
 
         .deleteBtn:hover,
@@ -818,7 +1003,8 @@ export default function TravelPage() {
           .layout,
           .mainGrid,
           .formGrid,
-          .dealerGrid {
+          .dealerGrid,
+          .taskAddGrid {
             grid-template-columns: 1fr;
           }
 
