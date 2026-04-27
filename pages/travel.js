@@ -8,13 +8,6 @@ const starterDealers = [
     contact: "",
     notes: "Exclusive / important partner. Add address, phone, and visit notes here.",
   },
-  {
-    id: 2,
-    name: "Dealer Name",
-    location: "City, Province",
-    contact: "",
-    notes: "",
-  },
 ];
 
 const starterTrips = [
@@ -24,7 +17,6 @@ const starterTrips = [
     date: "May 14 - May 16",
     status: "Planning",
     dealerId: 1,
-    location: "Virden, MB",
   },
 ];
 
@@ -35,6 +27,7 @@ const starterItinerary = [
     title: "Depart",
     type: "Travel",
     notes: "Leave for dealer visit",
+    open: false,
   },
   {
     id: 2,
@@ -42,6 +35,7 @@ const starterItinerary = [
     title: "Dealer Meeting",
     type: "Meeting",
     notes: "Review location, credit line, next steps",
+    open: false,
   },
   {
     id: 3,
@@ -49,6 +43,7 @@ const starterItinerary = [
     title: "Site Visit",
     type: "Dealer Location",
     notes: "Walk through setup and requirements",
+    open: false,
   },
 ];
 
@@ -65,6 +60,19 @@ export default function TravelPage() {
     const updatedTrip = { ...selectedTrip, [field]: value };
     setSelectedTrip(updatedTrip);
     setTrips(trips.map((trip) => (trip.id === updatedTrip.id ? updatedTrip : trip)));
+  };
+
+  const addTrip = () => {
+    const newTrip = {
+      id: Date.now(),
+      name: "New Trip",
+      date: "Add dates",
+      status: "Planning",
+      dealerId: dealers[0]?.id || null,
+    };
+
+    setTrips([...trips, newTrip]);
+    setSelectedTrip(newTrip);
   };
 
   const addDealer = () => {
@@ -88,20 +96,6 @@ export default function TravelPage() {
     );
   };
 
-  const addTrip = () => {
-    const newTrip = {
-      id: Date.now(),
-      name: "New Trip",
-      date: "Add dates",
-      status: "Planning",
-      dealerId: dealers[0]?.id || null,
-      location: "",
-    };
-
-    setTrips([...trips, newTrip]);
-    setSelectedTrip(newTrip);
-  };
-
   const addItineraryItem = () => {
     setItinerary([
       ...itinerary,
@@ -111,6 +105,7 @@ export default function TravelPage() {
         title: "New Item",
         type: "Travel",
         notes: "",
+        open: false,
       },
     ]);
   };
@@ -119,6 +114,14 @@ export default function TravelPage() {
     setItinerary(
       itinerary.map((item) =>
         item.id === id ? { ...item, [field]: value } : item
+      )
+    );
+  };
+
+  const toggleNotes = (id) => {
+    setItinerary(
+      itinerary.map((item) =>
+        item.id === id ? { ...item, open: !item.open } : item
       )
     );
   };
@@ -220,7 +223,7 @@ export default function TravelPage() {
               <div className="sectionHeader">
                 <div>
                   <h2>Trip Plan</h2>
-                  <p>Drag items to reorder. Keep each item compact and easy to scan.</p>
+                  <p>Drag items to reorder. Click notes to expand details.</p>
                 </div>
 
                 <button className="smallBtn" onClick={addItineraryItem}>
@@ -247,46 +250,47 @@ export default function TravelPage() {
                       placeholder="Time"
                     />
 
-                    <div className="itemMain">
-                      <div className="itemTop">
-                        <input
-                          className="itemTitle"
-                          value={item.title}
-                          onChange={(e) =>
-                            updateItinerary(item.id, "title", e.target.value)
-                          }
-                          placeholder="Item title"
-                        />
+                    <input
+                      className="itemTitle"
+                      value={item.title}
+                      onChange={(e) => updateItinerary(item.id, "title", e.target.value)}
+                      placeholder="Item title"
+                    />
 
-                        <select
-                          className="typeSelect"
-                          value={item.type}
-                          onChange={(e) =>
-                            updateItinerary(item.id, "type", e.target.value)
-                          }
-                        >
-                          <option>Travel</option>
-                          <option>Meeting</option>
-                          <option>Dealer Location</option>
-                          <option>Hotel</option>
-                          <option>Rental Car</option>
-                          <option>Food / Break</option>
-                        </select>
+                    <select
+                      className="typeSelect"
+                      value={item.type}
+                      onChange={(e) => updateItinerary(item.id, "type", e.target.value)}
+                    >
+                      <option>Travel</option>
+                      <option>Meeting</option>
+                      <option>Dealer Location</option>
+                      <option>Hotel</option>
+                      <option>Rental Car</option>
+                      <option>Food / Break</option>
+                    </select>
 
-                        <button
-                          className="deleteBtn"
-                          onClick={() => deleteItinerary(item.id)}
-                        >
-                          ×
-                        </button>
-                      </div>
+                    <button className="notesBtn" onClick={() => toggleNotes(item.id)}>
+                      {item.open ? "Hide Notes" : "Notes"}
+                    </button>
 
+                    <button
+                      className="deleteBtn"
+                      onClick={() => deleteItinerary(item.id)}
+                    >
+                      ×
+                    </button>
+
+                    {item.open && (
                       <textarea
+                        className="notesBox"
                         value={item.notes}
-                        onChange={(e) => updateItinerary(item.id, "notes", e.target.value)}
+                        onChange={(e) =>
+                          updateItinerary(item.id, "notes", e.target.value)
+                        }
                         placeholder="Add notes..."
                       />
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -550,7 +554,7 @@ export default function TravelPage() {
           border: 1px solid #e5e7eb;
           background: #f8f9fb;
           border-radius: 12px;
-          padding: 9px 11px;
+          padding: 7px 10px;
           font-size: 12px;
           color: #111;
           outline: none;
@@ -558,9 +562,15 @@ export default function TravelPage() {
           box-sizing: border-box;
         }
 
+        input,
+        select {
+          height: 30px;
+        }
+
         textarea {
           resize: vertical;
-          min-height: 56px;
+          min-height: 48px;
+          line-height: 1.35;
         }
 
         input:focus,
@@ -573,65 +583,79 @@ export default function TravelPage() {
         .itineraryList {
           display: flex;
           flex-direction: column;
-          gap: 9px;
+          gap: 8px;
         }
 
         .itineraryItem {
           display: grid;
-          grid-template-columns: 24px 82px 1fr;
-          gap: 9px;
-          align-items: start;
-          padding: 10px;
+          grid-template-columns: 20px 72px minmax(0, 1fr) 120px 78px 28px;
+          gap: 7px;
+          align-items: center;
+          padding: 8px 9px;
           border: 1px solid #eceef2;
-          border-radius: 16px;
+          border-radius: 14px;
           background: #fafafa;
         }
 
         .dragHandle {
           cursor: grab;
           color: #aaa;
-          font-size: 15px;
-          padding-top: 9px;
+          font-size: 14px;
           user-select: none;
-        }
-
-        .timeInput {
-          font-weight: 750;
           text-align: center;
         }
 
-        .itemMain {
-          min-width: 0;
-        }
-
-        .itemTop {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) 130px 30px;
-          gap: 8px;
-          align-items: center;
-          margin-bottom: 8px;
+        .timeInput {
+          font-size: 11px;
+          font-weight: 750;
+          text-align: center;
+          background: #fff;
         }
 
         .itemTitle {
+          font-size: 12px;
           font-weight: 700;
           background: #fff;
         }
 
         .typeSelect {
-          height: 36px;
-          font-size: 12px;
+          height: 30px;
+          font-size: 11px;
           background: #fff;
+        }
+
+        .notesBtn {
+          height: 30px;
+          border: 1px solid #e5e7eb;
+          background: #fff;
+          border-radius: 999px;
+          font-size: 11px;
+          font-weight: 700;
+          cursor: pointer;
         }
 
         .deleteBtn {
           border: none;
           background: #f1f1f1;
           border-radius: 999px;
-          height: 30px;
-          width: 30px;
+          height: 28px;
+          width: 28px;
           cursor: pointer;
-          font-size: 16px;
+          font-size: 15px;
           color: #555;
+        }
+
+        .deleteBtn:hover,
+        .notesBtn:hover {
+          background: #111;
+          color: #fff;
+        }
+
+        .notesBox {
+          grid-column: 3 / 7;
+          min-height: 42px;
+          margin-top: 0;
+          background: #fff;
         }
 
         .dealerGrid {
@@ -651,7 +675,7 @@ export default function TravelPage() {
         }
 
         .largeNotes {
-          min-height: 140px;
+          min-height: 120px;
         }
 
         @media (max-width: 1050px) {
@@ -666,8 +690,12 @@ export default function TravelPage() {
             grid-column: span 1;
           }
 
-          .itemTop {
+          .itineraryItem {
             grid-template-columns: 1fr;
+          }
+
+          .notesBox {
+            grid-column: auto;
           }
 
           .topHeader {
