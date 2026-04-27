@@ -60,8 +60,10 @@ export default function TravelPage() {
 
   useEffect(() => {
     const savedTravel = localStorage.getItem("travelPageData");
+
     if (savedTravel) {
       const parsed = JSON.parse(savedTravel);
+
       if (parsed.dealers) setDealers(parsed.dealers);
       if (parsed.trips) setTrips(parsed.trips);
       if (parsed.selectedTrip) setSelectedTrip(parsed.selectedTrip);
@@ -97,6 +99,7 @@ export default function TravelPage() {
 
   const toggleDealerForTrip = (dealerId) => {
     const current = selectedTrip?.dealerIds || [];
+
     const updatedDealerIds = current.includes(dealerId)
       ? current.filter((id) => id !== dealerId)
       : [...current, dealerId];
@@ -315,7 +318,7 @@ export default function TravelPage() {
     });
     rows.push([]);
 
-    rows.push(["General Notes"]);
+    rows.push(["Trip Notes"]);
     rows.push([tripNotes]);
 
     const csv = rows.map((row) => row.map(csvSafe).join(",")).join("\n");
@@ -355,9 +358,11 @@ export default function TravelPage() {
             <button className="secondaryBtn" onClick={downloadExcelCSV}>
               Download Excel
             </button>
+
             <button className="secondaryBtn" onClick={printPDF}>
               Print / PDF
             </button>
+
             <button className="primaryBtn" onClick={addTrip}>
               + New Trip
             </button>
@@ -421,6 +426,7 @@ export default function TravelPage() {
 
               <div className="selectedDealersPrint">
                 <h3>Dealers Included</h3>
+
                 {selectedDealers.length === 0 && (
                   <p className="emptySmall">No dealers selected.</p>
                 )}
@@ -442,6 +448,7 @@ export default function TravelPage() {
                       checked={selectedTrip?.dealerIds?.includes(dealer.id) || false}
                       onChange={() => toggleDealerForTrip(dealer.id)}
                     />
+
                     <span>
                       <strong>{dealer.name}</strong>
                       <small>{dealer.location || "No location added"}</small>
@@ -455,7 +462,9 @@ export default function TravelPage() {
               <div className="sectionHeader">
                 <div>
                   <h2>Trip Plan</h2>
-                  <p className="noPrint">Drag items to reorder. Click notes to expand details.</p>
+                  <p className="noPrint">
+                    Drag items to reorder. Click notes to expand details.
+                  </p>
                 </div>
 
                 <button className="smallBtn noPrint" onClick={addItineraryItem}>
@@ -699,21 +708,6 @@ export default function TravelPage() {
               />
             </section>
 
-            <section className="card wide">
-              <div className="sectionHeader">
-                <div>
-                  <h2>General Trip Notes</h2>
-                </div>
-              </div>
-
-              <textarea
-                className="tripNotesBox"
-                value={tripNotes}
-                onChange={(e) => setTripNotes(e.target.value)}
-                placeholder="General trip notes..."
-              />
-            </section>
-
             <section className="card wide noPrint">
               <div className="sectionHeader">
                 <div>
@@ -953,8 +947,7 @@ export default function TravelPage() {
           white-space: nowrap;
         }
 
-        .formGrid,
-        .taskAddGrid {
+        .formGrid {
           display: grid;
           grid-template-columns: 1fr 1fr 140px;
           gap: 10px;
@@ -976,6 +969,15 @@ export default function TravelPage() {
           border-radius: 14px;
           padding: 10px;
           cursor: pointer;
+        }
+
+        .dealerSelect input[type="checkbox"] {
+          width: 13px;
+          height: 13px;
+          min-width: 13px;
+          margin-top: 1px;
+          padding: 0;
+          accent-color: #111;
         }
 
         .dealerSelect strong,
@@ -1012,7 +1014,9 @@ export default function TravelPage() {
         }
 
         .taskAddGrid {
+          display: grid;
           grid-template-columns: 1fr 120px 120px 140px 70px;
+          gap: 10px;
           margin-bottom: 10px;
         }
 
