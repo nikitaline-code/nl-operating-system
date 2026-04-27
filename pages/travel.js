@@ -37,13 +37,25 @@ const starterItinerary = [
     notes: "Review location, credit line, next steps",
     open: false,
   },
+];
+
+const starterHotels = [
   {
-    id: 3,
-    time: "2:00 PM",
-    title: "Site Visit",
-    type: "Dealer Location",
-    notes: "Walk through setup and requirements",
-    open: false,
+    id: 1,
+    name: "Hotel Name",
+    location: "City / area",
+    rate: "",
+    notes: "",
+  },
+];
+
+const starterCars = [
+  {
+    id: 1,
+    company: "Rental Company",
+    pickup: "Pickup location",
+    dropoff: "Drop-off location",
+    confirmation: "",
   },
 ];
 
@@ -52,6 +64,8 @@ export default function TravelPage() {
   const [trips, setTrips] = useState(starterTrips);
   const [selectedTrip, setSelectedTrip] = useState(starterTrips[0]);
   const [itinerary, setItinerary] = useState(starterItinerary);
+  const [hotels, setHotels] = useState(starterHotels);
+  const [cars, setCars] = useState(starterCars);
   const [draggedItem, setDraggedItem] = useState(null);
 
   const selectedDealer = dealers.find((d) => d.id === selectedTrip?.dealerId);
@@ -142,6 +156,52 @@ export default function TravelPage() {
 
     setItinerary(updated);
     setDraggedItem(null);
+  };
+
+  const addHotel = () => {
+    setHotels([
+      ...hotels,
+      {
+        id: Date.now(),
+        name: "",
+        location: "",
+        rate: "",
+        notes: "",
+      },
+    ]);
+  };
+
+  const updateHotel = (id, field, value) => {
+    setHotels(
+      hotels.map((hotel) =>
+        hotel.id === id ? { ...hotel, [field]: value } : hotel
+      )
+    );
+  };
+
+  const deleteHotel = (id) => {
+    setHotels(hotels.filter((hotel) => hotel.id !== id));
+  };
+
+  const addCar = () => {
+    setCars([
+      ...cars,
+      {
+        id: Date.now(),
+        company: "",
+        pickup: "",
+        dropoff: "",
+        confirmation: "",
+      },
+    ]);
+  };
+
+  const updateCar = (id, field, value) => {
+    setCars(cars.map((car) => (car.id === id ? { ...car, [field]: value } : car)));
+  };
+
+  const deleteCar = (id) => {
+    setCars(cars.filter((car) => car.id !== id));
   };
 
   return (
@@ -271,13 +331,10 @@ export default function TravelPage() {
                     </select>
 
                     <button className="notesBtn" onClick={() => toggleNotes(item.id)}>
-                      {item.open ? "Hide Notes" : "Notes"}
+                      {item.open ? "Hide" : "Notes"}
                     </button>
 
-                    <button
-                      className="deleteBtn"
-                      onClick={() => deleteItinerary(item.id)}
-                    >
+                    <button className="deleteBtn" onClick={() => deleteItinerary(item.id)}>
                       ×
                     </button>
 
@@ -345,32 +402,102 @@ export default function TravelPage() {
               </div>
             </section>
 
-            <section className="card">
+            <section className="card wide">
               <div className="sectionHeader">
                 <div>
                   <h2>Recommended Hotels</h2>
-                  <p>Add hotel options, rates, links, and notes.</p>
+                  <p>Add each hotel as its own line.</p>
                 </div>
+
+                <button className="smallBtn" onClick={addHotel}>
+                  + Add Hotel
+                </button>
               </div>
 
-              <textarea
-                className="largeNotes"
-                placeholder="Hotel name, rate, booking link, address, parking, notes..."
-              />
+              <div className="lineList">
+                {hotels.map((hotel) => (
+                  <div className="hotelLine" key={hotel.id}>
+                    <input
+                      value={hotel.name}
+                      onChange={(e) => updateHotel(hotel.id, "name", e.target.value)}
+                      placeholder="Hotel name"
+                    />
+
+                    <input
+                      value={hotel.location}
+                      onChange={(e) =>
+                        updateHotel(hotel.id, "location", e.target.value)
+                      }
+                      placeholder="Location"
+                    />
+
+                    <input
+                      value={hotel.rate}
+                      onChange={(e) => updateHotel(hotel.id, "rate", e.target.value)}
+                      placeholder="Rate / booking link"
+                    />
+
+                    <input
+                      value={hotel.notes}
+                      onChange={(e) => updateHotel(hotel.id, "notes", e.target.value)}
+                      placeholder="Notes"
+                    />
+
+                    <button className="deleteBtn" onClick={() => deleteHotel(hotel.id)}>
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
             </section>
 
-            <section className="card">
+            <section className="card wide">
               <div className="sectionHeader">
                 <div>
-                  <h2>Rental Car</h2>
-                  <p>Keep rental details and confirmation info here.</p>
+                  <h2>Rental Cars</h2>
+                  <p>Add each rental option as its own line.</p>
                 </div>
+
+                <button className="smallBtn" onClick={addCar}>
+                  + Add Rental
+                </button>
               </div>
 
-              <textarea
-                className="largeNotes"
-                placeholder="Company, pickup, drop-off, confirmation number, vehicle type..."
-              />
+              <div className="lineList">
+                {cars.map((car) => (
+                  <div className="carLine" key={car.id}>
+                    <input
+                      value={car.company}
+                      onChange={(e) => updateCar(car.id, "company", e.target.value)}
+                      placeholder="Company"
+                    />
+
+                    <input
+                      value={car.pickup}
+                      onChange={(e) => updateCar(car.id, "pickup", e.target.value)}
+                      placeholder="Pickup"
+                    />
+
+                    <input
+                      value={car.dropoff}
+                      onChange={(e) => updateCar(car.id, "dropoff", e.target.value)}
+                      placeholder="Drop-off"
+                    />
+
+                    <input
+                      value={car.confirmation}
+                      onChange={(e) =>
+                        updateCar(car.id, "confirmation", e.target.value)
+                      }
+                      placeholder="Confirmation / notes"
+                    />
+
+                    <button className="deleteBtn" onClick={() => deleteCar(car.id)}>
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
             </section>
           </main>
         </div>
@@ -580,7 +707,8 @@ export default function TravelPage() {
           border-color: #111;
         }
 
-        .itineraryList {
+        .itineraryList,
+        .lineList {
           display: flex;
           flex-direction: column;
           gap: 8px;
@@ -595,6 +723,18 @@ export default function TravelPage() {
           border: 1px solid #eceef2;
           border-radius: 14px;
           background: #fafafa;
+        }
+
+        .hotelLine,
+        .carLine {
+          display: grid;
+          grid-template-columns: 1.1fr 1fr 1fr 1.2fr 28px;
+          gap: 8px;
+          align-items: center;
+          padding: 8px;
+          background: #fafafa;
+          border: 1px solid #eceef2;
+          border-radius: 14px;
         }
 
         .dragHandle {
@@ -674,10 +814,6 @@ export default function TravelPage() {
           min-width: 0;
         }
 
-        .largeNotes {
-          min-height: 120px;
-        }
-
         @media (max-width: 1050px) {
           .layout,
           .mainGrid,
@@ -690,7 +826,9 @@ export default function TravelPage() {
             grid-column: span 1;
           }
 
-          .itineraryItem {
+          .itineraryItem,
+          .hotelLine,
+          .carLine {
             grid-template-columns: 1fr;
           }
 
