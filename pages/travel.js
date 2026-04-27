@@ -1,12 +1,29 @@
 import { useState } from "react";
 
+const starterDealers = [
+  {
+    id: 1,
+    name: "Roblin Vet",
+    location: "Virden, MB",
+    contact: "",
+    notes: "Exclusive / important partner. Add address, phone, and visit notes here.",
+  },
+  {
+    id: 2,
+    name: "Dealer Name",
+    location: "City, Province",
+    contact: "",
+    notes: "",
+  },
+];
+
 const starterTrips = [
   {
     id: 1,
     name: "Dealer Visit - Manitoba",
     date: "May 14 - May 16",
     status: "Planning",
-    dealer: "Roblin Vet / Virden Location",
+    dealerId: 1,
     location: "Virden, MB",
   },
 ];
@@ -36,19 +53,54 @@ const starterItinerary = [
 ];
 
 export default function TravelPage() {
+  const [dealers, setDealers] = useState(starterDealers);
   const [trips, setTrips] = useState(starterTrips);
   const [selectedTrip, setSelectedTrip] = useState(starterTrips[0]);
   const [itinerary, setItinerary] = useState(starterItinerary);
-
-  const [hotels, setHotels] = useState([
-    { id: 1, name: "Recommended Hotel", location: "Near dealer", notes: "Add rate / contact / booking link" },
-  ]);
-
-  const [rentalCars, setRentalCars] = useState([
-    { id: 1, company: "Enterprise", pickup: "Winnipeg Airport", notes: "Add confirmation number" },
-  ]);
-
   const [draggedItem, setDraggedItem] = useState(null);
+
+  const selectedDealer = dealers.find((d) => d.id === selectedTrip?.dealerId);
+
+  const updateTrip = (field, value) => {
+    const updatedTrip = { ...selectedTrip, [field]: value };
+    setSelectedTrip(updatedTrip);
+    setTrips(trips.map((trip) => (trip.id === updatedTrip.id ? updatedTrip : trip)));
+  };
+
+  const addDealer = () => {
+    setDealers([
+      ...dealers,
+      {
+        id: Date.now(),
+        name: "New Dealer",
+        location: "",
+        contact: "",
+        notes: "",
+      },
+    ]);
+  };
+
+  const updateDealer = (id, field, value) => {
+    setDealers(
+      dealers.map((dealer) =>
+        dealer.id === id ? { ...dealer, [field]: value } : dealer
+      )
+    );
+  };
+
+  const addTrip = () => {
+    const newTrip = {
+      id: Date.now(),
+      name: "New Trip",
+      date: "Add dates",
+      status: "Planning",
+      dealerId: dealers[0]?.id || null,
+      location: "",
+    };
+
+    setTrips([...trips, newTrip]);
+    setSelectedTrip(newTrip);
+  };
 
   const addItineraryItem = () => {
     setItinerary([
@@ -75,10 +127,6 @@ export default function TravelPage() {
     setItinerary(itinerary.filter((item) => item.id !== id));
   };
 
-  const handleDragStart = (item) => {
-    setDraggedItem(item);
-  };
-
   const handleDrop = (targetItem) => {
     if (!draggedItem || draggedItem.id === targetItem.id) return;
 
@@ -93,36 +141,6 @@ export default function TravelPage() {
     setDraggedItem(null);
   };
 
-  const addHotel = () => {
-    setHotels([
-      ...hotels,
-      { id: Date.now(), name: "New Hotel", location: "", notes: "" },
-    ]);
-  };
-
-  const updateHotel = (id, field, value) => {
-    setHotels(
-      hotels.map((hotel) =>
-        hotel.id === id ? { ...hotel, [field]: value } : hotel
-      )
-    );
-  };
-
-  const addRentalCar = () => {
-    setRentalCars([
-      ...rentalCars,
-      { id: Date.now(), company: "Rental Car", pickup: "", notes: "" },
-    ]);
-  };
-
-  const updateRentalCar = (id, field, value) => {
-    setRentalCars(
-      rentalCars.map((car) =>
-        car.id === id ? { ...car, [field]: value } : car
-      )
-    );
-  };
-
   return (
     <div className="page">
       <div className="shell">
@@ -135,21 +153,7 @@ export default function TravelPage() {
             </p>
           </div>
 
-          <button
-            className="primaryBtn"
-            onClick={() => {
-              const newTrip = {
-                id: Date.now(),
-                name: "New Trip",
-                date: "Add dates",
-                status: "Planning",
-                dealer: "Dealer name",
-                location: "Location",
-              };
-              setTrips([...trips, newTrip]);
-              setSelectedTrip(newTrip);
-            }}
-          >
+          <button className="primaryBtn" onClick={addTrip}>
             + New Trip
           </button>
         </header>
@@ -159,17 +163,15 @@ export default function TravelPage() {
             <h2>Upcoming Trips</h2>
 
             {trips.map((trip) => (
-              <div
+              <button
                 key={trip.id}
-                className={`tripCard ${
-                  selectedTrip?.id === trip.id ? "active" : ""
-                }`}
+                className={`tripCard ${selectedTrip?.id === trip.id ? "active" : ""}`}
                 onClick={() => setSelectedTrip(trip)}
               >
-                <div className="tripTitle">{trip.name}</div>
-                <div className="tripMeta">{trip.date}</div>
-                <div className="badge">{trip.status}</div>
-              </div>
+                <span className="tripTitle">{trip.name}</span>
+                <span className="tripMeta">{trip.date}</span>
+                <span className="badge">{trip.status}</span>
+              </button>
             ))}
           </aside>
 
@@ -178,38 +180,38 @@ export default function TravelPage() {
               <div className="sectionHeader">
                 <div>
                   <h2>Trip Overview</h2>
-                  <p>Dealer, location, dates, and key trip details.</p>
+                  <p>Choose the dealer from your directory, then plan the visit.</p>
                 </div>
               </div>
 
               <div className="formGrid">
                 <input
                   value={selectedTrip?.name || ""}
-                  onChange={(e) =>
-                    setSelectedTrip({ ...selectedTrip, name: e.target.value })
-                  }
+                  onChange={(e) => updateTrip("name", e.target.value)}
                   placeholder="Trip name"
                 />
+
                 <input
                   value={selectedTrip?.date || ""}
-                  onChange={(e) =>
-                    setSelectedTrip({ ...selectedTrip, date: e.target.value })
-                  }
+                  onChange={(e) => updateTrip("date", e.target.value)}
                   placeholder="Trip dates"
                 />
+
+                <select
+                  value={selectedTrip?.dealerId || ""}
+                  onChange={(e) => updateTrip("dealerId", Number(e.target.value))}
+                >
+                  {dealers.map((dealer) => (
+                    <option key={dealer.id} value={dealer.id}>
+                      {dealer.name}
+                    </option>
+                  ))}
+                </select>
+
                 <input
-                  value={selectedTrip?.dealer || ""}
-                  onChange={(e) =>
-                    setSelectedTrip({ ...selectedTrip, dealer: e.target.value })
-                  }
-                  placeholder="Dealer location / contact"
-                />
-                <input
-                  value={selectedTrip?.location || ""}
-                  onChange={(e) =>
-                    setSelectedTrip({ ...selectedTrip, location: e.target.value })
-                  }
-                  placeholder="City / province"
+                  value={selectedDealer?.location || ""}
+                  readOnly
+                  placeholder="Dealer location"
                 />
               </div>
             </section>
@@ -218,8 +220,9 @@ export default function TravelPage() {
               <div className="sectionHeader">
                 <div>
                   <h2>Trip Plan</h2>
-                  <p>Drag items to slide things around as plans change.</p>
+                  <p>Drag items to reorder. Keep each item compact and easy to scan.</p>
                 </div>
+
                 <button className="smallBtn" onClick={addItineraryItem}>
                   + Add Item
                 </button>
@@ -231,7 +234,7 @@ export default function TravelPage() {
                     key={item.id}
                     className="itineraryItem"
                     draggable
-                    onDragStart={() => handleDragStart(item)}
+                    onDragStart={() => setDraggedItem(item)}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => handleDrop(item)}
                   >
@@ -240,51 +243,99 @@ export default function TravelPage() {
                     <input
                       className="timeInput"
                       value={item.time}
-                      onChange={(e) =>
-                        updateItinerary(item.id, "time", e.target.value)
-                      }
+                      onChange={(e) => updateItinerary(item.id, "time", e.target.value)}
                       placeholder="Time"
                     />
 
                     <div className="itemMain">
-                      <input
-                        className="itemTitle"
-                        value={item.title}
-                        onChange={(e) =>
-                          updateItinerary(item.id, "title", e.target.value)
-                        }
-                        placeholder="Item title"
-                      />
+                      <div className="itemTop">
+                        <input
+                          className="itemTitle"
+                          value={item.title}
+                          onChange={(e) =>
+                            updateItinerary(item.id, "title", e.target.value)
+                          }
+                          placeholder="Item title"
+                        />
+
+                        <select
+                          className="typeSelect"
+                          value={item.type}
+                          onChange={(e) =>
+                            updateItinerary(item.id, "type", e.target.value)
+                          }
+                        >
+                          <option>Travel</option>
+                          <option>Meeting</option>
+                          <option>Dealer Location</option>
+                          <option>Hotel</option>
+                          <option>Rental Car</option>
+                          <option>Food / Break</option>
+                        </select>
+
+                        <button
+                          className="deleteBtn"
+                          onClick={() => deleteItinerary(item.id)}
+                        >
+                          ×
+                        </button>
+                      </div>
 
                       <textarea
                         value={item.notes}
-                        onChange={(e) =>
-                          updateItinerary(item.id, "notes", e.target.value)
-                        }
+                        onChange={(e) => updateItinerary(item.id, "notes", e.target.value)}
                         placeholder="Add notes..."
                       />
                     </div>
+                  </div>
+                ))}
+              </div>
+            </section>
 
-                    <select
-                      value={item.type}
+            <section className="card wide">
+              <div className="sectionHeader">
+                <div>
+                  <h2>Dealer Directory</h2>
+                  <p>Add dealer locations once, then pull them into any trip.</p>
+                </div>
+
+                <button className="smallBtn" onClick={addDealer}>
+                  + Add Dealer
+                </button>
+              </div>
+
+              <div className="dealerGrid">
+                {dealers.map((dealer) => (
+                  <div className="dealerCard" key={dealer.id}>
+                    <input
+                      value={dealer.name}
+                      onChange={(e) => updateDealer(dealer.id, "name", e.target.value)}
+                      placeholder="Dealer name"
+                    />
+
+                    <input
+                      value={dealer.location}
                       onChange={(e) =>
-                        updateItinerary(item.id, "type", e.target.value)
+                        updateDealer(dealer.id, "location", e.target.value)
                       }
-                    >
-                      <option>Travel</option>
-                      <option>Meeting</option>
-                      <option>Dealer Location</option>
-                      <option>Hotel</option>
-                      <option>Rental Car</option>
-                      <option>Food / Break</option>
-                    </select>
+                      placeholder="City / Province"
+                    />
 
-                    <button
-                      className="deleteBtn"
-                      onClick={() => deleteItinerary(item.id)}
-                    >
-                      ×
-                    </button>
+                    <input
+                      value={dealer.contact}
+                      onChange={(e) =>
+                        updateDealer(dealer.id, "contact", e.target.value)
+                      }
+                      placeholder="Contact / phone / email"
+                    />
+
+                    <textarea
+                      value={dealer.notes}
+                      onChange={(e) =>
+                        updateDealer(dealer.id, "notes", e.target.value)
+                      }
+                      placeholder="Dealer notes, address, visit details..."
+                    />
                   </div>
                 ))}
               </div>
@@ -293,113 +344,28 @@ export default function TravelPage() {
             <section className="card">
               <div className="sectionHeader">
                 <div>
-                  <h2>Dealer Locations</h2>
-                  <p>Keep dealer addresses, contacts, and notes here.</p>
-                </div>
-              </div>
-
-              <div className="infoBlock">
-                <label>Dealer / Location</label>
-                <input placeholder="Dealer name" defaultValue={selectedTrip?.dealer} />
-
-                <label>Address</label>
-                <input placeholder="Street address" />
-
-                <label>Contact</label>
-                <input placeholder="Name / phone / email" />
-
-                <label>Notes</label>
-                <textarea placeholder="Add details about the visit..." />
-              </div>
-            </section>
-
-            <section className="card">
-              <div className="sectionHeader">
-                <div>
                   <h2>Recommended Hotels</h2>
-                  <p>Add options, rates, links, and booking notes.</p>
+                  <p>Add hotel options, rates, links, and notes.</p>
                 </div>
-                <button className="smallBtn" onClick={addHotel}>
-                  + Add
-                </button>
               </div>
 
-              {hotels.map((hotel) => (
-                <div className="miniCard" key={hotel.id}>
-                  <input
-                    value={hotel.name}
-                    onChange={(e) =>
-                      updateHotel(hotel.id, "name", e.target.value)
-                    }
-                    placeholder="Hotel name"
-                  />
-                  <input
-                    value={hotel.location}
-                    onChange={(e) =>
-                      updateHotel(hotel.id, "location", e.target.value)
-                    }
-                    placeholder="Location"
-                  />
-                  <textarea
-                    value={hotel.notes}
-                    onChange={(e) =>
-                      updateHotel(hotel.id, "notes", e.target.value)
-                    }
-                    placeholder="Rate, booking link, parking, notes..."
-                  />
-                </div>
-              ))}
+              <textarea
+                className="largeNotes"
+                placeholder="Hotel name, rate, booking link, address, parking, notes..."
+              />
             </section>
 
             <section className="card">
               <div className="sectionHeader">
                 <div>
                   <h2>Rental Car</h2>
-                  <p>Rental company, pickup, drop-off, and confirmations.</p>
-                </div>
-                <button className="smallBtn" onClick={addRentalCar}>
-                  + Add
-                </button>
-              </div>
-
-              {rentalCars.map((car) => (
-                <div className="miniCard" key={car.id}>
-                  <input
-                    value={car.company}
-                    onChange={(e) =>
-                      updateRentalCar(car.id, "company", e.target.value)
-                    }
-                    placeholder="Rental company"
-                  />
-                  <input
-                    value={car.pickup}
-                    onChange={(e) =>
-                      updateRentalCar(car.id, "pickup", e.target.value)
-                    }
-                    placeholder="Pickup / drop-off"
-                  />
-                  <textarea
-                    value={car.notes}
-                    onChange={(e) =>
-                      updateRentalCar(car.id, "notes", e.target.value)
-                    }
-                    placeholder="Confirmation number, vehicle type, notes..."
-                  />
-                </div>
-              ))}
-            </section>
-
-            <section className="card">
-              <div className="sectionHeader">
-                <div>
-                  <h2>Quick Notes</h2>
-                  <p>Anything important for the trip.</p>
+                  <p>Keep rental details and confirmation info here.</p>
                 </div>
               </div>
 
               <textarea
                 className="largeNotes"
-                placeholder="Flight info, meal plans, dealer asks, exec preferences, prep notes..."
+                placeholder="Company, pickup, drop-off, confirmation number, vehicle type..."
               />
             </section>
           </main>
@@ -424,41 +390,40 @@ export default function TravelPage() {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 24px;
+          margin-bottom: 22px;
         }
 
         .eyebrow {
+          margin: 0 0 7px;
+          font-size: 10px;
+          letter-spacing: 0.16em;
           text-transform: uppercase;
-          font-size: 11px;
-          letter-spacing: 0.12em;
-          color: #777;
-          margin: 0 0 6px;
+          color: #6b7280;
         }
 
         h1 {
           margin: 0;
-          font-size: 34px;
+          font-size: 32px;
           letter-spacing: -0.04em;
-          font-weight: 750;
         }
 
         h2 {
           margin: 0;
-          font-size: 15px;
-          letter-spacing: -0.01em;
+          font-size: 14px;
+          letter-spacing: -0.02em;
         }
 
         .subtext,
         .sectionHeader p {
           margin: 6px 0 0;
-          color: #777;
-          font-size: 13px;
+          color: #6b7280;
+          font-size: 12px;
           line-height: 1.4;
         }
 
         .layout {
           display: grid;
-          grid-template-columns: 280px 1fr;
+          grid-template-columns: 250px 1fr;
           gap: 18px;
         }
 
@@ -466,19 +431,19 @@ export default function TravelPage() {
         .card {
           background: #fff;
           border: 1px solid #e5e7eb;
-          border-radius: 22px;
-          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
+          border-radius: 20px;
+          box-shadow: 0 16px 38px rgba(15, 23, 42, 0.06);
         }
 
         .sidebarCard {
-          padding: 18px;
+          padding: 16px;
           height: fit-content;
         }
 
         .mainGrid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 18px;
+          gap: 16px;
         }
 
         .wide {
@@ -486,30 +451,27 @@ export default function TravelPage() {
         }
 
         .card {
-          padding: 20px;
+          padding: 18px;
         }
 
         .sectionHeader {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          gap: 12px;
-          margin-bottom: 16px;
+          gap: 14px;
+          margin-bottom: 14px;
         }
 
         .tripCard {
-          padding: 14px;
+          width: 100%;
+          text-align: left;
+          display: block;
+          padding: 13px;
           border: 1px solid #eceef2;
-          border-radius: 16px;
+          border-radius: 14px;
           background: #f8f9fb;
-          margin-top: 12px;
+          margin-top: 10px;
           cursor: pointer;
-          transition: 0.2s ease;
-        }
-
-        .tripCard:hover {
-          transform: translateY(-1px);
-          background: #f3f4f6;
         }
 
         .tripCard.active {
@@ -518,15 +480,20 @@ export default function TravelPage() {
           border-color: #111;
         }
 
+        .tripTitle,
+        .tripMeta {
+          display: block;
+        }
+
         .tripTitle {
-          font-size: 13px;
-          font-weight: 700;
+          font-size: 12px;
+          font-weight: 750;
         }
 
         .tripMeta {
-          font-size: 12px;
-          color: #888;
-          margin-top: 4px;
+          font-size: 11px;
+          color: #777;
+          margin-top: 5px;
         }
 
         .tripCard.active .tripMeta {
@@ -537,7 +504,7 @@ export default function TravelPage() {
           display: inline-flex;
           margin-top: 10px;
           font-size: 10px;
-          padding: 5px 8px;
+          padding: 4px 7px;
           border-radius: 999px;
           background: #eef0f3;
           color: #444;
@@ -555,49 +522,45 @@ export default function TravelPage() {
           color: #fff;
           border-radius: 999px;
           cursor: pointer;
-          font-weight: 650;
-          transition: 0.2s ease;
+          font-weight: 700;
         }
 
         .primaryBtn {
-          padding: 11px 16px;
-          font-size: 13px;
-        }
-
-        .smallBtn {
-          padding: 8px 12px;
+          padding: 9px 14px;
           font-size: 12px;
         }
 
-        .primaryBtn:hover,
-        .smallBtn:hover {
-          transform: translateY(-1px);
-          opacity: 0.88;
+        .smallBtn {
+          padding: 8px 11px;
+          font-size: 11px;
+          white-space: nowrap;
         }
 
         .formGrid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 12px;
+          gap: 10px;
         }
 
         input,
         textarea,
         select {
           width: 100%;
+          max-width: 100%;
           border: 1px solid #e5e7eb;
           background: #f8f9fb;
-          border-radius: 14px;
-          padding: 10px 12px;
-          font-size: 13px;
+          border-radius: 12px;
+          padding: 9px 11px;
+          font-size: 12px;
           color: #111;
           outline: none;
           font-family: inherit;
+          box-sizing: border-box;
         }
 
         textarea {
           resize: vertical;
-          min-height: 70px;
+          min-height: 56px;
         }
 
         input:focus,
@@ -610,41 +573,53 @@ export default function TravelPage() {
         .itineraryList {
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 9px;
         }
 
         .itineraryItem {
           display: grid;
-          grid-template-columns: 28px 90px 1fr 145px 34px;
-          gap: 10px;
+          grid-template-columns: 24px 82px 1fr;
+          gap: 9px;
           align-items: start;
-          padding: 12px;
+          padding: 10px;
           border: 1px solid #eceef2;
-          border-radius: 18px;
+          border-radius: 16px;
           background: #fafafa;
-          transition: 0.2s ease;
-        }
-
-        .itineraryItem:hover {
-          background: #f4f5f7;
-          transform: translateY(-1px);
         }
 
         .dragHandle {
           cursor: grab;
           color: #aaa;
-          font-size: 18px;
-          padding-top: 8px;
+          font-size: 15px;
+          padding-top: 9px;
           user-select: none;
         }
 
         .timeInput {
-          font-weight: 650;
+          font-weight: 750;
+          text-align: center;
+        }
+
+        .itemMain {
+          min-width: 0;
+        }
+
+        .itemTop {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 130px 30px;
+          gap: 8px;
+          align-items: center;
+          margin-bottom: 8px;
         }
 
         .itemTitle {
           font-weight: 700;
-          margin-bottom: 8px;
+          background: #fff;
+        }
+
+        .typeSelect {
+          height: 36px;
+          font-size: 12px;
           background: #fff;
         }
 
@@ -652,52 +627,38 @@ export default function TravelPage() {
           border: none;
           background: #f1f1f1;
           border-radius: 999px;
-          height: 32px;
-          width: 32px;
+          height: 30px;
+          width: 30px;
           cursor: pointer;
-          font-size: 18px;
+          font-size: 16px;
           color: #555;
         }
 
-        .deleteBtn:hover {
-          background: #111;
-          color: #fff;
-        }
-
-        .infoBlock {
+        .dealerGrid {
           display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 10px;
         }
 
-        label {
-          font-size: 11px;
-          color: #777;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          margin-top: 4px;
-        }
-
-        .miniCard {
+        .dealerCard {
+          display: grid;
+          gap: 8px;
           padding: 12px;
-          border-radius: 18px;
+          border-radius: 16px;
           background: #fafafa;
           border: 1px solid #eceef2;
-          display: grid;
-          gap: 10px;
-          margin-bottom: 10px;
+          min-width: 0;
         }
 
         .largeNotes {
-          min-height: 180px;
+          min-height: 140px;
         }
 
         @media (max-width: 1050px) {
-          .layout {
-            grid-template-columns: 1fr;
-          }
-
-          .mainGrid {
+          .layout,
+          .mainGrid,
+          .formGrid,
+          .dealerGrid {
             grid-template-columns: 1fr;
           }
 
@@ -705,11 +666,7 @@ export default function TravelPage() {
             grid-column: span 1;
           }
 
-          .itineraryItem {
-            grid-template-columns: 1fr;
-          }
-
-          .formGrid {
+          .itemTop {
             grid-template-columns: 1fr;
           }
 
