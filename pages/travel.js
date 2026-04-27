@@ -13,10 +13,19 @@ const starterDealers = [
 const starterTrips = [
   {
     id: 1,
+    owner: "Mark",
     name: "Dealer Visit - Manitoba",
     date: "May 14 - May 16",
     status: "Planning",
     dealerIds: [1],
+  },
+  {
+    id: 2,
+    owner: "Dane",
+    name: "New Trip",
+    date: "Add dates",
+    status: "Planning",
+    dealerIds: [],
   },
 ];
 
@@ -40,6 +49,7 @@ const starterItinerary = [
 ];
 
 export default function TravelPage() {
+  const [activePerson, setActivePerson] = useState("Mark");
   const [dealers, setDealers] = useState(starterDealers);
   const [trips, setTrips] = useState(starterTrips);
   const [selectedTrip, setSelectedTrip] = useState(starterTrips[0]);
@@ -54,6 +64,8 @@ export default function TravelPage() {
   const [taskDueDate, setTaskDueDate] = useState("");
   const [draggedItem, setDraggedItem] = useState(null);
 
+  const visibleTrips = trips.filter((trip) => trip.owner === activePerson);
+
   const selectedDealers = dealers.filter((d) =>
     selectedTrip?.dealerIds?.includes(d.id)
   );
@@ -64,6 +76,7 @@ export default function TravelPage() {
     if (savedTravel) {
       const parsed = JSON.parse(savedTravel);
 
+      if (parsed.activePerson) setActivePerson(parsed.activePerson);
       if (parsed.dealers) setDealers(parsed.dealers);
       if (parsed.trips) setTrips(parsed.trips);
       if (parsed.selectedTrip) setSelectedTrip(parsed.selectedTrip);
@@ -79,6 +92,7 @@ export default function TravelPage() {
     localStorage.setItem(
       "travelPageData",
       JSON.stringify({
+        activePerson,
         dealers,
         trips,
         selectedTrip,
@@ -89,7 +103,39 @@ export default function TravelPage() {
         tripNotes,
       })
     );
-  }, [dealers, trips, selectedTrip, itinerary, hotels, cars, tripTasks, tripNotes]);
+  }, [
+    activePerson,
+    dealers,
+    trips,
+    selectedTrip,
+    itinerary,
+    hotels,
+    cars,
+    tripTasks,
+    tripNotes,
+  ]);
+
+  const switchPerson = (person) => {
+    setActivePerson(person);
+
+    const firstTripForPerson = trips.find((trip) => trip.owner === person);
+
+    if (firstTripForPerson) {
+      setSelectedTrip(firstTripForPerson);
+    } else {
+      const newTrip = {
+        id: Date.now(),
+        owner: person,
+        name: "New Trip",
+        date: "Add dates",
+        status: "Planning",
+        dealerIds: [],
+      };
+
+      setTrips([...trips, newTrip]);
+      setSelectedTrip(newTrip);
+    }
+  };
 
   const updateTrip = (field, value) => {
     const updatedTrip = { ...selectedTrip, [field]: value };
@@ -110,6 +156,7 @@ export default function TravelPage() {
   const addTrip = () => {
     const newTrip = {
       id: Date.now(),
+      owner: activePerson,
       name: "New Trip",
       date: "Add dates",
       status: "Planning",
@@ -278,6 +325,7 @@ export default function TravelPage() {
     const rows = [];
 
     rows.push(["Trip Plan"]);
+    rows.push(["Owner", selectedTrip?.owner || activePerson]);
     rows.push(["Trip Name", selectedTrip?.name || ""]);
     rows.push(["Trip Dates", selectedTrip?.date || ""]);
     rows.push([]);
@@ -297,7 +345,7 @@ export default function TravelPage() {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
 
-    const fileName = `${selectedTrip?.name || "trip-plan"}`
+    const fileName = `${selectedTrip?.owner || activePerson}-${selectedTrip?.name || "trip-plan"}`
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
@@ -365,6 +413,17 @@ export default function TravelPage() {
               margin-top: 8px;
               font-size: 14px;
               color: #666;
+            }
+
+            .owner {
+              margin-top: 8px;
+              display: inline-block;
+              font-size: 11px;
+              font-weight: 700;
+              padding: 5px 9px;
+              border-radius: 999px;
+              background: #111;
+              color: #fff;
             }
 
             .timeline {
@@ -456,6 +515,7 @@ export default function TravelPage() {
             <div class="eyebrow">Travel Itinerary</div>
             <h1>${selectedTrip?.name || "Trip Plan"}</h1>
             <div class="date">${selectedTrip?.date || ""}</div>
+            <div class="owner">${selectedTrip?.owner || activePerson}</div>
           </div>
 
           <div class="timeline">
@@ -503,9 +563,25 @@ export default function TravelPage() {
 
         <div className="layout">
           <aside className="sidebarCard noPrint">
-            <h2>Upcoming Trips</h2>
+            <div className="personToggle">
+              <button
+                className={activePerson === "Mark" ? "activePerson" : ""}
+                onClick={() => switchPerson("Mark")}
+              >
+                Mark
+              </button>
 
-            {trips.map((trip) => (
+              <button
+                className={activePerson === "Dane" ? "activePerson" : ""}
+                onClick={() => switchPerson("Dane")}
+              >
+                Dane
+              </button>
+            </div>
+
+            <h2>{activePerson}'s Trips</h2>
+
+            {visibleTrips.map((trip) => (
               <button
                 key={trip.id}
                 className={`tripCard ${selectedTrip?.id === trip.id ? "active" : ""}`}
@@ -516,6 +592,10 @@ export default function TravelPage() {
                 <span className="badge">{trip.status}</span>
               </button>
             ))}
+
+            {visibleTrips.length === 0 && (
+              <div className="emptyTripBox">No trips for {activePerson} yet.</div>
+            )}
           </aside>
 
           <main className="mainGrid">
@@ -523,8 +603,10 @@ export default function TravelPage() {
               <div className="sectionHeader">
                 <div>
                   <h2>Trip Overview</h2>
-                  <p>Select all dealers included in this trip.</p>
+                  <p>This trip is assigned to {selectedTrip?.owner || activePerson}.</p>
                 </div>
+
+                <span className="ownerBadge">{selectedTrip?.owner || activePerson}</span>
               </div>
 
               <div className="formGrid">
@@ -963,6 +1045,32 @@ export default function TravelPage() {
           height: fit-content;
         }
 
+        .personToggle {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 6px;
+          background: #f3f4f6;
+          padding: 5px;
+          border-radius: 999px;
+          margin-bottom: 14px;
+        }
+
+        .personToggle button {
+          border: none;
+          background: transparent;
+          color: #555;
+          border-radius: 999px;
+          height: 28px;
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .personToggle button.activePerson {
+          background: #111;
+          color: #fff;
+        }
+
         .mainGrid {
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -983,6 +1091,15 @@ export default function TravelPage() {
           align-items: flex-start;
           gap: 14px;
           margin-bottom: 14px;
+        }
+
+        .ownerBadge {
+          font-size: 11px;
+          font-weight: 700;
+          padding: 6px 10px;
+          border-radius: 999px;
+          background: #111;
+          color: #fff;
         }
 
         .tripCard {
@@ -1036,6 +1153,17 @@ export default function TravelPage() {
         .tripCard.active .badge {
           background: rgba(255, 255, 255, 0.14);
           color: #fff;
+        }
+
+        .emptyTripBox {
+          margin-top: 12px;
+          padding: 14px;
+          background: #f8f9fb;
+          border: 1px dashed #d1d5db;
+          border-radius: 14px;
+          font-size: 12px;
+          color: #777;
+          text-align: center;
         }
 
         .primaryBtn,
