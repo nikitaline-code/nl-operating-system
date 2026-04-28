@@ -57,6 +57,14 @@ export default function TravelPage() {
   const [itinerary, setItinerary] = useState(starterItinerary);
   const [hotels, setHotels] = useState([]);
   const [cars, setCars] = useState([]);
+  const [flights, setFlights] = useState([]);
+  const [flightSearch, setFlightSearch] = useState({
+    from: "YWG",
+    to: "",
+    depart: "",
+    returnDate: "",
+    passengers: "1",
+  });
   const [tripTasks, setTripTasks] = useState([]);
   const [tripNotes, setTripNotes] = useState("");
   const [newTripTask, setNewTripTask] = useState("");
@@ -108,6 +116,8 @@ export default function TravelPage() {
       if (parsed.itinerary) setItinerary(parsed.itinerary);
       if (parsed.hotels) setHotels(parsed.hotels);
       if (parsed.cars) setCars(parsed.cars);
+      if (parsed.flights) setFlights(parsed.flights);
+      if (parsed.flightSearch) setFlightSearch(parsed.flightSearch);
       if (parsed.tripTasks) setTripTasks(parsed.tripTasks);
       if (parsed.tripNotes) setTripNotes(parsed.tripNotes);
     }
@@ -124,6 +134,8 @@ export default function TravelPage() {
         itinerary,
         hotels,
         cars,
+        flights,
+        flightSearch,
         tripTasks,
         tripNotes,
       })
@@ -136,6 +148,8 @@ export default function TravelPage() {
     itinerary,
     hotels,
     cars,
+    flights,
+    flightSearch,
     tripTasks,
     tripNotes,
   ]);
@@ -306,6 +320,68 @@ export default function TravelPage() {
 
   const deleteCar = (id) => {
     setCars(cars.filter((car) => car.id !== id));
+  };
+
+  const updateFlightSearch = (field, value) => {
+    setFlightSearch({
+      ...flightSearch,
+      [field]: value,
+    });
+  };
+
+  const searchGoogleFlights = () => {
+    const query = `Flights from ${flightSearch.from} to ${flightSearch.to} departing ${flightSearch.depart}${
+      flightSearch.returnDate ? ` returning ${flightSearch.returnDate}` : ""
+    } for ${flightSearch.passengers} passenger`;
+
+    const url = `https://www.google.com/travel/flights?q=${encodeURIComponent(query)}`;
+    window.open(url, "_blank");
+  };
+
+  const addFlight = () => {
+    setFlights([
+      ...flights,
+      {
+        id: Date.now(),
+        airline: "",
+        flightNumber: "",
+        from: flightSearch.from || "",
+        to: flightSearch.to || "",
+        departTime: "",
+        arriveTime: "",
+        confirmation: "",
+        notes: "",
+      },
+    ]);
+  };
+
+  const updateFlight = (id, field, value) => {
+    setFlights(
+      flights.map((flight) =>
+        flight.id === id ? { ...flight, [field]: value } : flight
+      )
+    );
+  };
+
+  const deleteFlight = (id) => {
+    setFlights(flights.filter((flight) => flight.id !== id));
+  };
+
+  const addFlightToTripPlan = (flight) => {
+    const flightItem = {
+      id: Date.now(),
+      time: flight.departTime || "",
+      title: `${flight.airline || "Flight"} ${flight.flightNumber || ""}`.trim(),
+      type: "Flight",
+      notes: `${flight.from || ""} → ${flight.to || ""}${
+        flight.arriveTime ? ` | Arrive: ${flight.arriveTime}` : ""
+      }${flight.confirmation ? ` | Confirmation: ${flight.confirmation}` : ""}${
+        flight.notes ? ` | ${flight.notes}` : ""
+      }`,
+      open: false,
+    };
+
+    setItinerary([...itinerary, flightItem]);
   };
 
   const addTripTask = () => {
@@ -537,7 +613,7 @@ export default function TravelPage() {
             <p className="eyebrow">Travel Planning</p>
             <h1>Trips</h1>
             <p className="subtext">
-              Plan dealer visits, hotels, rental cars, tasks, notes, and itineraries.
+              Plan dealer visits, hotels, flights, rental cars, tasks, notes, and itineraries.
             </p>
           </div>
 
@@ -702,6 +778,7 @@ export default function TravelPage() {
                       onChange={(e) => updateItinerary(item.id, "type", e.target.value)}
                     >
                       <option>Travel</option>
+                      <option>Flight</option>
                       <option>Meeting</option>
                       <option>Dealer Location</option>
                       <option>Hotel</option>
@@ -823,6 +900,125 @@ export default function TravelPage() {
                     />
 
                     <button className="deleteBtn" onClick={() => deleteCar(car.id)}>
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="card wide">
+              <div className="sectionHeader">
+                <div>
+                  <h2>Flights</h2>
+                  <p>Search Google Flights, then save booked flight details here.</p>
+                </div>
+
+                <button className="smallBtn" onClick={addFlight}>
+                  + Add Flight
+                </button>
+              </div>
+
+              <div className="flightSearchGrid">
+                <input
+                  value={flightSearch.from}
+                  onChange={(e) => updateFlightSearch("from", e.target.value)}
+                  placeholder="From e.g. YWG"
+                />
+
+                <input
+                  value={flightSearch.to}
+                  onChange={(e) => updateFlightSearch("to", e.target.value)}
+                  placeholder="To e.g. YYC"
+                />
+
+                <input
+                  type="date"
+                  value={flightSearch.depart}
+                  onChange={(e) => updateFlightSearch("depart", e.target.value)}
+                />
+
+                <input
+                  type="date"
+                  value={flightSearch.returnDate}
+                  onChange={(e) => updateFlightSearch("returnDate", e.target.value)}
+                />
+
+                <input
+                  value={flightSearch.passengers}
+                  onChange={(e) => updateFlightSearch("passengers", e.target.value)}
+                  placeholder="Passengers"
+                />
+
+                <button className="secondaryBtn" onClick={searchGoogleFlights}>
+                  Search Flights
+                </button>
+              </div>
+
+              <div className="lineList">
+                {flights.map((flight) => (
+                  <div className="flightLine" key={flight.id}>
+                    <input
+                      value={flight.airline}
+                      onChange={(e) => updateFlight(flight.id, "airline", e.target.value)}
+                      placeholder="Airline"
+                    />
+
+                    <input
+                      value={flight.flightNumber}
+                      onChange={(e) =>
+                        updateFlight(flight.id, "flightNumber", e.target.value)
+                      }
+                      placeholder="Flight #"
+                    />
+
+                    <input
+                      value={flight.from}
+                      onChange={(e) => updateFlight(flight.id, "from", e.target.value)}
+                      placeholder="From"
+                    />
+
+                    <input
+                      value={flight.to}
+                      onChange={(e) => updateFlight(flight.id, "to", e.target.value)}
+                      placeholder="To"
+                    />
+
+                    <input
+                      value={flight.departTime}
+                      onChange={(e) =>
+                        updateFlight(flight.id, "departTime", e.target.value)
+                      }
+                      placeholder="Depart"
+                    />
+
+                    <input
+                      value={flight.arriveTime}
+                      onChange={(e) =>
+                        updateFlight(flight.id, "arriveTime", e.target.value)
+                      }
+                      placeholder="Arrive"
+                    />
+
+                    <input
+                      value={flight.confirmation}
+                      onChange={(e) =>
+                        updateFlight(flight.id, "confirmation", e.target.value)
+                      }
+                      placeholder="Confirm #"
+                    />
+
+                    <input
+                      value={flight.notes}
+                      onChange={(e) => updateFlight(flight.id, "notes", e.target.value)}
+                      placeholder="Notes"
+                    />
+
+                    <button className="tinyBtn" onClick={() => addFlightToTripPlan(flight)}>
+                      + Plan
+                    </button>
+
+                    <button className="deleteBtn" onClick={() => deleteFlight(flight.id)}>
                       ×
                     </button>
                   </div>
@@ -1316,6 +1512,41 @@ export default function TravelPage() {
           border-radius: 14px;
         }
 
+        .flightSearchGrid {
+          display: grid;
+          grid-template-columns: 1fr 1fr 140px 140px 110px 130px;
+          gap: 8px;
+          margin-bottom: 12px;
+          padding: 10px;
+          background: #fafafa;
+          border: 1px solid #eceef2;
+          border-radius: 14px;
+        }
+
+        .flightLine {
+          display: grid;
+          grid-template-columns: 1fr 90px 70px 70px 95px 95px 120px 1fr 68px 28px;
+          gap: 8px;
+          align-items: center;
+          padding: 8px;
+          background: #fafafa;
+          border: 1px solid #eceef2;
+          border-radius: 14px;
+        }
+
+        .tinyBtn {
+          height: 28px;
+          border: none;
+          background: #111;
+          color: #fff;
+          border-radius: 999px;
+          font-size: 10px;
+          font-weight: 700;
+          cursor: pointer;
+          padding: 0 8px;
+          white-space: nowrap;
+        }
+
         .tripTaskItem {
           display: flex;
           justify-content: space-between;
@@ -1396,9 +1627,11 @@ export default function TravelPage() {
         }
 
         .deleteBtn:hover,
-        .notesBtn:hover {
+        .notesBtn:hover,
+        .tinyBtn:hover {
           background: #111;
           color: #fff;
+          opacity: 0.9;
         }
 
         .notesBox {
@@ -1430,7 +1663,9 @@ export default function TravelPage() {
           .formGrid,
           .dealerGrid,
           .taskAddGrid,
-          .dealerSelectGrid {
+          .dealerSelectGrid,
+          .flightSearchGrid,
+          .flightLine {
             grid-template-columns: 1fr;
           }
 
