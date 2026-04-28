@@ -1,6 +1,44 @@
 import { useEffect, useMemo, useState } from "react";
 
-const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pub?gid=1945000950&single=true&output=csv";
+const GOOGLE_SHEET_CSV_URL = "PASTE_YOUR_GOOGLE_SHEET_CSV_LINK_HERE";
+
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let insideQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    if (char === '"' && insideQuotes && nextChar === '"') {
+      cell += '"';
+      i++;
+    } else if (char === '"') {
+      insideQuotes = !insideQuotes;
+    } else if (char === "," && !insideQuotes) {
+      row.push(cell.trim());
+      cell = "";
+    } else if ((char === "\n" || char === "\r") && !insideQuotes) {
+      if (cell || row.length) {
+        row.push(cell.trim());
+        rows.push(row);
+        row = [];
+        cell = "";
+      }
+    } else {
+      cell += char;
+    }
+  }
+
+  if (cell || row.length) {
+    row.push(cell.trim());
+    rows.push(row);
+  }
+
+  return rows;
+}
 
 export default function EastPage() {
   const [activePerson, setActivePerson] = useState("Mark");
@@ -14,27 +52,30 @@ export default function EastPage() {
         const res = await fetch(GOOGLE_SHEET_CSV_URL);
         const text = await res.text();
 
-        const rows = text
-          .split("\n")
-          .map((row) => row.trim())
-          .filter(Boolean);
+        const rows = parseCSV(text);
+        const headers = rows[0].map((h) => h.toLowerCase().trim());
 
-        const dataRows = rows.slice(1);
+        const getIndex = (...names) =>
+          names
+            .map((name) => headers.indexOf(name.toLowerCase()))
+            .find((index) => index !== -1);
 
-        const parsed = dataRows.map((row, index) => {
-          const columns = row.split(",");
+        const ownerIndex = getIndex("owner", "person", "executive");
+        const nameIndex = getIndex("dealer name", "dealer", "name", "account");
+        const locationIndex = getIndex("location", "city", "province", "address");
+        const contactIndex = getIndex("contact", "contact name", "phone", "email");
+        const notesIndex = getIndex("notes", "note", "comments", "details");
 
-          return {
-            id: index + 1,
-            owner: columns[0]?.trim() || "Mark",
-            name: columns[1]?.trim() || "",
-            location: columns[2]?.trim() || "",
-            contact: columns[3]?.trim() || "",
-            notes: columns[4]?.trim() || "",
-          };
-        });
+        const parsed = rows.slice(1).map((row, index) => ({
+          id: index + 1,
+          owner: row[ownerIndex] || "Mark",
+          name: row[nameIndex] || "",
+          location: row[locationIndex] || "",
+          contact: row[contactIndex] || "",
+          notes: row[notesIndex] || "",
+        }));
 
-        setDealers(parsed);
+        setDealers(parsed.filter((dealer) => dealer.name || dealer.location));
       } catch (error) {
         console.error("Could not load Google Sheet:", error);
       } finally {
@@ -47,15 +88,12 @@ export default function EastPage() {
 
   const visibleDealers = useMemo(() => {
     return dealers.filter((dealer) => {
-      const matchesOwner = dealer.owner === activePerson;
+      const matchesOwner =
+        dealer.owner?.toLowerCase().trim() === activePerson.toLowerCase();
 
-      const matchesSearch =
-        dealer.name.toLowerCase().includes(search.toLowerCase()) ||
-        dealer.location.toLowerCase().includes(search.toLowerCase()) ||
-        dealer.contact.toLowerCase().includes(search.toLowerCase()) ||
-        dealer.notes.toLowerCase().includes(search.toLowerCase());
+      const searchText = `${dealer.name} ${dealer.location} ${dealer.contact} ${dealer.notes}`.toLowerCase();
 
-      return matchesOwner && matchesSearch;
+      return matchesOwner && searchText.includes(search.toLowerCase());
     });
   }, [dealers, activePerson, search]);
 
@@ -67,7 +105,7 @@ export default function EastPage() {
             <p className="eyebrow">Google Sheet Sync</p>
             <h1>East</h1>
             <p className="subtext">
-              Dealer information pulled from your Google Sheet and displayed in your website style.
+              Dealer information pulled from your Google Sheet.
             </p>
           </div>
 
@@ -91,9 +129,7 @@ export default function EastPage() {
         <section className="toolbarCard">
           <div>
             <h2>{activePerson}'s East Dealers</h2>
-            <p>
-              Update the Google Sheet and refresh this page to see the latest list.
-            </p>
+            <p>Synced from your Google Sheet.</p>
           </div>
 
           <input
@@ -115,7 +151,7 @@ export default function EastPage() {
             <div className="emptyState">Loading Google Sheet...</div>
           ) : visibleDealers.length === 0 ? (
             <div className="emptyState">
-              No dealers showing. Check your Google Sheet link or owner column.
+              No dealers showing. Check the Owner column says Mark or Dane.
             </div>
           ) : (
             <div className="dealerGrid">
@@ -123,7 +159,7 @@ export default function EastPage() {
                 <div className="dealerCard" key={dealer.id}>
                   <div className="dealerTop">
                     <div>
-                      <h3>{dealer.name || "Unnamed Dealer"}</h3>
+                      <h3>{dealer.name}</h3>
                       <p>{dealer.location || "No location added"}</p>
                     </div>
 
@@ -187,13 +223,11 @@ export default function EastPage() {
         h2 {
           margin: 0;
           font-size: 15px;
-          letter-spacing: -0.02em;
         }
 
         h3 {
           margin: 0;
           font-size: 14px;
-          letter-spacing: -0.02em;
         }
 
         p {
@@ -201,10 +235,6 @@ export default function EastPage() {
           font-size: 12px;
           color: #6b7280;
           line-height: 1.4;
-        }
-
-        .subtext {
-          max-width: 560px;
         }
 
         .personToggle {
@@ -255,9 +285,6 @@ export default function EastPage() {
         }
 
         .sectionHeader {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
           margin-bottom: 14px;
         }
 
@@ -289,7 +316,6 @@ export default function EastPage() {
           border: 1px solid #eceef2;
           border-radius: 18px;
           padding: 14px;
-          min-width: 0;
         }
 
         .dealerTop {
