@@ -41,9 +41,9 @@ function parseCSV(text) {
 }
 
 export default function EastPage() {
-  const [activePerson, setActivePerson] = useState("Mark");
-  const [dealers, setDealers] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [search, setSearch] = useState("");
+  const [responsibleFilter, setResponsibleFilter] = useState("All");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -60,22 +60,25 @@ export default function EastPage() {
             .map((name) => headers.indexOf(name.toLowerCase()))
             .find((index) => index !== -1);
 
-        const ownerIndex = getIndex("owner", "person", "executive");
-        const nameIndex = getIndex("dealer name", "dealer", "name", "account");
-        const locationIndex = getIndex("location", "city", "province", "address");
-        const contactIndex = getIndex("contact", "contact name", "phone", "email");
-        const notesIndex = getIndex("notes", "note", "comments", "details");
+        const taskIndex = getIndex("task name", "task", "item");
+        const dealerIndex = getIndex("dealer name", "dealer", "account");
+        const responsibleIndex = getIndex("responsible", "who", "owner");
+        const dueDateIndex = getIndex("due date", "date", "deadline");
+        const completedIndex = getIndex("completed", "complete", "done");
 
         const parsed = rows.slice(1).map((row, index) => ({
           id: index + 1,
-          owner: row[ownerIndex] || "Mark",
-          name: row[nameIndex] || "",
-          location: row[locationIndex] || "",
-          contact: row[contactIndex] || "",
-          notes: row[notesIndex] || "",
+          taskName: row[taskIndex] || "",
+          dealerName: row[dealerIndex] || "",
+          responsible: row[responsibleIndex] || "",
+          dueDate: row[dueDateIndex] || "",
+          completed:
+            String(row[completedIndex] || "").toLowerCase().trim() === "true" ||
+            String(row[completedIndex] || "").toLowerCase().trim() === "yes" ||
+            String(row[completedIndex] || "").toLowerCase().trim() === "complete",
         }));
 
-        setDealers(parsed.filter((dealer) => dealer.name || dealer.location));
+        setTasks(parsed.filter((task) => task.taskName || task.dealerName));
       } catch (error) {
         console.error("Could not load Google Sheet:", error);
       } finally {
@@ -86,16 +89,31 @@ export default function EastPage() {
     fetchSheet();
   }, []);
 
-  const visibleDealers = useMemo(() => {
-    return dealers.filter((dealer) => {
-      const matchesOwner =
-        dealer.owner?.toLowerCase().trim() === activePerson.toLowerCase();
+  const responsibleOptions = useMemo(() => {
+    const names = tasks
+      .map((task) => task.responsible)
+      .filter(Boolean);
 
-      const searchText = `${dealer.name} ${dealer.location} ${dealer.contact} ${dealer.notes}`.toLowerCase();
+    return ["All", ...new Set(names)];
+  }, [tasks]);
 
-      return matchesOwner && searchText.includes(search.toLowerCase());
+  const visibleTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      const searchText = `${task.taskName} ${task.dealerName} ${task.responsible} ${task.dueDate}`.toLowerCase();
+
+      const matchesSearch = searchText.includes(search.toLowerCase());
+
+      const matchesResponsible =
+        responsibleFilter === "All" || task.responsible === responsibleFilter;
+
+      return matchesSearch && matchesResponsible;
     });
-  }, [dealers, activePerson, search]);
+  }, [tasks, search, responsibleFilter]);
+
+  const completedCount = visibleTasks.filter((task) => task.completed).length;
+  const progress = visibleTasks.length
+    ? Math.round((completedCount / visibleTasks.length) * 100)
+    : 0;
 
   return (
     <div className="page">
@@ -105,78 +123,71 @@ export default function EastPage() {
             <p className="eyebrow">Google Sheet Sync</p>
             <h1>East</h1>
             <p className="subtext">
-              Dealer information pulled from your Google Sheet.
+              Task list pulled from your Google Sheet.
             </p>
           </div>
 
-          <div className="personToggle">
-            <button
-              className={activePerson === "Mark" ? "active" : ""}
-              onClick={() => setActivePerson("Mark")}
-            >
-              Mark
-            </button>
-
-            <button
-              className={activePerson === "Dane" ? "active" : ""}
-              onClick={() => setActivePerson("Dane")}
-            >
-              Dane
-            </button>
+          <div className="progressCard">
+            <span>Progress</span>
+            <strong>{progress}%</strong>
           </div>
         </header>
 
         <section className="toolbarCard">
           <div>
-            <h2>{activePerson}'s East Dealers</h2>
-            <p>Synced from your Google Sheet.</p>
+            <h2>East Task List</h2>
+            <p>{visibleTasks.length} tasks showing · {completedCount} completed</p>
           </div>
 
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search dealers, locations, contacts..."
-          />
+          <div className="filters">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search task, dealer, responsible..."
+            />
+
+            <select
+              value={responsibleFilter}
+              onChange={(e) => setResponsibleFilter(e.target.value)}
+            >
+              {responsibleOptions.map((name) => (
+                <option key={name}>{name}</option>
+              ))}
+            </select>
+          </div>
         </section>
 
         <section className="card">
-          <div className="sectionHeader">
-            <div>
-              <h2>Dealer Directory</h2>
-              <p>{visibleDealers.length} showing</p>
-            </div>
-          </div>
-
           {loading ? (
             <div className="emptyState">Loading Google Sheet...</div>
-          ) : visibleDealers.length === 0 ? (
+          ) : visibleTasks.length === 0 ? (
             <div className="emptyState">
-              No dealers showing. Check the Owner column says Mark or Dane.
+              No tasks showing. Check your Google Sheet headers.
             </div>
           ) : (
-            <div className="dealerGrid">
-              {visibleDealers.map((dealer) => (
-                <div className="dealerCard" key={dealer.id}>
-                  <div className="dealerTop">
-                    <div>
-                      <h3>{dealer.name}</h3>
-                      <p>{dealer.location || "No location added"}</p>
-                    </div>
+            <div className="taskTable">
+              <div className="tableHeader">
+                <span>Task Name</span>
+                <span>Dealer Name</span>
+                <span>Responsible</span>
+                <span>Due Date</span>
+                <span>Completed</span>
+              </div>
 
-                    <span>{dealer.owner}</span>
-                  </div>
-
-                  <div className="dealerDetails">
-                    <div>
-                      <label>Contact</label>
-                      <p>{dealer.contact || "—"}</p>
-                    </div>
-
-                    <div>
-                      <label>Notes</label>
-                      <p>{dealer.notes || "—"}</p>
-                    </div>
-                  </div>
+              {visibleTasks.map((task) => (
+                <div
+                  className={`taskRow ${task.completed ? "completed" : ""}`}
+                  key={task.id}
+                >
+                  <span className="taskName">{task.taskName}</span>
+                  <span>{task.dealerName}</span>
+                  <span>{task.responsible}</span>
+                  <span>{task.dueDate}</span>
+                  <span>
+                    <span className={`checkBadge ${task.completed ? "done" : ""}`}>
+                      {task.completed ? "✓" : ""}
+                    </span>
+                  </span>
                 </div>
               ))}
             </div>
@@ -225,11 +236,6 @@ export default function EastPage() {
           font-size: 15px;
         }
 
-        h3 {
-          margin: 0;
-          font-size: 14px;
-        }
-
         p {
           margin: 5px 0 0;
           font-size: 12px;
@@ -237,32 +243,7 @@ export default function EastPage() {
           line-height: 1.4;
         }
 
-        .personToggle {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 6px;
-          background: #eceef2;
-          padding: 5px;
-          border-radius: 999px;
-          min-width: 180px;
-        }
-
-        .personToggle button {
-          border: none;
-          background: transparent;
-          color: #555;
-          border-radius: 999px;
-          height: 30px;
-          font-size: 12px;
-          font-weight: 700;
-          cursor: pointer;
-        }
-
-        .personToggle button.active {
-          background: #111;
-          color: #fff;
-        }
-
+        .progressCard,
         .toolbarCard,
         .card {
           background: #fff;
@@ -271,24 +252,40 @@ export default function EastPage() {
           box-shadow: 0 16px 38px rgba(15, 23, 42, 0.06);
         }
 
+        .progressCard {
+          padding: 14px 18px;
+          min-width: 130px;
+          text-align: right;
+        }
+
+        .progressCard span {
+          display: block;
+          font-size: 11px;
+          color: #6b7280;
+          margin-bottom: 4px;
+        }
+
+        .progressCard strong {
+          font-size: 28px;
+        }
+
         .toolbarCard {
           padding: 16px;
           display: grid;
-          grid-template-columns: 1fr 340px;
+          grid-template-columns: 1fr 520px;
           gap: 16px;
           align-items: center;
           margin-bottom: 16px;
         }
 
-        .card {
-          padding: 18px;
+        .filters {
+          display: grid;
+          grid-template-columns: 1fr 160px;
+          gap: 10px;
         }
 
-        .sectionHeader {
-          margin-bottom: 14px;
-        }
-
-        input {
+        input,
+        select {
           width: 100%;
           border: 1px solid #e5e7eb;
           background: #f8f9fb;
@@ -300,60 +297,75 @@ export default function EastPage() {
           box-sizing: border-box;
         }
 
-        input:focus {
+        input:focus,
+        select:focus {
           background: #fff;
           border-color: #111;
         }
 
-        .dealerGrid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 12px;
+        .card {
+          padding: 18px;
         }
 
-        .dealerCard {
-          background: #fafafa;
-          border: 1px solid #eceef2;
-          border-radius: 18px;
-          padding: 14px;
-        }
-
-        .dealerTop {
+        .taskTable {
           display: flex;
-          justify-content: space-between;
-          gap: 12px;
-          margin-bottom: 14px;
+          flex-direction: column;
+          gap: 7px;
         }
 
-        .dealerTop span {
-          height: fit-content;
-          background: #111;
-          color: #fff;
-          font-size: 10px;
-          font-weight: 700;
-          border-radius: 999px;
-          padding: 5px 8px;
-        }
-
-        .dealerDetails {
+        .tableHeader,
+        .taskRow {
           display: grid;
-          gap: 10px;
+          grid-template-columns: 1.6fr 1.2fr 1fr 0.8fr 90px;
+          gap: 12px;
+          align-items: center;
         }
 
-        label {
-          display: block;
+        .tableHeader {
+          padding: 0 12px 8px;
           font-size: 10px;
           color: #777;
           text-transform: uppercase;
           letter-spacing: 0.1em;
           font-weight: 800;
-          margin-bottom: 3px;
         }
 
-        .dealerDetails p {
-          margin: 0;
-          color: #222;
-          font-size: 12px;
+        .taskRow {
+          background: #fafafa;
+          border: 1px solid #eceef2;
+          border-radius: 14px;
+          padding: 12px;
+          font-size: 13px;
+        }
+
+        .taskRow.completed {
+          opacity: 0.65;
+        }
+
+        .taskRow.completed .taskName {
+          text-decoration: line-through;
+        }
+
+        .taskName {
+          font-weight: 700;
+        }
+
+        .checkBadge {
+          width: 22px;
+          height: 22px;
+          border-radius: 999px;
+          border: 1px solid #d1d5db;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 13px;
+          font-weight: 800;
+        }
+
+        .checkBadge.done {
+          background: #111;
+          color: #fff;
+          border-color: #111;
         }
 
         .emptyState {
@@ -373,12 +385,14 @@ export default function EastPage() {
             flex-direction: column;
           }
 
-          .dealerGrid {
+          .filters,
+          .tableHeader,
+          .taskRow {
             grid-template-columns: 1fr;
           }
 
-          .personToggle {
-            width: 100%;
+          .progressCard {
+            text-align: left;
           }
         }
       `}</style>
