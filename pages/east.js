@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pub?gid=1945000950&single=true&output=csv";
+const GOOGLE_SHEET_CSV_URL = "PASTE_YOUR_GOOGLE_SHEET_CSV_LINK_HERE";
 
 function parseCSV(text) {
   const delimiter = text.includes("\t") ? "\t" : ",";
@@ -19,6 +19,8 @@ export default function EastPage() {
   const [tasks, setTasks] = useState([]);
   const [search, setSearch] = useState("");
   const [responsibleFilter, setResponsibleFilter] = useState("All");
+  const [hideCompleted, setHideCompleted] = useState(false);
+  const [taskListOpen, setTaskListOpen] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,12 +41,7 @@ export default function EastPage() {
         const dealerIndex = getIndex("dealer name", "dealer", "account");
         const responsibleIndex = getIndex("responsible", "who", "owner");
         const dueDateIndex = getIndex("due date", "date", "deadline");
-        const completedIndex = getIndex(
-          "completed",
-          "completed?",
-          "complete",
-          "done"
-        );
+        const completedIndex = getIndex("completed", "completed?", "complete", "done");
 
         const parsed = rows.slice(1).map((row, index) => ({
           id: index + 1,
@@ -74,7 +71,7 @@ export default function EastPage() {
     return ["All", ...new Set(names)];
   }, [tasks]);
 
-  const visibleTasks = useMemo(() => {
+  const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       const searchText = `${task.taskName} ${task.dealerName} ${task.responsible} ${task.dueDate}`.toLowerCase();
 
@@ -83,14 +80,17 @@ export default function EastPage() {
       const matchesResponsible =
         responsibleFilter === "All" || task.responsible === responsibleFilter;
 
-      return matchesSearch && matchesResponsible;
-    });
-  }, [tasks, search, responsibleFilter]);
+      const matchesCompleted = hideCompleted ? !task.completed : true;
 
-  const completedCount = visibleTasks.filter((task) => task.completed).length;
-  const progress = visibleTasks.length
-    ? Math.round((completedCount / visibleTasks.length) * 100)
-    : 0;
+      return matchesSearch && matchesResponsible && matchesCompleted;
+    });
+  }, [tasks, search, responsibleFilter, hideCompleted]);
+
+  const completedCount = tasks.filter((task) => task.completed).length;
+  const openCount = tasks.filter((task) => !task.completed).length;
+  const progress = tasks.length ? Math.round((completedCount / tasks.length) * 100) : 0;
+
+  const dueSoon = filteredTasks.slice(0, 5);
 
   return (
     <div className="page">
@@ -98,7 +98,7 @@ export default function EastPage() {
         <header className="topHeader">
           <div>
             <p className="eyebrow">Google Sheet Sync</p>
-            <h1>East</h1>
+            <h1>East Command Center</h1>
             <p className="subtext">Task list pulled from your Google Sheet.</p>
           </div>
 
@@ -108,12 +108,32 @@ export default function EastPage() {
           </div>
         </header>
 
+        <section className="statsGrid">
+          <div className="statCard">
+            <span>Total Tasks</span>
+            <strong>{tasks.length}</strong>
+          </div>
+
+          <div className="statCard">
+            <span>Open Tasks</span>
+            <strong>{openCount}</strong>
+          </div>
+
+          <div className="statCard">
+            <span>Completed</span>
+            <strong>{completedCount}</strong>
+          </div>
+
+          <div className="statCard">
+            <span>Showing</span>
+            <strong>{filteredTasks.length}</strong>
+          </div>
+        </section>
+
         <section className="toolbarCard">
           <div>
-            <h2>East Task List</h2>
-            <p>
-              {visibleTasks.length} tasks showing · {completedCount} completed
-            </p>
+            <h2>Filters</h2>
+            <p>Search, filter by responsible person, or hide completed tasks.</p>
           </div>
 
           <div className="filters">
@@ -131,45 +151,111 @@ export default function EastPage() {
                 <option key={name}>{name}</option>
               ))}
             </select>
+
+            <label className="hideToggle">
+              <input
+                type="checkbox"
+                checked={hideCompleted}
+                onChange={() => setHideCompleted(!hideCompleted)}
+              />
+              Hide completed
+            </label>
           </div>
         </section>
 
-        <section className="card">
-          {loading ? (
-            <div className="emptyState">Loading Google Sheet...</div>
-          ) : visibleTasks.length === 0 ? (
-            <div className="emptyState">
-              No tasks showing. Check your Google Sheet link and headers.
-            </div>
-          ) : (
-            <div className="taskTable">
-              <div className="tableHeader">
-                <span>Task Name</span>
-                <span>Dealer Name</span>
-                <span>Responsible</span>
-                <span>Due Date</span>
-                <span>Completed</span>
+        <main className="mainGrid">
+          <section className="card large">
+            <div className="sectionHeader">
+              <div>
+                <h2>East Task List</h2>
+                <p>
+                  {filteredTasks.length} showing · {openCount} open · {completedCount} completed
+                </p>
               </div>
 
-              {visibleTasks.map((task) => (
-                <div
-                  className={`taskRow ${task.completed ? "completed" : ""}`}
-                  key={task.id}
-                >
-                  <span className="taskName">{task.taskName}</span>
-                  <span>{task.dealerName || "—"}</span>
-                  <span>{task.responsible || "—"}</span>
-                  <span>{task.dueDate || "—"}</span>
-                  <span>
-                    <span className={`checkBadge ${task.completed ? "done" : ""}`}>
-                      {task.completed ? "✓" : ""}
-                    </span>
-                  </span>
-                </div>
-              ))}
+              <button className="collapseBtn" onClick={() => setTaskListOpen(!taskListOpen)}>
+                {taskListOpen ? "Minimize" : "Open"}
+              </button>
             </div>
-          )}
-        </section>
+
+            {taskListOpen && (
+              <>
+                {loading ? (
+                  <div className="emptyState">Loading Google Sheet...</div>
+                ) : filteredTasks.length === 0 ? (
+                  <div className="emptyState">No tasks showing.</div>
+                ) : (
+                  <div className="taskTable">
+                    <div className="tableHeader">
+                      <span>Task Name</span>
+                      <span>Dealer Name</span>
+                      <span>Responsible</span>
+                      <span>Due Date</span>
+                      <span>Completed</span>
+                    </div>
+
+                    {filteredTasks.map((task) => (
+                      <div
+                        className={`taskRow ${task.completed ? "completed" : ""}`}
+                        key={task.id}
+                      >
+                        <span className="taskName">{task.taskName}</span>
+                        <span>{task.dealerName || "—"}</span>
+                        <span>{task.responsible || "—"}</span>
+                        <span>{task.dueDate || "—"}</span>
+                        <span>
+                          <span className={`checkBadge ${task.completed ? "done" : ""}`}>
+                            {task.completed ? "✓" : ""}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+
+          <section className="sideStack">
+            <section className="card">
+              <div className="sectionHeader">
+                <div>
+                  <h2>Due Soon / Focus</h2>
+                  <p>Quick view of active filtered items.</p>
+                </div>
+              </div>
+
+              <div className="miniList">
+                {dueSoon.length === 0 ? (
+                  <div className="emptyState small">No focus tasks.</div>
+                ) : (
+                  dueSoon.map((task) => (
+                    <div className="miniItem" key={task.id}>
+                      <strong>{task.taskName}</strong>
+                      <p>
+                        {task.dealerName || "No dealer"} · {task.responsible || "No owner"}
+                      </p>
+                      <span>{task.dueDate || "No date"}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+
+            <section className="card">
+              <div className="sectionHeader">
+                <div>
+                  <h2>Notes / Next Section</h2>
+                  <p>Placeholder for anything else you want to add.</p>
+                </div>
+              </div>
+
+              <div className="placeholderBox">
+                Add another section here later — calls, follow-ups, dealer notes, quotes, or reminders.
+              </div>
+            </section>
+          </section>
+        </main>
       </div>
 
       <style jsx>{`
@@ -222,7 +308,8 @@ export default function EastPage() {
 
         .progressCard,
         .toolbarCard,
-        .card {
+        .card,
+        .statCard {
           background: #fff;
           border: 1px solid #e5e7eb;
           border-radius: 22px;
@@ -235,21 +322,34 @@ export default function EastPage() {
           text-align: right;
         }
 
-        .progressCard span {
+        .progressCard span,
+        .statCard span {
           display: block;
           font-size: 11px;
           color: #6b7280;
           margin-bottom: 4px;
         }
 
-        .progressCard strong {
+        .progressCard strong,
+        .statCard strong {
           font-size: 28px;
+        }
+
+        .statsGrid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+
+        .statCard {
+          padding: 16px;
         }
 
         .toolbarCard {
           padding: 16px;
           display: grid;
-          grid-template-columns: 1fr 520px;
+          grid-template-columns: 1fr 680px;
           gap: 16px;
           align-items: center;
           margin-bottom: 16px;
@@ -257,8 +357,30 @@ export default function EastPage() {
 
         .filters {
           display: grid;
-          grid-template-columns: 1fr 160px;
+          grid-template-columns: 1fr 160px 150px;
           gap: 10px;
+          align-items: center;
+        }
+
+        .hideToggle {
+          height: 38px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          background: #f8f9fb;
+          border: 1px solid #e5e7eb;
+          border-radius: 14px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #111;
+        }
+
+        .hideToggle input {
+          width: 13px;
+          height: 13px;
+          padding: 0;
+          accent-color: #111;
         }
 
         input,
@@ -280,8 +402,43 @@ export default function EastPage() {
           border-color: #111;
         }
 
+        .mainGrid {
+          display: grid;
+          grid-template-columns: 1.45fr 0.75fr;
+          gap: 16px;
+          align-items: start;
+        }
+
+        .sideStack {
+          display: grid;
+          gap: 16px;
+        }
+
         .card {
           padding: 18px;
+        }
+
+        .large {
+          min-height: 360px;
+        }
+
+        .sectionHeader {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 14px;
+          margin-bottom: 14px;
+        }
+
+        .collapseBtn {
+          border: none;
+          background: #111;
+          color: #fff;
+          border-radius: 999px;
+          padding: 8px 12px;
+          font-size: 11px;
+          font-weight: 700;
+          cursor: pointer;
         }
 
         .taskTable {
@@ -293,7 +450,7 @@ export default function EastPage() {
         .tableHeader,
         .taskRow {
           display: grid;
-          grid-template-columns: 1.6fr 1.2fr 1fr 0.8fr 90px;
+          grid-template-columns: 1.6fr 1.1fr 0.9fr 0.75fr 80px;
           gap: 12px;
           align-items: center;
         }
@@ -316,7 +473,7 @@ export default function EastPage() {
         }
 
         .taskRow.completed {
-          opacity: 0.65;
+          opacity: 0.55;
         }
 
         .taskRow.completed .taskName {
@@ -345,21 +502,55 @@ export default function EastPage() {
           border-color: #111;
         }
 
+        .miniList {
+          display: grid;
+          gap: 8px;
+        }
+
+        .miniItem {
+          background: #fafafa;
+          border: 1px solid #eceef2;
+          border-radius: 14px;
+          padding: 12px;
+        }
+
+        .miniItem strong {
+          font-size: 12px;
+        }
+
+        .miniItem span {
+          display: inline-flex;
+          margin-top: 8px;
+          font-size: 10px;
+          font-weight: 700;
+          background: #111;
+          color: #fff;
+          border-radius: 999px;
+          padding: 5px 8px;
+        }
+
+        .placeholderBox,
         .emptyState {
-          padding: 28px;
+          padding: 22px;
           text-align: center;
           color: #777;
           font-size: 13px;
           border: 1px dashed #d1d5db;
           border-radius: 16px;
           background: #fafafa;
+          line-height: 1.5;
+        }
+
+        .emptyState.small {
+          padding: 16px;
         }
 
         @media (max-width: 1050px) {
           .topHeader,
-          .toolbarCard {
+          .toolbarCard,
+          .mainGrid,
+          .statsGrid {
             grid-template-columns: 1fr;
-            flex-direction: column;
           }
 
           .filters,
