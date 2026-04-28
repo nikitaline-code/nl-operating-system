@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 
 const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pub?gid=1945000950&single=true&output=csv";
 
-const TRADESHOW_CSV_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pub?gid=722935598&single=true&output=csv";
+const TRADESHOW_EMBED_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=722935598&single=true";
 
 function parseCSV(text) {
   const delimiter = text.includes("\t") ? "\t" : ",";
@@ -35,14 +35,12 @@ function isCompleted(value) {
 
 export default function EastPage() {
   const [tasks, setTasks] = useState([]);
-  const [tradeshows, setTradeshows] = useState([]);
   const [search, setSearch] = useState("");
   const [responsibleFilter, setResponsibleFilter] = useState("All");
   const [hideCompleted, setHideCompleted] = useState(false);
   const [taskListOpen, setTaskListOpen] = useState(true);
   const [tradeshowsOpen, setTradeshowsOpen] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [tradeshowLoading, setTradeshowLoading] = useState(true);
 
   useEffect(() => {
     async function fetchTasks() {
@@ -89,48 +87,6 @@ export default function EastPage() {
     fetchTasks();
   }, []);
 
-  useEffect(() => {
-    async function fetchTradeshows() {
-      try {
-        const res = await fetch(TRADESHOW_CSV_URL);
-        const text = await res.text();
-
-        const rows = parseCSV(text);
-        const headers = rows[0].map((h) => h.toLowerCase().trim());
-
-        const getIndex = (...names) =>
-          names
-            .map((name) => headers.indexOf(name.toLowerCase()))
-            .find((index) => index !== -1);
-
-        const showIndex = getIndex("show", "tradeshow", "event", "event name");
-        const dateIndex = getIndex("date", "dates", "show date");
-        const locationIndex = getIndex("location", "city", "venue");
-        const ownerIndex = getIndex("owner", "responsible", "lead");
-        const notesIndex = getIndex("notes", "details", "comments");
-
-        const parsed = rows.slice(1).map((row, index) => ({
-          id: index + 1,
-          show: row[showIndex] || "",
-          date: row[dateIndex] || "",
-          location: row[locationIndex] || "",
-          owner: row[ownerIndex] || "",
-          notes: row[notesIndex] || "",
-        }));
-
-        setTradeshows(
-          parsed.filter((item) => item.show || item.date || item.location)
-        );
-      } catch (error) {
-        console.error("Could not load tradeshows:", error);
-      } finally {
-        setTradeshowLoading(false);
-      }
-    }
-
-    fetchTradeshows();
-  }, []);
-
   const responsibleOptions = useMemo(() => {
     const names = tasks.map((task) => task.responsible).filter(Boolean);
     return ["All", ...new Set(names)];
@@ -142,8 +98,10 @@ export default function EastPage() {
         `${task.taskName} ${task.dealerName} ${task.responsible} ${task.dueDate}`.toLowerCase();
 
       const matchesSearch = searchText.includes(search.toLowerCase());
+
       const matchesResponsible =
         responsibleFilter === "All" || task.responsible === responsibleFilter;
+
       const matchesCompleted = hideCompleted ? !task.completed : true;
 
       return matchesSearch && matchesResponsible && matchesCompleted;
@@ -164,7 +122,7 @@ export default function EastPage() {
             <p className="eyebrow">Google Sheet Sync</p>
             <h1>East Command Center</h1>
             <p className="subtext">
-              Tasks and tradeshows pulled from Google Sheets.
+              Tasks and tradeshow calendar pulled from Google Sheets.
             </p>
           </div>
 
@@ -191,8 +149,8 @@ export default function EastPage() {
           </div>
 
           <div className="statCard">
-            <span>Tradeshows</span>
-            <strong>{tradeshows.length}</strong>
+            <span>Showing</span>
+            <strong>{filteredTasks.length}</strong>
           </div>
         </section>
 
@@ -234,7 +192,7 @@ export default function EastPage() {
             <div className="sectionHeader">
               <div>
                 <h2>Tradeshows</h2>
-                <p>This year at a glance · pulled from Google Sheets</p>
+                <p>This year at a glance · live formatted sheet view</p>
               </div>
 
               <button
@@ -246,33 +204,13 @@ export default function EastPage() {
             </div>
 
             {tradeshowsOpen && (
-              <>
-                {tradeshowLoading ? (
-                  <div className="emptyState">Loading tradeshows...</div>
-                ) : tradeshows.length === 0 ? (
-                  <div className="emptyState">No tradeshows showing.</div>
-                ) : (
-                  <div className="tradeshowGrid">
-                    {tradeshows.map((show) => (
-                      <div className="tradeshowCard" key={show.id}>
-                        <div>
-                          <h3>{show.show || "Unnamed Show"}</h3>
-                          <p>{show.location || "No location added"}</p>
-                        </div>
-
-                        <div className="tradeshowMeta">
-                          <span>{show.date || "No date"}</span>
-                          {show.owner && <span>{show.owner}</span>}
-                        </div>
-
-                        {show.notes && (
-                          <p className="tradeshowNotes">{show.notes}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
+              <div className="sheetEmbedWrap">
+                <iframe
+                  src={TRADESHOW_EMBED_URL}
+                  className="sheetEmbed"
+                  title="Tradeshows Year at a Glance"
+                />
+              </div>
             )}
           </section>
 
@@ -312,7 +250,9 @@ export default function EastPage() {
 
                     {filteredTasks.map((task) => (
                       <div
-                        className={`taskRow ${task.completed ? "completed" : ""}`}
+                        className={`taskRow ${
+                          task.completed ? "completed" : ""
+                        }`}
                         key={task.id}
                       >
                         <span className="taskName">{task.taskName}</span>
@@ -377,11 +317,6 @@ export default function EastPage() {
         h2 {
           margin: 0;
           font-size: 15px;
-        }
-
-        h3 {
-          margin: 0;
-          font-size: 13px;
         }
 
         p {
@@ -491,7 +426,6 @@ export default function EastPage() {
           display: grid;
           grid-template-columns: 1fr;
           gap: 16px;
-          align-items: start;
         }
 
         .fullWidth {
@@ -521,39 +455,19 @@ export default function EastPage() {
           cursor: pointer;
         }
 
-        .tradeshowGrid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 10px;
-        }
-
-        .tradeshowCard {
-          background: #fafafa;
+        .sheetEmbedWrap {
+          width: 100%;
+          height: 720px;
+          overflow: hidden;
           border: 1px solid #eceef2;
           border-radius: 16px;
-          padding: 14px;
+          background: #fff;
         }
 
-        .tradeshowMeta {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-          margin-top: 10px;
-        }
-
-        .tradeshowMeta span {
-          font-size: 10px;
-          font-weight: 700;
-          background: #111;
-          color: #fff;
-          border-radius: 999px;
-          padding: 5px 8px;
-        }
-
-        .tradeshowNotes {
-          margin-top: 10px;
-          font-size: 12px;
-          color: #555;
+        .sheetEmbed {
+          width: 100%;
+          height: 100%;
+          border: none;
         }
 
         .taskTable {
@@ -637,8 +551,7 @@ export default function EastPage() {
 
           .filters,
           .tableHeader,
-          .taskRow,
-          .tradeshowGrid {
+          .taskRow {
             grid-template-columns: 1fr;
           }
 
@@ -646,8 +559,8 @@ export default function EastPage() {
             text-align: left;
           }
 
-          .fullWidth {
-            grid-column: auto;
+          .sheetEmbedWrap {
+            height: 520px;
           }
         }
       `}</style>
