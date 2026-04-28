@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 const starterDealers = [
   {
     id: 1,
+    owner: "Mark",
     name: "Roblin Vet",
     location: "Virden, MB",
     contact: "",
@@ -65,8 +66,9 @@ export default function TravelPage() {
   const [draggedItem, setDraggedItem] = useState(null);
 
   const visibleTrips = trips.filter((trip) => trip.owner === activePerson);
+  const visibleDealers = dealers.filter((dealer) => dealer.owner === activePerson);
 
-  const selectedDealers = dealers.filter((d) =>
+  const selectedDealers = visibleDealers.filter((d) =>
     selectedTrip?.dealerIds?.includes(d.id)
   );
 
@@ -76,10 +78,33 @@ export default function TravelPage() {
     if (savedTravel) {
       const parsed = JSON.parse(savedTravel);
 
+      const fixedDealers = parsed.dealers
+        ? parsed.dealers.map((dealer) => ({
+            ...dealer,
+            owner: dealer.owner || "Mark",
+          }))
+        : starterDealers;
+
+      const fixedTrips = parsed.trips
+        ? parsed.trips.map((trip) => ({
+            ...trip,
+            owner: trip.owner || "Mark",
+            dealerIds: trip.dealerIds || [],
+          }))
+        : starterTrips;
+
+      setDealers(fixedDealers);
+      setTrips(fixedTrips);
+
       if (parsed.activePerson) setActivePerson(parsed.activePerson);
-      if (parsed.dealers) setDealers(parsed.dealers);
-      if (parsed.trips) setTrips(parsed.trips);
-      if (parsed.selectedTrip) setSelectedTrip(parsed.selectedTrip);
+      if (parsed.selectedTrip) {
+        setSelectedTrip({
+          ...parsed.selectedTrip,
+          owner: parsed.selectedTrip.owner || "Mark",
+          dealerIds: parsed.selectedTrip.dealerIds || [],
+        });
+      }
+
       if (parsed.itinerary) setItinerary(parsed.itinerary);
       if (parsed.hotels) setHotels(parsed.hotels);
       if (parsed.cars) setCars(parsed.cars);
@@ -172,6 +197,7 @@ export default function TravelPage() {
       ...dealers,
       {
         id: Date.now(),
+        owner: activePerson,
         name: "New Dealer",
         location: "",
         contact: "",
@@ -388,13 +414,11 @@ export default function TravelPage() {
               padding: 40px;
               background: #fff;
             }
-
             .header {
               border-bottom: 1px solid #e5e7eb;
               padding-bottom: 20px;
               margin-bottom: 30px;
             }
-
             .eyebrow {
               font-size: 11px;
               text-transform: uppercase;
@@ -402,19 +426,16 @@ export default function TravelPage() {
               color: #777;
               margin-bottom: 8px;
             }
-
             h1 {
               margin: 0;
               font-size: 30px;
               letter-spacing: -0.04em;
             }
-
             .date {
               margin-top: 8px;
               font-size: 14px;
               color: #666;
             }
-
             .owner {
               margin-top: 8px;
               display: inline-block;
@@ -425,12 +446,6 @@ export default function TravelPage() {
               background: #111;
               color: #fff;
             }
-
-            .timeline {
-              position: relative;
-              margin-top: 24px;
-            }
-
             .timelineItem {
               display: grid;
               grid-template-columns: 90px 24px 1fr;
@@ -438,15 +453,12 @@ export default function TravelPage() {
               margin-bottom: 22px;
               page-break-inside: avoid;
             }
-
             .time {
               font-size: 13px;
               font-weight: 700;
-              color: #111;
               padding-top: 4px;
               text-align: right;
             }
-
             .dot {
               width: 12px;
               height: 12px;
@@ -455,7 +467,6 @@ export default function TravelPage() {
               margin-top: 6px;
               position: relative;
             }
-
             .dot:after {
               content: "";
               position: absolute;
@@ -465,18 +476,15 @@ export default function TravelPage() {
               height: 54px;
               background: #ddd;
             }
-
             .timelineItem:last-child .dot:after {
               display: none;
             }
-
             .details {
               border: 1px solid #e5e7eb;
               border-radius: 16px;
               padding: 14px 16px;
               background: #fafafa;
             }
-
             .type {
               display: inline-block;
               font-size: 10px;
@@ -489,27 +497,18 @@ export default function TravelPage() {
               border-radius: 999px;
               margin-bottom: 8px;
             }
-
             h3 {
               margin: 0;
               font-size: 16px;
             }
-
             p {
               margin: 8px 0 0;
               font-size: 13px;
               line-height: 1.45;
               color: #555;
             }
-
-            @media print {
-              body {
-                padding: 24px;
-              }
-            }
           </style>
         </head>
-
         <body>
           <div class="header">
             <div class="eyebrow">Travel Itinerary</div>
@@ -517,11 +516,7 @@ export default function TravelPage() {
             <div class="date">${selectedTrip?.date || ""}</div>
             <div class="owner">${selectedTrip?.owner || activePerson}</div>
           </div>
-
-          <div class="timeline">
-            ${timelineRows}
-          </div>
-
+          <div>${timelineRows}</div>
           <script>
             window.onload = function() {
               window.print();
@@ -592,10 +587,6 @@ export default function TravelPage() {
                 <span className="badge">{trip.status}</span>
               </button>
             ))}
-
-            {visibleTrips.length === 0 && (
-              <div className="emptyTripBox">No trips for {activePerson} yet.</div>
-            )}
           </aside>
 
           <main className="mainGrid">
@@ -650,7 +641,7 @@ export default function TravelPage() {
               </div>
 
               <div className="dealerSelectGrid">
-                {dealers.map((dealer) => (
+                {visibleDealers.map((dealer) => (
                   <label className="dealerSelect" key={dealer.id}>
                     <input
                       type="checkbox"
@@ -916,8 +907,8 @@ export default function TravelPage() {
             <section className="card wide">
               <div className="sectionHeader">
                 <div>
-                  <h2>Dealer Directory</h2>
-                  <p>Add dealer locations once, then pull them into any trip.</p>
+                  <h2>{activePerson}'s Dealer Directory</h2>
+                  <p>Add dealer locations once, then pull them into any {activePerson} trip.</p>
                 </div>
 
                 <button className="smallBtn" onClick={addDealer}>
@@ -926,7 +917,7 @@ export default function TravelPage() {
               </div>
 
               <div className="dealerGrid">
-                {dealers.map((dealer) => (
+                {visibleDealers.map((dealer) => (
                   <div className="dealerCard" key={dealer.id}>
                     <input
                       value={dealer.name}
@@ -1153,17 +1144,6 @@ export default function TravelPage() {
         .tripCard.active .badge {
           background: rgba(255, 255, 255, 0.14);
           color: #fff;
-        }
-
-        .emptyTripBox {
-          margin-top: 12px;
-          padding: 14px;
-          background: #f8f9fb;
-          border: 1px dashed #d1d5db;
-          border-radius: 14px;
-          font-size: 12px;
-          color: #777;
-          text-align: center;
         }
 
         .primaryBtn,
