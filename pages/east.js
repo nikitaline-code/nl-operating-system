@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
-const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pub?gid=1945000950&single=true&output=csv";
+const GOOGLE_SHEET_CSV_URL = "PASTE_YOUR_EAST_TASK_CSV_LINK_HERE";
+
+const TRADESHOW_CSV_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pub?gid=722935598&single=true&output=csv";
 
 function parseCSV(text) {
   const delimiter = text.includes("\t") ? "\t" : ",";
@@ -15,16 +18,34 @@ function parseCSV(text) {
     );
 }
 
+function isCompleted(value) {
+  return [
+    "true",
+    "yes",
+    "complete",
+    "completed",
+    "done",
+    "x",
+    "✓",
+    "checked",
+    "1",
+    "y",
+  ].includes(String(value || "").toLowerCase().trim());
+}
+
 export default function EastPage() {
   const [tasks, setTasks] = useState([]);
+  const [tradeshows, setTradeshows] = useState([]);
   const [search, setSearch] = useState("");
   const [responsibleFilter, setResponsibleFilter] = useState("All");
   const [hideCompleted, setHideCompleted] = useState(false);
   const [taskListOpen, setTaskListOpen] = useState(true);
+  const [tradeshowsOpen, setTradeshowsOpen] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [tradeshowLoading, setTradeshowLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchSheet() {
+    async function fetchTasks() {
       try {
         const res = await fetch(GOOGLE_SHEET_CSV_URL);
         const text = await res.text();
@@ -41,7 +62,12 @@ export default function EastPage() {
         const dealerIndex = getIndex("dealer name", "dealer", "account");
         const responsibleIndex = getIndex("responsible", "who", "owner");
         const dueDateIndex = getIndex("due date", "date", "deadline");
-        const completedIndex = getIndex("completed", "completed?", "complete", "done");
+        const completedIndex = getIndex(
+          "completed",
+          "completed?",
+          "complete",
+          "done"
+        );
 
         const parsed = rows.slice(1).map((row, index) => ({
           id: index + 1,
@@ -49,10 +75,7 @@ export default function EastPage() {
           dealerName: row[dealerIndex] || "",
           responsible: row[responsibleIndex] || "",
           dueDate: row[dueDateIndex] || "",
-          completed:
-            String(row[completedIndex] || "").toLowerCase().trim() === "true" ||
-            String(row[completedIndex] || "").toLowerCase().trim() === "yes" ||
-            String(row[completedIndex] || "").toLowerCase().trim() === "complete",
+          completed: isCompleted(row[completedIndex]),
         }));
 
         setTasks(parsed.filter((task) => task.taskName || task.dealerName));
@@ -63,7 +86,49 @@ export default function EastPage() {
       }
     }
 
-    fetchSheet();
+    fetchTasks();
+  }, []);
+
+  useEffect(() => {
+    async function fetchTradeshows() {
+      try {
+        const res = await fetch(TRADESHOW_CSV_URL);
+        const text = await res.text();
+
+        const rows = parseCSV(text);
+        const headers = rows[0].map((h) => h.toLowerCase().trim());
+
+        const getIndex = (...names) =>
+          names
+            .map((name) => headers.indexOf(name.toLowerCase()))
+            .find((index) => index !== -1);
+
+        const showIndex = getIndex("show", "tradeshow", "event", "event name");
+        const dateIndex = getIndex("date", "dates", "show date");
+        const locationIndex = getIndex("location", "city", "venue");
+        const ownerIndex = getIndex("owner", "responsible", "lead");
+        const notesIndex = getIndex("notes", "details", "comments");
+
+        const parsed = rows.slice(1).map((row, index) => ({
+          id: index + 1,
+          show: row[showIndex] || "",
+          date: row[dateIndex] || "",
+          location: row[locationIndex] || "",
+          owner: row[ownerIndex] || "",
+          notes: row[notesIndex] || "",
+        }));
+
+        setTradeshows(
+          parsed.filter((item) => item.show || item.date || item.location)
+        );
+      } catch (error) {
+        console.error("Could not load tradeshows:", error);
+      } finally {
+        setTradeshowLoading(false);
+      }
+    }
+
+    fetchTradeshows();
   }, []);
 
   const responsibleOptions = useMemo(() => {
@@ -73,13 +138,12 @@ export default function EastPage() {
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
-      const searchText = `${task.taskName} ${task.dealerName} ${task.responsible} ${task.dueDate}`.toLowerCase();
+      const searchText =
+        `${task.taskName} ${task.dealerName} ${task.responsible} ${task.dueDate}`.toLowerCase();
 
       const matchesSearch = searchText.includes(search.toLowerCase());
-
       const matchesResponsible =
         responsibleFilter === "All" || task.responsible === responsibleFilter;
-
       const matchesCompleted = hideCompleted ? !task.completed : true;
 
       return matchesSearch && matchesResponsible && matchesCompleted;
@@ -88,8 +152,9 @@ export default function EastPage() {
 
   const completedCount = tasks.filter((task) => task.completed).length;
   const openCount = tasks.filter((task) => !task.completed).length;
-  const progress = tasks.length ? Math.round((completedCount / tasks.length) * 100) : 0;
-
+  const progress = tasks.length
+    ? Math.round((completedCount / tasks.length) * 100)
+    : 0;
   const dueSoon = filteredTasks.slice(0, 5);
 
   return (
@@ -99,7 +164,9 @@ export default function EastPage() {
           <div>
             <p className="eyebrow">Google Sheet Sync</p>
             <h1>East Command Center</h1>
-            <p className="subtext">Task list pulled from your Google Sheet.</p>
+            <p className="subtext">
+              Tasks and tradeshows pulled from Google Sheets.
+            </p>
           </div>
 
           <div className="progressCard">
@@ -125,8 +192,8 @@ export default function EastPage() {
           </div>
 
           <div className="statCard">
-            <span>Showing</span>
-            <strong>{filteredTasks.length}</strong>
+            <span>Tradeshows</span>
+            <strong>{tradeshows.length}</strong>
           </div>
         </section>
 
@@ -167,13 +234,104 @@ export default function EastPage() {
           <section className="card large">
             <div className="sectionHeader">
               <div>
+                <h2>Tradeshows</h2>
+                <p>This year at a glance · pulled from Google Sheets</p>
+              </div>
+
+              <button
+                className="collapseBtn"
+                onClick={() => setTradeshowsOpen(!tradeshowsOpen)}
+              >
+                {tradeshowsOpen ? "Minimize" : "Open"}
+              </button>
+            </div>
+
+            {tradeshowsOpen && (
+              <>
+                {tradeshowLoading ? (
+                  <div className="emptyState">Loading tradeshows...</div>
+                ) : tradeshows.length === 0 ? (
+                  <div className="emptyState">No tradeshows showing.</div>
+                ) : (
+                  <div className="tradeshowGrid">
+                    {tradeshows.map((show) => (
+                      <div className="tradeshowCard" key={show.id}>
+                        <div>
+                          <h3>{show.show || "Unnamed Show"}</h3>
+                          <p>{show.location || "No location added"}</p>
+                        </div>
+
+                        <div className="tradeshowMeta">
+                          <span>{show.date || "No date"}</span>
+                          {show.owner && <span>{show.owner}</span>}
+                        </div>
+
+                        {show.notes && (
+                          <p className="tradeshowNotes">{show.notes}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+
+          <section className="sideStack">
+            <section className="card">
+              <div className="sectionHeader">
+                <div>
+                  <h2>Due Soon / Focus</h2>
+                  <p>Quick view of active filtered items.</p>
+                </div>
+              </div>
+
+              <div className="miniList">
+                {dueSoon.length === 0 ? (
+                  <div className="emptyState small">No focus tasks.</div>
+                ) : (
+                  dueSoon.map((task) => (
+                    <div className="miniItem" key={task.id}>
+                      <strong>{task.taskName}</strong>
+                      <p>
+                        {task.dealerName || "No dealer"} ·{" "}
+                        {task.responsible || "No owner"}
+                      </p>
+                      <span>{task.dueDate || "No date"}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+
+            <section className="card">
+              <div className="sectionHeader">
+                <div>
+                  <h2>Notes / Next Section</h2>
+                  <p>Placeholder for anything else you want to add.</p>
+                </div>
+              </div>
+
+              <div className="placeholderBox">
+                Add calls, follow-ups, dealer notes, quotes, or reminders here later.
+              </div>
+            </section>
+          </section>
+
+          <section className="card fullWidth">
+            <div className="sectionHeader">
+              <div>
                 <h2>East Task List</h2>
                 <p>
-                  {filteredTasks.length} showing · {openCount} open · {completedCount} completed
+                  {filteredTasks.length} showing · {openCount} open ·{" "}
+                  {completedCount} completed
                 </p>
               </div>
 
-              <button className="collapseBtn" onClick={() => setTaskListOpen(!taskListOpen)}>
+              <button
+                className="collapseBtn"
+                onClick={() => setTaskListOpen(!taskListOpen)}
+              >
                 {taskListOpen ? "Minimize" : "Open"}
               </button>
             </div>
@@ -204,7 +362,11 @@ export default function EastPage() {
                         <span>{task.responsible || "—"}</span>
                         <span>{task.dueDate || "—"}</span>
                         <span>
-                          <span className={`checkBadge ${task.completed ? "done" : ""}`}>
+                          <span
+                            className={`checkBadge ${
+                              task.completed ? "done" : ""
+                            }`}
+                          >
                             {task.completed ? "✓" : ""}
                           </span>
                         </span>
@@ -214,46 +376,6 @@ export default function EastPage() {
                 )}
               </>
             )}
-          </section>
-
-          <section className="sideStack">
-            <section className="card">
-              <div className="sectionHeader">
-                <div>
-                  <h2>Due Soon / Focus</h2>
-                  <p>Quick view of active filtered items.</p>
-                </div>
-              </div>
-
-              <div className="miniList">
-                {dueSoon.length === 0 ? (
-                  <div className="emptyState small">No focus tasks.</div>
-                ) : (
-                  dueSoon.map((task) => (
-                    <div className="miniItem" key={task.id}>
-                      <strong>{task.taskName}</strong>
-                      <p>
-                        {task.dealerName || "No dealer"} · {task.responsible || "No owner"}
-                      </p>
-                      <span>{task.dueDate || "No date"}</span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </section>
-
-            <section className="card">
-              <div className="sectionHeader">
-                <div>
-                  <h2>Notes / Next Section</h2>
-                  <p>Placeholder for anything else you want to add.</p>
-                </div>
-              </div>
-
-              <div className="placeholderBox">
-                Add another section here later — calls, follow-ups, dealer notes, quotes, or reminders.
-              </div>
-            </section>
           </section>
         </main>
       </div>
@@ -297,6 +419,11 @@ export default function EastPage() {
         h2 {
           margin: 0;
           font-size: 15px;
+        }
+
+        h3 {
+          margin: 0;
+          font-size: 13px;
         }
 
         p {
@@ -414,12 +541,16 @@ export default function EastPage() {
           gap: 16px;
         }
 
+        .fullWidth {
+          grid-column: 1 / -1;
+        }
+
         .card {
           padding: 18px;
         }
 
         .large {
-          min-height: 360px;
+          min-height: 280px;
         }
 
         .sectionHeader {
@@ -439,6 +570,41 @@ export default function EastPage() {
           font-size: 11px;
           font-weight: 700;
           cursor: pointer;
+        }
+
+        .tradeshowGrid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+        }
+
+        .tradeshowCard {
+          background: #fafafa;
+          border: 1px solid #eceef2;
+          border-radius: 16px;
+          padding: 14px;
+        }
+
+        .tradeshowMeta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 10px;
+        }
+
+        .tradeshowMeta span {
+          font-size: 10px;
+          font-weight: 700;
+          background: #111;
+          color: #fff;
+          border-radius: 999px;
+          padding: 5px 8px;
+        }
+
+        .tradeshowNotes {
+          margin-top: 10px;
+          font-size: 12px;
+          color: #555;
         }
 
         .taskTable {
@@ -555,12 +721,17 @@ export default function EastPage() {
 
           .filters,
           .tableHeader,
-          .taskRow {
+          .taskRow,
+          .tradeshowGrid {
             grid-template-columns: 1fr;
           }
 
           .progressCard {
             text-align: left;
+          }
+
+          .fullWidth {
+            grid-column: auto;
           }
         }
       `}</style>
