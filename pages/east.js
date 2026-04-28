@@ -1,43 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 
-const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=1945000950&single=true";
+const GOOGLE_SHEET_CSV_URL = "PASTE_YOUR_GOOGLE_SHEET_CSV_LINK_HERE";
 
 function parseCSV(text) {
-  const rows = [];
-  let row = [];
-  let cell = "";
-  let insideQuotes = false;
+  const delimiter = text.includes("\t") ? "\t" : ",";
 
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const nextChar = text[i + 1];
-
-    if (char === '"' && insideQuotes && nextChar === '"') {
-      cell += '"';
-      i++;
-    } else if (char === '"') {
-      insideQuotes = !insideQuotes;
-    } else if (char === "," && !insideQuotes) {
-      row.push(cell.trim());
-      cell = "";
-    } else if ((char === "\n" || char === "\r") && !insideQuotes) {
-      if (cell || row.length) {
-        row.push(cell.trim());
-        rows.push(row);
-        row = [];
-        cell = "";
-      }
-    } else {
-      cell += char;
-    }
-  }
-
-  if (cell || row.length) {
-    row.push(cell.trim());
-    rows.push(row);
-  }
-
-  return rows;
+  return text
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((row) =>
+      row
+        .split(delimiter)
+        .map((cell) => cell.replace(/^"|"$/g, "").trim())
+    );
 }
 
 export default function EastPage() {
@@ -64,7 +39,12 @@ export default function EastPage() {
         const dealerIndex = getIndex("dealer name", "dealer", "account");
         const responsibleIndex = getIndex("responsible", "who", "owner");
         const dueDateIndex = getIndex("due date", "date", "deadline");
-        const completedIndex = getIndex("completed", "complete", "done");
+        const completedIndex = getIndex(
+          "completed",
+          "completed?",
+          "complete",
+          "done"
+        );
 
         const parsed = rows.slice(1).map((row, index) => ({
           id: index + 1,
@@ -90,10 +70,7 @@ export default function EastPage() {
   }, []);
 
   const responsibleOptions = useMemo(() => {
-    const names = tasks
-      .map((task) => task.responsible)
-      .filter(Boolean);
-
+    const names = tasks.map((task) => task.responsible).filter(Boolean);
     return ["All", ...new Set(names)];
   }, [tasks]);
 
@@ -122,9 +99,7 @@ export default function EastPage() {
           <div>
             <p className="eyebrow">Google Sheet Sync</p>
             <h1>East</h1>
-            <p className="subtext">
-              Task list pulled from your Google Sheet.
-            </p>
+            <p className="subtext">Task list pulled from your Google Sheet.</p>
           </div>
 
           <div className="progressCard">
@@ -136,7 +111,9 @@ export default function EastPage() {
         <section className="toolbarCard">
           <div>
             <h2>East Task List</h2>
-            <p>{visibleTasks.length} tasks showing · {completedCount} completed</p>
+            <p>
+              {visibleTasks.length} tasks showing · {completedCount} completed
+            </p>
           </div>
 
           <div className="filters">
@@ -162,7 +139,7 @@ export default function EastPage() {
             <div className="emptyState">Loading Google Sheet...</div>
           ) : visibleTasks.length === 0 ? (
             <div className="emptyState">
-              No tasks showing. Check your Google Sheet headers.
+              No tasks showing. Check your Google Sheet link and headers.
             </div>
           ) : (
             <div className="taskTable">
@@ -180,9 +157,9 @@ export default function EastPage() {
                   key={task.id}
                 >
                   <span className="taskName">{task.taskName}</span>
-                  <span>{task.dealerName}</span>
-                  <span>{task.responsible}</span>
-                  <span>{task.dueDate}</span>
+                  <span>{task.dealerName || "—"}</span>
+                  <span>{task.responsible || "—"}</span>
+                  <span>{task.dueDate || "—"}</span>
                   <span>
                     <span className={`checkBadge ${task.completed ? "done" : ""}`}>
                       {task.completed ? "✓" : ""}
