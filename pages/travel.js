@@ -34,8 +34,11 @@ const starterItinerary = [
   {
     id: 1,
     date: "",
-    time: "8:00 AM",
-    title: "Depart",
+    activity: "Depart",
+    departTime: "8:00 AM",
+    arriveTime: "",
+    location: "",
+    reservation: "",
     type: "Travel",
     notes: "Leave for dealer visit",
     open: false,
@@ -43,8 +46,11 @@ const starterItinerary = [
   {
     id: 2,
     date: "",
-    time: "11:00 AM",
-    title: "Dealer Meeting",
+    activity: "Dealer Meeting",
+    departTime: "11:00 AM",
+    arriveTime: "",
+    location: "",
+    reservation: "",
     type: "Meeting",
     notes: "Review location, credit line, next steps",
     open: false,
@@ -88,31 +94,41 @@ export default function TravelPage() {
     if (savedTravel) {
       const parsed = JSON.parse(savedTravel);
 
-      const fixedDealers = parsed.dealers
-        ? parsed.dealers.map((dealer) => ({
-            ...dealer,
-            owner: dealer.owner || "Mark",
-          }))
-        : starterDealers;
+      setDealers(
+        parsed.dealers
+          ? parsed.dealers.map((dealer) => ({
+              ...dealer,
+              owner: dealer.owner || "Mark",
+            }))
+          : starterDealers
+      );
 
-      const fixedTrips = parsed.trips
-        ? parsed.trips.map((trip) => ({
-            ...trip,
-            owner: trip.owner || "Mark",
-            dealerIds: trip.dealerIds || [],
-          }))
-        : starterTrips;
+      setTrips(
+        parsed.trips
+          ? parsed.trips.map((trip) => ({
+              ...trip,
+              owner: trip.owner || "Mark",
+              dealerIds: trip.dealerIds || [],
+            }))
+          : starterTrips
+      );
 
-      const fixedItinerary = parsed.itinerary
-        ? parsed.itinerary.map((item) => ({
-            ...item,
-            date: item.date || "",
-          }))
-        : starterItinerary;
-
-      setDealers(fixedDealers);
-      setTrips(fixedTrips);
-      setItinerary(fixedItinerary);
+      setItinerary(
+        parsed.itinerary
+          ? parsed.itinerary.map((item) => ({
+              id: item.id,
+              date: item.date || "",
+              activity: item.activity || item.title || "New Item",
+              departTime: item.departTime || item.time || "",
+              arriveTime: item.arriveTime || "",
+              location: item.location || "",
+              reservation: item.reservation || "",
+              type: item.type || "Travel",
+              notes: item.notes || "",
+              open: item.open || false,
+            }))
+          : starterItinerary
+      );
 
       if (parsed.activePerson) setActivePerson(parsed.activePerson);
 
@@ -242,8 +258,11 @@ export default function TravelPage() {
       {
         id: Date.now(),
         date: "",
-        time: "",
-        title: "New Item",
+        activity: "New Item",
+        departTime: "",
+        arriveTime: "",
+        location: "",
+        reservation: "",
         type: "Travel",
         notes: "",
         open: false,
@@ -381,14 +400,13 @@ export default function TravelPage() {
     const flightItem = {
       id: Date.now(),
       date: flight.departDate || "",
-      time: flight.departTime || "",
-      title: `${flight.airline || "Flight"} ${flight.flightNumber || ""}`.trim(),
+      activity: `${flight.airline || "Flight"} ${flight.flightNumber || ""}`.trim(),
+      departTime: flight.departTime || "",
+      arriveTime: flight.arriveTime || "",
+      location: `${flight.from || ""} → ${flight.to || ""}`,
+      reservation: flight.confirmation || "",
       type: "Flight",
-      notes: `${flight.from || ""} → ${flight.to || ""}${
-        flight.arriveTime ? ` | Arrive: ${flight.arriveTime}` : ""
-      }${flight.confirmation ? ` | Confirmation: ${flight.confirmation}` : ""}${
-        flight.notes ? ` | ${flight.notes}` : ""
-      }`,
+      notes: flight.notes || "",
       open: false,
     };
 
@@ -442,13 +460,25 @@ export default function TravelPage() {
     rows.push(["Trip Name", selectedTrip?.name || ""]);
     rows.push(["Trip Dates", selectedTrip?.date || ""]);
     rows.push([]);
-    rows.push(["Date", "Time", "Title", "Type", "Notes"]);
+    rows.push([
+      "Date",
+      "Activity",
+      "Departure Time",
+      "Arrival Time",
+      "Location",
+      "Reservation #",
+      "Type",
+      "Notes",
+    ]);
 
     itinerary.forEach((item) => {
       rows.push([
         item.date || "",
-        item.time || "",
-        item.title || "",
+        item.activity || "",
+        item.departTime || "",
+        item.arriveTime || "",
+        item.location || "",
+        item.reservation || "",
         item.type || "",
         item.notes || "",
       ]);
@@ -478,12 +508,15 @@ export default function TravelPage() {
           <div class="timelineItem">
             <div class="timeBlock">
               <div class="date">${item.date || ""}</div>
-              <div class="time">${item.time || ""}</div>
+              <div class="time">${item.departTime || ""}</div>
+              ${item.arriveTime ? `<div class="arrive">Arrive: ${item.arriveTime}</div>` : ""}
             </div>
             <div class="dot"></div>
             <div class="details">
               <div class="type">${item.type || "Trip Item"}</div>
-              <h3>${item.title || ""}</h3>
+              <h3>${item.activity || ""}</h3>
+              ${item.location ? `<p><strong>Location:</strong> ${item.location}</p>` : ""}
+              ${item.reservation ? `<p><strong>Reservation:</strong> ${item.reservation}</p>` : ""}
               ${item.notes ? `<p>${item.notes}</p>` : ""}
             </div>
           </div>
@@ -538,7 +571,7 @@ export default function TravelPage() {
             }
             .timelineItem {
               display: grid;
-              grid-template-columns: 110px 24px 1fr;
+              grid-template-columns: 120px 24px 1fr;
               gap: 14px;
               margin-bottom: 22px;
               page-break-inside: avoid;
@@ -551,6 +584,11 @@ export default function TravelPage() {
               font-size: 13px;
               font-weight: 700;
               margin-top: 4px;
+            }
+            .arrive {
+              font-size: 11px;
+              color: #777;
+              margin-top: 3px;
             }
             .dot {
               width: 12px;
@@ -755,12 +793,25 @@ export default function TravelPage() {
               <div className="sectionHeader">
                 <div>
                   <h2>Trip Plan</h2>
-                  <p>Drag items to reorder. Add date, time, title, type, and notes.</p>
+                  <p>Use this like an itinerary: date, activity, depart/arrival times, location, and reservation.</p>
                 </div>
 
                 <button className="smallBtn" onClick={addItineraryItem}>
                   + Add Item
                 </button>
+              </div>
+
+              <div className="itineraryHeader">
+                <span></span>
+                <span>Date</span>
+                <span>Activity</span>
+                <span>Depart Time</span>
+                <span>Arrival Time</span>
+                <span>Location</span>
+                <span>Reservation #</span>
+                <span>Type</span>
+                <span>Notes</span>
+                <span></span>
               </div>
 
               <div className="itineraryList">
@@ -776,37 +827,57 @@ export default function TravelPage() {
                     <div className="dragHandle">⋮⋮</div>
 
                     <input
-                      className="dateInput"
                       type="date"
                       value={item.date || ""}
                       onChange={(e) => updateItinerary(item.id, "date", e.target.value)}
                     />
 
                     <input
-                      className="timeInput"
-                      value={item.time}
-                      onChange={(e) => updateItinerary(item.id, "time", e.target.value)}
-                      placeholder="Time"
+                      value={item.activity || ""}
+                      onChange={(e) => updateItinerary(item.id, "activity", e.target.value)}
+                      placeholder="Activity"
                     />
 
                     <input
-                      className="itemTitle"
-                      value={item.title}
-                      onChange={(e) => updateItinerary(item.id, "title", e.target.value)}
-                      placeholder="Item title"
+                      value={item.departTime || ""}
+                      onChange={(e) =>
+                        updateItinerary(item.id, "departTime", e.target.value)
+                      }
+                      placeholder="Depart"
+                    />
+
+                    <input
+                      value={item.arriveTime || ""}
+                      onChange={(e) =>
+                        updateItinerary(item.id, "arriveTime", e.target.value)
+                      }
+                      placeholder="Arrive"
+                    />
+
+                    <input
+                      value={item.location || ""}
+                      onChange={(e) => updateItinerary(item.id, "location", e.target.value)}
+                      placeholder="Location / link"
+                    />
+
+                    <input
+                      value={item.reservation || ""}
+                      onChange={(e) =>
+                        updateItinerary(item.id, "reservation", e.target.value)
+                      }
+                      placeholder="Reservation #"
                     />
 
                     <select
-                      className="typeSelect"
-                      value={item.type}
+                      value={item.type || "Travel"}
                       onChange={(e) => updateItinerary(item.id, "type", e.target.value)}
                     >
                       <option>Travel</option>
                       <option>Flight</option>
-                      <option>Meeting</option>
-                      <option>Dealer Location</option>
                       <option>Hotel</option>
                       <option>Rental Car</option>
+                      <option>Meeting</option>
+                      <option>Dealer Visit</option>
                       <option>Food / Break</option>
                     </select>
 
@@ -856,9 +927,7 @@ export default function TravelPage() {
 
                     <input
                       value={hotel.location}
-                      onChange={(e) =>
-                        updateHotel(hotel.id, "location", e.target.value)
-                      }
+                      onChange={(e) => updateHotel(hotel.id, "location", e.target.value)}
                       placeholder="Location"
                     />
 
@@ -917,9 +986,7 @@ export default function TravelPage() {
 
                     <input
                       value={car.confirmation}
-                      onChange={(e) =>
-                        updateCar(car.id, "confirmation", e.target.value)
-                      }
+                      onChange={(e) => updateCar(car.id, "confirmation", e.target.value)}
                       placeholder="Confirmation / notes"
                     />
 
@@ -1512,18 +1579,38 @@ export default function TravelPage() {
         .tripTaskList {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 7px;
+        }
+
+        .itineraryHeader,
+        .itineraryItem {
+          display: grid;
+          grid-template-columns: 22px 112px 1.2fr 92px 92px 1.3fr 118px 115px 70px 28px;
+          gap: 6px;
+          align-items: center;
+        }
+
+        .itineraryHeader {
+          padding: 0 9px 6px;
+          font-size: 10px;
+          color: #6b7280;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          font-weight: 800;
         }
 
         .itineraryItem {
-          display: grid;
-          grid-template-columns: 20px 118px 72px minmax(0, 1fr) 120px 78px 28px;
-          gap: 7px;
-          align-items: center;
-          padding: 8px 9px;
+          padding: 7px 9px;
           border: 1px solid #eceef2;
-          border-radius: 14px;
+          border-radius: 12px;
           background: #fafafa;
+        }
+
+        .itineraryItem input,
+        .itineraryItem select {
+          height: 28px;
+          font-size: 11px;
+          border-radius: 9px;
         }
 
         .hotelLine,
@@ -1611,28 +1698,8 @@ export default function TravelPage() {
           text-align: center;
         }
 
-        .dateInput,
-        .timeInput {
-          font-size: 11px;
-          font-weight: 750;
-          text-align: center;
-          background: #fff;
-        }
-
-        .itemTitle {
-          font-size: 12px;
-          font-weight: 700;
-          background: #fff;
-        }
-
-        .typeSelect {
-          height: 30px;
-          font-size: 11px;
-          background: #fff;
-        }
-
         .notesBtn {
-          height: 30px;
+          height: 28px;
           border: 1px solid #e5e7eb;
           background: #fff;
           border-radius: 999px;
@@ -1662,7 +1729,7 @@ export default function TravelPage() {
         }
 
         .notesBox {
-          grid-column: 4 / 8;
+          grid-column: 3 / 11;
           min-height: 42px;
           margin-top: 0;
           background: #fff;
@@ -1698,6 +1765,10 @@ export default function TravelPage() {
 
           .wide {
             grid-column: span 1;
+          }
+
+          .itineraryHeader {
+            display: none;
           }
 
           .itineraryItem,
