@@ -33,6 +33,7 @@ const starterTrips = [
 const starterItinerary = [
   {
     id: 1,
+    date: "",
     time: "8:00 AM",
     title: "Depart",
     type: "Travel",
@@ -41,6 +42,7 @@ const starterItinerary = [
   },
   {
     id: 2,
+    date: "",
     time: "11:00 AM",
     title: "Dealer Meeting",
     type: "Meeting",
@@ -101,10 +103,19 @@ export default function TravelPage() {
           }))
         : starterTrips;
 
+      const fixedItinerary = parsed.itinerary
+        ? parsed.itinerary.map((item) => ({
+            ...item,
+            date: item.date || "",
+          }))
+        : starterItinerary;
+
       setDealers(fixedDealers);
       setTrips(fixedTrips);
+      setItinerary(fixedItinerary);
 
       if (parsed.activePerson) setActivePerson(parsed.activePerson);
+
       if (parsed.selectedTrip) {
         setSelectedTrip({
           ...parsed.selectedTrip,
@@ -113,7 +124,6 @@ export default function TravelPage() {
         });
       }
 
-      if (parsed.itinerary) setItinerary(parsed.itinerary);
       if (parsed.hotels) setHotels(parsed.hotels);
       if (parsed.cars) setCars(parsed.cars);
       if (parsed.flights) setFlights(parsed.flights);
@@ -156,7 +166,6 @@ export default function TravelPage() {
 
   const switchPerson = (person) => {
     setActivePerson(person);
-
     const firstTripForPerson = trips.find((trip) => trip.owner === person);
 
     if (firstTripForPerson) {
@@ -184,7 +193,6 @@ export default function TravelPage() {
 
   const toggleDealerForTrip = (dealerId) => {
     const current = selectedTrip?.dealerIds || [];
-
     const updatedDealerIds = current.includes(dealerId)
       ? current.filter((id) => id !== dealerId)
       : [...current, dealerId];
@@ -233,6 +241,7 @@ export default function TravelPage() {
       ...itinerary,
       {
         id: Date.now(),
+        date: "",
         time: "",
         title: "New Item",
         type: "Travel",
@@ -347,6 +356,7 @@ export default function TravelPage() {
         flightNumber: "",
         from: flightSearch.from || "",
         to: flightSearch.to || "",
+        departDate: flightSearch.depart || "",
         departTime: "",
         arriveTime: "",
         confirmation: "",
@@ -370,6 +380,7 @@ export default function TravelPage() {
   const addFlightToTripPlan = (flight) => {
     const flightItem = {
       id: Date.now(),
+      date: flight.departDate || "",
       time: flight.departTime || "",
       title: `${flight.airline || "Flight"} ${flight.flightNumber || ""}`.trim(),
       type: "Flight",
@@ -431,10 +442,11 @@ export default function TravelPage() {
     rows.push(["Trip Name", selectedTrip?.name || ""]);
     rows.push(["Trip Dates", selectedTrip?.date || ""]);
     rows.push([]);
-    rows.push(["Time", "Title", "Type", "Notes"]);
+    rows.push(["Date", "Time", "Title", "Type", "Notes"]);
 
     itinerary.forEach((item) => {
       rows.push([
+        item.date || "",
         item.time || "",
         item.title || "",
         item.type || "",
@@ -443,7 +455,6 @@ export default function TravelPage() {
     });
 
     const csv = rows.map((row) => row.map(csvSafe).join(",")).join("\n");
-
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
 
@@ -465,7 +476,10 @@ export default function TravelPage() {
       .map(
         (item) => `
           <div class="timelineItem">
-            <div class="time">${item.time || ""}</div>
+            <div class="timeBlock">
+              <div class="date">${item.date || ""}</div>
+              <div class="time">${item.time || ""}</div>
+            </div>
             <div class="dot"></div>
             <div class="details">
               <div class="type">${item.type || "Trip Item"}</div>
@@ -508,9 +522,9 @@ export default function TravelPage() {
               letter-spacing: -0.04em;
             }
             .date {
-              margin-top: 8px;
-              font-size: 14px;
+              font-size: 12px;
               color: #666;
+              font-weight: 700;
             }
             .owner {
               margin-top: 8px;
@@ -524,23 +538,26 @@ export default function TravelPage() {
             }
             .timelineItem {
               display: grid;
-              grid-template-columns: 90px 24px 1fr;
+              grid-template-columns: 110px 24px 1fr;
               gap: 14px;
               margin-bottom: 22px;
               page-break-inside: avoid;
             }
+            .timeBlock {
+              text-align: right;
+              padding-top: 4px;
+            }
             .time {
               font-size: 13px;
               font-weight: 700;
-              padding-top: 4px;
-              text-align: right;
+              margin-top: 4px;
             }
             .dot {
               width: 12px;
               height: 12px;
               background: #111;
               border-radius: 999px;
-              margin-top: 6px;
+              margin-top: 8px;
               position: relative;
             }
             .dot:after {
@@ -738,7 +755,7 @@ export default function TravelPage() {
               <div className="sectionHeader">
                 <div>
                   <h2>Trip Plan</h2>
-                  <p>Drag items to reorder. Click notes to expand details.</p>
+                  <p>Drag items to reorder. Add date, time, title, type, and notes.</p>
                 </div>
 
                 <button className="smallBtn" onClick={addItineraryItem}>
@@ -757,6 +774,13 @@ export default function TravelPage() {
                     onDrop={() => handleDrop(item)}
                   >
                     <div className="dragHandle">⋮⋮</div>
+
+                    <input
+                      className="dateInput"
+                      type="date"
+                      value={item.date || ""}
+                      onChange={(e) => updateItinerary(item.id, "date", e.target.value)}
+                    />
 
                     <input
                       className="timeInput"
@@ -985,6 +1009,14 @@ export default function TravelPage() {
                     />
 
                     <input
+                      type="date"
+                      value={flight.departDate || ""}
+                      onChange={(e) =>
+                        updateFlight(flight.id, "departDate", e.target.value)
+                      }
+                    />
+
+                    <input
                       value={flight.departTime}
                       onChange={(e) =>
                         updateFlight(flight.id, "departTime", e.target.value)
@@ -1006,12 +1038,6 @@ export default function TravelPage() {
                         updateFlight(flight.id, "confirmation", e.target.value)
                       }
                       placeholder="Confirm #"
-                    />
-
-                    <input
-                      value={flight.notes}
-                      onChange={(e) => updateFlight(flight.id, "notes", e.target.value)}
-                      placeholder="Notes"
                     />
 
                     <button className="tinyBtn" onClick={() => addFlightToTripPlan(flight)}>
@@ -1491,7 +1517,7 @@ export default function TravelPage() {
 
         .itineraryItem {
           display: grid;
-          grid-template-columns: 20px 72px minmax(0, 1fr) 120px 78px 28px;
+          grid-template-columns: 20px 118px 72px minmax(0, 1fr) 120px 78px 28px;
           gap: 7px;
           align-items: center;
           padding: 8px 9px;
@@ -1525,7 +1551,7 @@ export default function TravelPage() {
 
         .flightLine {
           display: grid;
-          grid-template-columns: 1fr 90px 70px 70px 95px 95px 120px 1fr 68px 28px;
+          grid-template-columns: 1fr 90px 70px 70px 118px 95px 95px 120px 68px 28px;
           gap: 8px;
           align-items: center;
           padding: 8px;
@@ -1585,6 +1611,7 @@ export default function TravelPage() {
           text-align: center;
         }
 
+        .dateInput,
         .timeInput {
           font-size: 11px;
           font-weight: 750;
@@ -1635,7 +1662,7 @@ export default function TravelPage() {
         }
 
         .notesBox {
-          grid-column: 3 / 7;
+          grid-column: 4 / 8;
           min-height: 42px;
           margin-top: 0;
           background: #fff;
