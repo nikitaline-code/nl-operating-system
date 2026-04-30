@@ -1,148 +1,85 @@
 import { useEffect, useMemo, useState } from "react";
 
-const TASK_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pub?gid=1945000950&single=true&output=csv";
-const TRADESHOW_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pub?gid=722935598&single=true&output=csv";
-const COOP_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pub?gid=290340762&single=true&output=csv";
+const TASK_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pub?gid=1945000950&single=true&output=csv";
 
-function googleSheetToCsvUrl(url) {
-  if (!url) return "";
-
-  if (url.includes("output=csv")) return url;
-
-  const idMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-  const gidMatch = url.match(/gid=([0-9]+)/);
-
-  if (!idMatch) return url;
-
-  const sheetId = idMatch[1];
-  const gid = gidMatch ? gidMatch[1] : "0";
-
-  return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
-}
+const TRADESHOW_EMBED_URL = "<iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=722935598&amp;single=true&amp;widget=true&amp;headers=false"></iframe>";
+const COOP_EMBED_URL = "<iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=290340762&amp;single=true&amp;widget=true&amp;headers=false"></iframe>";
 
 function parseCSV(text) {
-  const rows = [];
-  let current = [];
-  let value = "";
-  let insideQuotes = false;
+  const rows = text.trim().split(/\r?\n/);
+  const headers = rows[0].split(",").map((h) => h.trim());
 
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const next = text[i + 1];
-
-    if (char === '"' && insideQuotes && next === '"') {
-      value += '"';
-      i++;
-    } else if (char === '"') {
-      insideQuotes = !insideQuotes;
-    } else if (char === "," && !insideQuotes) {
-      current.push(value.trim());
-      value = "";
-    } else if ((char === "\n" || char === "\r") && !insideQuotes) {
-      if (value || current.length) {
-        current.push(value.trim());
-        rows.push(current);
-        current = [];
-        value = "";
-      }
-    } else {
-      value += char;
-    }
-  }
-
-  if (value || current.length) {
-    current.push(value.trim());
-    rows.push(current);
-  }
-
-  const cleanRows = rows.filter((row) => row.some((cell) => cell !== ""));
-  const headers = cleanRows[0] || [];
-
-  return cleanRows.slice(1).map((row) => {
+  return rows.slice(1).map((row) => {
+    const values = row.split(",").map((v) => v.trim());
     return headers.reduce((obj, header, index) => {
-      obj[header || `Column ${index + 1}`] = row[index] || "";
+      obj[header] = values[index] || "";
       return obj;
     }, {});
   });
 }
 
-async function fetchSheet(url) {
-  const csvUrl = googleSheetToCsvUrl(url);
-  if (!csvUrl || !csvUrl.includes("http")) return [];
-
-  const res = await fetch(csvUrl);
+async function fetchTasks(url) {
+  if (!url || !url.includes("http")) return [];
+  const res = await fetch(url);
   const text = await res.text();
 
-  if (text.trim().startsWith("<!DOCTYPE html") || text.includes("<html")) {
-    console.error("This is still loading HTML, not CSV. Check sharing permissions.");
+  if (text.includes("<html") || text.includes("<!DOCTYPE")) {
+    console.error("Task sheet URL is HTML, not CSV.");
     return [];
   }
 
   return parseCSV(text);
 }
 
+function isCompleted(task) {
+  const value = `${task.Completed || task.Status || task.Done || ""}`.toLowerCase().trim();
+  return ["true", "yes", "complete", "completed", "done"].includes(value);
+}
+
 export default function EastCommandCenter() {
   const [tasks, setTasks] = useState([]);
-  const [tradeshows, setTradeshows] = useState([]);
-  const [coopSpend, setCoopSpend] = useState([]);
-
   const [search, setSearch] = useState("");
   const [responsibleFilter, setResponsibleFilter] = useState("All");
   const [hideCompleted, setHideCompleted] = useState(true);
 
   const [tradeshowsOpen, setTradeshowsOpen] = useState(false);
   const [coopOpen, setCoopOpen] = useState(false);
-  const [tasksOpen, setTasksOpen] = useState(false);
+  const [tasksOpen, setTasksOpen] = useState(true);
 
   useEffect(() => {
-    async function loadData() {
-      setTasks(await fetchSheet(TASK_SHEET_URL));
-      setTradeshows(await fetchSheet(TRADESHOW_SHEET_URL));
-      setCoopSpend(await fetchSheet(COOP_SHEET_URL));
+    async function load() {
+      const taskData = await fetchTasks(TASK_SHEET_CSV_URL);
+      setTasks(taskData);
     }
 
-    loadData();
+    load();
   }, []);
 
-  const completedTasks = tasks.filter((task) => {
-    const status = `${task.Completed || task.Status || ""}`.toLowerCase();
-    return ["true", "yes", "complete", "completed", "done"].includes(status);
-  });
-
-  const openTasks = tasks.filter((task) => !completedTasks.includes(task));
-
-  const filteredTasks = useMemo(() => {
-    return tasks.filter((task) => {
-      const text = Object.values(task).join(" ").toLowerCase();
-      const matchesSearch = text.includes(search.toLowerCase());
-
-      const responsible =
-        task.Responsible ||
-        task.Owner ||
-        task.Assigned ||
-        task["Assigned To"] ||
-        "";
-
-      const matchesResponsible =
-        responsibleFilter === "All" || responsible === responsibleFilter;
-
-      const isCompleted = completedTasks.includes(task);
-      const matchesCompleted = hideCompleted ? !isCompleted : true;
-
-      return matchesSearch && matchesResponsible && matchesCompleted;
-    });
-  }, [tasks, search, responsibleFilter, hideCompleted]);
+  const completedTasks = tasks.filter(isCompleted);
+  const openTasks = tasks.filter((task) => !isCompleted(task));
 
   const responsibleOptions = useMemo(() => {
     const names = tasks
-      .map(
-        (task) =>
-          task.Responsible || task.Owner || task.Assigned || task["Assigned To"]
-      )
+      .map((task) => task.Responsible || task.Owner || task.Assigned || task["Assigned To"])
       .filter(Boolean);
 
     return ["All", ...Array.from(new Set(names))];
   }, [tasks]);
+
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      const allText = Object.values(task).join(" ").toLowerCase();
+      const responsible =
+        task.Responsible || task.Owner || task.Assigned || task["Assigned To"] || "";
+
+      const matchesSearch = allText.includes(search.toLowerCase());
+      const matchesResponsible =
+        responsibleFilter === "All" || responsible === responsibleFilter;
+      const matchesCompleted = hideCompleted ? !isCompleted(task) : true;
+
+      return matchesSearch && matchesResponsible && matchesCompleted;
+    });
+  }, [tasks, search, responsibleFilter, hideCompleted]);
 
   const progress =
     tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
@@ -152,9 +89,9 @@ export default function EastCommandCenter() {
       <div className="east-shell">
         <div className="east-top">
           <div>
-            <p className="east-eyebrow">GOOGLE SHEET SYNC</p>
+            <p className="eyebrow">GOOGLE SHEET SYNC</p>
             <h1>East Command Center</h1>
-            <p className="east-subtitle">
+            <p className="subtitle">
               Tasks and tradeshow calendar pulled from Google Sheets.
             </p>
           </div>
@@ -205,23 +142,21 @@ export default function EastCommandCenter() {
           </div>
         </section>
 
-        <CollapsibleCard
+        <SheetEmbedCard
           title="Tradeshows"
           subtitle="This year at a glance · live formatted sheet view"
           open={tradeshowsOpen}
           setOpen={setTradeshowsOpen}
-        >
-          <SheetTable rows={tradeshows} />
-        </CollapsibleCard>
+          url={TRADESHOW_EMBED_URL}
+        />
 
-        <CollapsibleCard
+        <SheetEmbedCard
           title="Co-op Spend Tracker"
           subtitle="Dealer co-op spend pulled directly from Google Sheets"
           open={coopOpen}
           setOpen={setCoopOpen}
-        >
-          <SheetTable rows={coopSpend} />
-        </CollapsibleCard>
+          url={COOP_EMBED_URL}
+        />
 
         <CollapsibleCard
           title="East Task List"
@@ -229,7 +164,7 @@ export default function EastCommandCenter() {
           open={tasksOpen}
           setOpen={setTasksOpen}
         >
-          <SheetTable rows={filteredTasks} />
+          <TaskTable rows={filteredTasks} />
         </CollapsibleCard>
       </div>
 
@@ -260,7 +195,7 @@ export default function EastCommandCenter() {
           margin-bottom: 24px;
         }
 
-        .east-eyebrow {
+        .eyebrow {
           margin: 0 0 12px;
           font-size: 10px;
           letter-spacing: 0.18em;
@@ -268,7 +203,7 @@ export default function EastCommandCenter() {
           color: #64748b;
         }
 
-        .east-top h1 {
+        h1 {
           margin: 0;
           font-size: 29px;
           line-height: 1;
@@ -276,7 +211,7 @@ export default function EastCommandCenter() {
           letter-spacing: -0.04em;
         }
 
-        .east-subtitle {
+        .subtitle {
           margin: 10px 0 0;
           font-size: 12px;
           color: #475569;
@@ -440,20 +375,28 @@ export default function EastCommandCenter() {
           padding: 0 18px 18px;
         }
 
+        .sheet-frame {
+          width: 100%;
+          height: 520px;
+          border: 1px solid #e5e7eb;
+          border-radius: 14px;
+          background: #ffffff;
+        }
+
         .table-wrap {
           overflow-x: auto;
           border: 1px solid #e5e7eb;
           border-radius: 14px;
         }
 
-        .sheet-table {
+        table {
           width: 100%;
           border-collapse: collapse;
           background: #ffffff;
           font-size: 12px;
         }
 
-        .sheet-table th {
+        th {
           background: #f8fafc;
           color: #64748b;
           text-align: left;
@@ -465,18 +408,18 @@ export default function EastCommandCenter() {
           white-space: nowrap;
         }
 
-        .sheet-table td {
+        td {
           padding: 12px;
           border-bottom: 1px solid #eef2f7;
           color: #0f172a;
           white-space: nowrap;
         }
 
-        .sheet-table tr:last-child td {
+        tr:last-child td {
           border-bottom: none;
         }
 
-        .sheet-table tr:hover td {
+        tr:hover td {
           background: #fafafa;
         }
 
@@ -516,16 +459,28 @@ function CollapsibleCard({ title, subtitle, open, setOpen, children }) {
   );
 }
 
-function SheetTable({ rows }) {
+function SheetEmbedCard({ title, subtitle, open, setOpen, url }) {
+  return (
+    <CollapsibleCard title={title} subtitle={subtitle} open={open} setOpen={setOpen}>
+      {url && url.includes("http") ? (
+        <iframe className="sheet-frame" src={url} />
+      ) : (
+        <p className="empty">Add your published Google Sheet embed link.</p>
+      )}
+    </CollapsibleCard>
+  );
+}
+
+function TaskTable({ rows }) {
   if (!rows || rows.length === 0) {
-    return <p className="empty">No sheet data loaded yet.</p>;
+    return <p className="empty">No tasks showing.</p>;
   }
 
   const headers = Object.keys(rows[0]);
 
   return (
     <div className="table-wrap">
-      <table className="sheet-table">
+      <table>
         <thead>
           <tr>
             {headers.map((header) => (
