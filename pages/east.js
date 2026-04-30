@@ -1,26 +1,83 @@
 import { useEffect, useMemo, useState } from "react";
 
-const TASK_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=1945000950&single=true";
-const TRADESHOW_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=722935598&single=true";
-const COOP_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=290340762&single=true";
+const TASK_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pub?gid=1945000950&single=true&output=csv";
+const TRADESHOW_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pub?gid=722935598&single=true&output=csv";
+const COOP_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pub?gid=290340762&single=true&output=csv";
+
+function googleSheetToCsvUrl(url) {
+  if (!url) return "";
+
+  if (url.includes("output=csv")) return url;
+
+  const idMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  const gidMatch = url.match(/gid=([0-9]+)/);
+
+  if (!idMatch) return url;
+
+  const sheetId = idMatch[1];
+  const gid = gidMatch ? gidMatch[1] : "0";
+
+  return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+}
 
 function parseCSV(text) {
-  const lines = text.trim().split(/\r?\n/);
-  const headers = lines[0].split(",").map((h) => h.trim());
+  const rows = [];
+  let current = [];
+  let value = "";
+  let insideQuotes = false;
 
-  return lines.slice(1).map((line) => {
-    const values = line.split(",").map((v) => v.trim());
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const next = text[i + 1];
+
+    if (char === '"' && insideQuotes && next === '"') {
+      value += '"';
+      i++;
+    } else if (char === '"') {
+      insideQuotes = !insideQuotes;
+    } else if (char === "," && !insideQuotes) {
+      current.push(value.trim());
+      value = "";
+    } else if ((char === "\n" || char === "\r") && !insideQuotes) {
+      if (value || current.length) {
+        current.push(value.trim());
+        rows.push(current);
+        current = [];
+        value = "";
+      }
+    } else {
+      value += char;
+    }
+  }
+
+  if (value || current.length) {
+    current.push(value.trim());
+    rows.push(current);
+  }
+
+  const cleanRows = rows.filter((row) => row.some((cell) => cell !== ""));
+  const headers = cleanRows[0] || [];
+
+  return cleanRows.slice(1).map((row) => {
     return headers.reduce((obj, header, index) => {
-      obj[header] = values[index] || "";
+      obj[header || `Column ${index + 1}`] = row[index] || "";
       return obj;
     }, {});
   });
 }
 
 async function fetchSheet(url) {
-  if (!url || !url.includes("http")) return [];
-  const res = await fetch(url);
+  const csvUrl = googleSheetToCsvUrl(url);
+  if (!csvUrl || !csvUrl.includes("http")) return [];
+
+  const res = await fetch(csvUrl);
   const text = await res.text();
+
+  if (text.trim().startsWith("<!DOCTYPE html") || text.includes("<html")) {
+    console.error("This is still loading HTML, not CSV. Check sharing permissions.");
+    return [];
+  }
+
   return parseCSV(text);
 }
 
@@ -39,9 +96,9 @@ export default function EastCommandCenter() {
 
   useEffect(() => {
     async function loadData() {
-      setTasks(await fetchSheet(TASK_SHEET_CSV_URL));
-      setTradeshows(await fetchSheet(TRADESHOW_SHEET_CSV_URL));
-      setCoopSpend(await fetchSheet(COOP_SHEET_CSV_URL));
+      setTasks(await fetchSheet(TASK_SHEET_URL));
+      setTradeshows(await fetchSheet(TRADESHOW_SHEET_URL));
+      setCoopSpend(await fetchSheet(COOP_SHEET_URL));
     }
 
     loadData();
@@ -49,12 +106,7 @@ export default function EastCommandCenter() {
 
   const completedTasks = tasks.filter((task) => {
     const status = `${task.Completed || task.Status || ""}`.toLowerCase();
-    return (
-      status === "true" ||
-      status === "yes" ||
-      status === "complete" ||
-      status === "completed"
-    );
+    return ["true", "yes", "complete", "completed", "done"].includes(status);
   });
 
   const openTasks = tasks.filter((task) => !completedTasks.includes(task));
@@ -230,13 +282,19 @@ export default function EastCommandCenter() {
           color: #475569;
         }
 
-        .progress-card {
-          width: 150px;
-          height: 76px;
+        .progress-card,
+        .stat-card,
+        .filters-card,
+        .section-card {
           background: #ffffff;
           border: 1px solid #dfe3ea;
           border-radius: 20px;
-          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.07);
+          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
+        }
+
+        .progress-card {
+          width: 150px;
+          height: 76px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -263,12 +321,8 @@ export default function EastCommandCenter() {
         }
 
         .stat-card {
-          background: #ffffff;
-          border: 1px solid #dfe3ea;
-          border-radius: 20px;
           padding: 20px 18px;
           min-height: 78px;
-          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
         }
 
         .stat-card p {
@@ -284,9 +338,6 @@ export default function EastCommandCenter() {
         }
 
         .filters-card {
-          background: #ffffff;
-          border: 1px solid #dfe3ea;
-          border-radius: 20px;
           min-height: 66px;
           padding: 16px 18px;
           display: flex;
@@ -294,7 +345,6 @@ export default function EastCommandCenter() {
           align-items: center;
           gap: 20px;
           margin-bottom: 18px;
-          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
         }
 
         .filters-card h3 {
@@ -344,10 +394,6 @@ export default function EastCommandCenter() {
         }
 
         .section-card {
-          background: #ffffff;
-          border: 1px solid #dfe3ea;
-          border-radius: 20px;
-          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
           margin-bottom: 18px;
           overflow: hidden;
           width: 100%;
@@ -440,26 +486,6 @@ export default function EastCommandCenter() {
           font-size: 12px;
           color: #64748b;
         }
-
-        @media (max-width: 900px) {
-          .east-top,
-          .filters-card {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .progress-card {
-            align-self: flex-start;
-          }
-
-          .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-
-          .filters-right {
-            grid-template-columns: 1fr;
-          }
-        }
       `}</style>
     </main>
   );
@@ -482,7 +508,6 @@ function CollapsibleCard({ title, subtitle, open, setOpen, children }) {
           <h3>{title}</h3>
           <p>{subtitle}</p>
         </div>
-
         <span className="open-btn">{open ? "Close" : "Open"}</span>
       </button>
 
