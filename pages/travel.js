@@ -11,33 +11,6 @@ const starterDealers = [
   },
 ];
 
-const starterItinerary = [
-  {
-    id: 1,
-    date: "",
-    activity: "Depart",
-    departTime: "8:00 AM",
-    arriveTime: "",
-    location: "",
-    reservation: "",
-    type: "Travel",
-    notes: "Leave for dealer visit",
-    open: false,
-  },
-  {
-    id: 2,
-    date: "",
-    activity: "Dealer Meeting",
-    departTime: "11:00 AM",
-    arriveTime: "",
-    location: "",
-    reservation: "",
-    type: "Meeting",
-    notes: "Review location, credit line, next steps",
-    open: false,
-  },
-];
-
 const starterTrips = [
   {
     id: 1,
@@ -46,7 +19,12 @@ const starterTrips = [
     date: "May 14 - May 16",
     status: "Planning",
     dealerIds: [1],
-    itinerary: starterItinerary,
+    itinerary: [],
+    hotels: [],
+    cars: [],
+    flights: [],
+    tripTasks: [],
+    tripNotes: "",
   },
   {
     id: 2,
@@ -56,6 +34,11 @@ const starterTrips = [
     status: "Planning",
     dealerIds: [],
     itinerary: [],
+    hotels: [],
+    cars: [],
+    flights: [],
+    tripTasks: [],
+    tripNotes: "",
   },
 ];
 
@@ -64,10 +47,14 @@ export default function TravelPage() {
   const [dealers, setDealers] = useState(starterDealers);
   const [trips, setTrips] = useState(starterTrips);
   const [selectedTrip, setSelectedTrip] = useState(starterTrips[0]);
-  const [itinerary, setItinerary] = useState(starterTrips[0].itinerary || []);
+
+  const [itinerary, setItinerary] = useState([]);
   const [hotels, setHotels] = useState([]);
   const [cars, setCars] = useState([]);
   const [flights, setFlights] = useState([]);
+  const [tripTasks, setTripTasks] = useState([]);
+  const [tripNotes, setTripNotes] = useState("");
+
   const [flightSearch, setFlightSearch] = useState({
     from: "YWG",
     to: "",
@@ -75,8 +62,7 @@ export default function TravelPage() {
     returnDate: "",
     passengers: "1",
   });
-  const [tripTasks, setTripTasks] = useState([]);
-  const [tripNotes, setTripNotes] = useState("");
+
   const [newTripTask, setNewTripTask] = useState("");
   const [taskAssignedFrom, setTaskAssignedFrom] = useState("Mark");
   const [taskUrgency, setTaskUrgency] = useState("Medium");
@@ -90,19 +76,17 @@ export default function TravelPage() {
     selectedTrip?.dealerIds?.includes(d.id)
   );
 
-  const normalizeItinerary = (items = []) =>
-    items.map((item) => ({
-      id: item.id || Date.now(),
-      date: item.date || "",
-      activity: item.activity || item.title || "New Item",
-      departTime: item.departTime || item.time || "",
-      arriveTime: item.arriveTime || "",
-      location: item.location || "",
-      reservation: item.reservation || "",
-      type: item.type || "Travel",
-      notes: item.notes || "",
-      open: item.open || false,
-    }));
+  const cleanTrip = (trip) => ({
+    ...trip,
+    owner: trip.owner || "Mark",
+    dealerIds: trip.dealerIds || [],
+    itinerary: trip.itinerary || [],
+    hotels: trip.hotels || [],
+    cars: trip.cars || [],
+    flights: trip.flights || [],
+    tripTasks: trip.tripTasks || [],
+    tripNotes: trip.tripNotes || "",
+  });
 
   useEffect(() => {
     const savedTravel = localStorage.getItem("travelPageData");
@@ -117,42 +101,46 @@ export default function TravelPage() {
           }))
         : starterDealers;
 
-      const oldGlobalItinerary = normalizeItinerary(parsed.itinerary || []);
-
       const fixedTrips = parsed.trips
-        ? parsed.trips.map((trip, index) => ({
-            ...trip,
-            owner: trip.owner || "Mark",
-            dealerIds: trip.dealerIds || [],
-            itinerary:
-              trip.itinerary && trip.itinerary.length
-                ? normalizeItinerary(trip.itinerary)
-                : index === 0 && oldGlobalItinerary.length
-                ? oldGlobalItinerary
-                : [],
-          }))
+        ? parsed.trips.map((trip, index) =>
+            cleanTrip({
+              ...trip,
+
+              // Migration fallback from older versions:
+              itinerary:
+                trip.itinerary ||
+                (index === 0 ? parsed.itinerary || [] : []),
+              hotels:
+                trip.hotels ||
+                (index === 0 ? parsed.hotels || [] : []),
+              cars:
+                trip.cars ||
+                (index === 0 ? parsed.cars || [] : []),
+              flights:
+                trip.flights ||
+                (index === 0 ? parsed.flights || [] : []),
+              tripTasks:
+                trip.tripTasks ||
+                (index === 0 ? parsed.tripTasks || [] : []),
+              tripNotes:
+                trip.tripNotes ||
+                (index === 0 ? parsed.tripNotes || "" : ""),
+            })
+          )
         : starterTrips;
 
       setDealers(fixedDealers);
       setTrips(fixedTrips);
 
-      const savedSelected = parsed.selectedTrip;
-      const matchedTrip =
-        fixedTrips.find((trip) => trip.id === savedSelected?.id) || fixedTrips[0];
-
       if (parsed.activePerson) setActivePerson(parsed.activePerson);
 
-      if (matchedTrip) {
-        setSelectedTrip(matchedTrip);
-        setItinerary(matchedTrip.itinerary || []);
-      }
+      const matchedTrip =
+        fixedTrips.find((trip) => trip.id === parsed.selectedTrip?.id) ||
+        fixedTrips[0];
 
-      if (parsed.hotels) setHotels(parsed.hotels);
-      if (parsed.cars) setCars(parsed.cars);
-      if (parsed.flights) setFlights(parsed.flights);
+      if (matchedTrip) selectTrip(matchedTrip);
+
       if (parsed.flightSearch) setFlightSearch(parsed.flightSearch);
-      if (parsed.tripTasks) setTripTasks(parsed.tripTasks);
-      if (parsed.tripNotes) setTripNotes(parsed.tripNotes);
     }
   }, []);
 
@@ -164,38 +152,27 @@ export default function TravelPage() {
         dealers,
         trips,
         selectedTrip,
-        hotels,
-        cars,
-        flights,
         flightSearch,
-        tripTasks,
-        tripNotes,
       })
     );
-  }, [
-    activePerson,
-    dealers,
-    trips,
-    selectedTrip,
-    hotels,
-    cars,
-    flights,
-    flightSearch,
-    tripTasks,
-    tripNotes,
-  ]);
+  }, [activePerson, dealers, trips, selectedTrip, flightSearch]);
 
   const selectTrip = (trip) => {
-    setSelectedTrip(trip);
-    setItinerary(trip.itinerary || []);
+    const clean = cleanTrip(trip);
+
+    setSelectedTrip(clean);
+    setItinerary(clean.itinerary);
+    setHotels(clean.hotels);
+    setCars(clean.cars);
+    setFlights(clean.flights);
+    setTripTasks(clean.tripTasks);
+    setTripNotes(clean.tripNotes);
   };
 
-  const saveItineraryToTrip = (updatedItinerary) => {
-    setItinerary(updatedItinerary);
-
+  const saveTripField = (field, value) => {
     const updatedTrip = {
       ...selectedTrip,
-      itinerary: updatedItinerary,
+      [field]: value,
     };
 
     setSelectedTrip(updatedTrip);
@@ -203,6 +180,17 @@ export default function TravelPage() {
     setTrips((currentTrips) =>
       currentTrips.map((trip) =>
         trip.id === selectedTrip.id ? updatedTrip : trip
+      )
+    );
+  };
+
+  const updateTrip = (field, value) => {
+    const updatedTrip = { ...selectedTrip, [field]: value };
+    setSelectedTrip(updatedTrip);
+
+    setTrips((currentTrips) =>
+      currentTrips.map((trip) =>
+        trip.id === updatedTrip.id ? updatedTrip : trip
       )
     );
   };
@@ -223,27 +211,16 @@ export default function TravelPage() {
         status: "Planning",
         dealerIds: [],
         itinerary: [],
+        hotels: [],
+        cars: [],
+        flights: [],
+        tripTasks: [],
+        tripNotes: "",
       };
 
       setTrips([...trips, newTrip]);
-      setSelectedTrip(newTrip);
-      setItinerary([]);
+      selectTrip(newTrip);
     }
-  };
-
-  const updateTrip = (field, value) => {
-    const updatedTrip = { ...selectedTrip, [field]: value };
-    setSelectedTrip(updatedTrip);
-    setTrips(trips.map((trip) => (trip.id === updatedTrip.id ? updatedTrip : trip)));
-  };
-
-  const toggleDealerForTrip = (dealerId) => {
-    const current = selectedTrip?.dealerIds || [];
-    const updatedDealerIds = current.includes(dealerId)
-      ? current.filter((id) => id !== dealerId)
-      : [...current, dealerId];
-
-    updateTrip("dealerIds", updatedDealerIds);
   };
 
   const addTrip = () => {
@@ -255,11 +232,25 @@ export default function TravelPage() {
       status: "Planning",
       dealerIds: [],
       itinerary: [],
+      hotels: [],
+      cars: [],
+      flights: [],
+      tripTasks: [],
+      tripNotes: "",
     };
 
     setTrips([...trips, newTrip]);
-    setSelectedTrip(newTrip);
-    setItinerary([]);
+    selectTrip(newTrip);
+  };
+
+  const toggleDealerForTrip = (dealerId) => {
+    const current = selectedTrip?.dealerIds || [];
+
+    const updatedDealerIds = current.includes(dealerId)
+      ? current.filter((id) => id !== dealerId)
+      : [...current, dealerId];
+
+    updateTrip("dealerIds", updatedDealerIds);
   };
 
   const addDealer = () => {
@@ -301,7 +292,8 @@ export default function TravelPage() {
       },
     ];
 
-    saveItineraryToTrip(updated);
+    setItinerary(updated);
+    saveTripField("itinerary", updated);
   };
 
   const updateItinerary = (id, field, value) => {
@@ -309,7 +301,8 @@ export default function TravelPage() {
       item.id === id ? { ...item, [field]: value } : item
     );
 
-    saveItineraryToTrip(updated);
+    setItinerary(updated);
+    saveTripField("itinerary", updated);
   };
 
   const toggleNotes = (id) => {
@@ -317,12 +310,15 @@ export default function TravelPage() {
       item.id === id ? { ...item, open: !item.open } : item
     );
 
-    saveItineraryToTrip(updated);
+    setItinerary(updated);
+    saveTripField("itinerary", updated);
   };
 
   const deleteItinerary = (id) => {
     const updated = itinerary.filter((item) => item.id !== id);
-    saveItineraryToTrip(updated);
+
+    setItinerary(updated);
+    saveTripField("itinerary", updated);
   };
 
   const handleDrop = (targetItem) => {
@@ -335,12 +331,13 @@ export default function TravelPage() {
     const [removed] = updated.splice(draggedIndex, 1);
     updated.splice(targetIndex, 0, removed);
 
-    saveItineraryToTrip(updated);
+    setItinerary(updated);
+    saveTripField("itinerary", updated);
     setDraggedItem(null);
   };
 
   const addHotel = () => {
-    setHotels([
+    const updated = [
       ...hotels,
       {
         id: Date.now(),
@@ -349,23 +346,30 @@ export default function TravelPage() {
         rate: "",
         notes: "",
       },
-    ]);
+    ];
+
+    setHotels(updated);
+    saveTripField("hotels", updated);
   };
 
   const updateHotel = (id, field, value) => {
-    setHotels(
-      hotels.map((hotel) =>
-        hotel.id === id ? { ...hotel, [field]: value } : hotel
-      )
+    const updated = hotels.map((hotel) =>
+      hotel.id === id ? { ...hotel, [field]: value } : hotel
     );
+
+    setHotels(updated);
+    saveTripField("hotels", updated);
   };
 
   const deleteHotel = (id) => {
-    setHotels(hotels.filter((hotel) => hotel.id !== id));
+    const updated = hotels.filter((hotel) => hotel.id !== id);
+
+    setHotels(updated);
+    saveTripField("hotels", updated);
   };
 
   const addCar = () => {
-    setCars([
+    const updated = [
       ...cars,
       {
         id: Date.now(),
@@ -374,15 +378,26 @@ export default function TravelPage() {
         dropoff: "",
         confirmation: "",
       },
-    ]);
+    ];
+
+    setCars(updated);
+    saveTripField("cars", updated);
   };
 
   const updateCar = (id, field, value) => {
-    setCars(cars.map((car) => (car.id === id ? { ...car, [field]: value } : car)));
+    const updated = cars.map((car) =>
+      car.id === id ? { ...car, [field]: value } : car
+    );
+
+    setCars(updated);
+    saveTripField("cars", updated);
   };
 
   const deleteCar = (id) => {
-    setCars(cars.filter((car) => car.id !== id));
+    const updated = cars.filter((car) => car.id !== id);
+
+    setCars(updated);
+    saveTripField("cars", updated);
   };
 
   const updateFlightSearch = (field, value) => {
@@ -402,7 +417,7 @@ export default function TravelPage() {
   };
 
   const addFlight = () => {
-    setFlights([
+    const updated = [
       ...flights,
       {
         id: Date.now(),
@@ -416,36 +431,47 @@ export default function TravelPage() {
         confirmation: "",
         notes: "",
       },
-    ]);
+    ];
+
+    setFlights(updated);
+    saveTripField("flights", updated);
   };
 
   const updateFlight = (id, field, value) => {
-    setFlights(
-      flights.map((flight) =>
-        flight.id === id ? { ...flight, [field]: value } : flight
-      )
+    const updated = flights.map((flight) =>
+      flight.id === id ? { ...flight, [field]: value } : flight
     );
+
+    setFlights(updated);
+    saveTripField("flights", updated);
   };
 
   const deleteFlight = (id) => {
-    setFlights(flights.filter((flight) => flight.id !== id));
+    const updated = flights.filter((flight) => flight.id !== id);
+
+    setFlights(updated);
+    saveTripField("flights", updated);
   };
 
   const addFlightToTripPlan = (flight) => {
-    const flightItem = {
-      id: Date.now(),
-      date: flight.departDate || "",
-      activity: `${flight.airline || "Flight"} ${flight.flightNumber || ""}`.trim(),
-      departTime: flight.departTime || "",
-      arriveTime: flight.arriveTime || "",
-      location: `${flight.from || ""} → ${flight.to || ""}`,
-      reservation: flight.confirmation || "",
-      type: "Flight",
-      notes: flight.notes || "",
-      open: false,
-    };
+    const updatedItinerary = [
+      ...itinerary,
+      {
+        id: Date.now(),
+        date: flight.departDate || "",
+        activity: `${flight.airline || "Flight"} ${flight.flightNumber || ""}`.trim(),
+        departTime: flight.departTime || "",
+        arriveTime: flight.arriveTime || "",
+        location: `${flight.from || ""} → ${flight.to || ""}`,
+        reservation: flight.confirmation || "",
+        type: "Flight",
+        notes: flight.notes || "",
+        open: false,
+      },
+    ];
 
-    saveItineraryToTrip([...itinerary, flightItem]);
+    setItinerary(updatedItinerary);
+    saveTripField("itinerary", updatedItinerary);
   };
 
   const addTripTask = () => {
@@ -462,10 +488,14 @@ export default function TravelPage() {
       tripName: selectedTrip?.name || "",
     };
 
+    const updated = [task, ...tripTasks];
+
+    setTripTasks(updated);
+    saveTripField("tripTasks", updated);
+
     const savedTasks = JSON.parse(localStorage.getItem("tasks") || "[]");
     localStorage.setItem("tasks", JSON.stringify([task, ...savedTasks]));
 
-    setTripTasks([task, ...tripTasks]);
     setNewTripTask("");
     setTaskAssignedFrom("Mark");
     setTaskUrgency("Medium");
@@ -473,13 +503,21 @@ export default function TravelPage() {
   };
 
   const deleteTripTask = (id) => {
-    setTripTasks(tripTasks.filter((task) => task.id !== id));
+    const updated = tripTasks.filter((task) => task.id !== id);
+
+    setTripTasks(updated);
+    saveTripField("tripTasks", updated);
 
     const savedTasks = JSON.parse(localStorage.getItem("tasks") || "[]");
     localStorage.setItem(
       "tasks",
       JSON.stringify(savedTasks.filter((task) => task.id !== id))
     );
+  };
+
+  const updateTripNotes = (value) => {
+    setTripNotes(value);
+    saveTripField("tripNotes", value);
   };
 
   const csvSafe = (value) => {
@@ -828,7 +866,7 @@ export default function TravelPage() {
               <div className="sectionHeader">
                 <div>
                   <h2>Trip Plan</h2>
-                  <p>Each trip now has its own separate schedule.</p>
+                  <p>Each trip has its own schedule, flights, hotels, rentals, tasks, and notes.</p>
                 </div>
 
                 <button className="smallBtn" onClick={addItineraryItem}>
@@ -943,7 +981,7 @@ export default function TravelPage() {
               <div className="sectionHeader">
                 <div>
                   <h2>Recommended Hotels</h2>
-                  <p>Add each hotel as its own line.</p>
+                  <p>Hotels are saved separately for each trip.</p>
                 </div>
 
                 <button className="smallBtn" onClick={addHotel}>
@@ -990,7 +1028,7 @@ export default function TravelPage() {
               <div className="sectionHeader">
                 <div>
                   <h2>Rental Cars</h2>
-                  <p>Add each rental option as its own line.</p>
+                  <p>Rental cars are saved separately for each trip.</p>
                 </div>
 
                 <button className="smallBtn" onClick={addCar}>
@@ -1037,7 +1075,7 @@ export default function TravelPage() {
               <div className="sectionHeader">
                 <div>
                   <h2>Flights</h2>
-                  <p>Search Google Flights, then save booked flight details here.</p>
+                  <p>Flights are saved separately for each trip.</p>
                 </div>
 
                 <button className="smallBtn" onClick={addFlight}>
@@ -1158,7 +1196,7 @@ export default function TravelPage() {
               <div className="sectionHeader">
                 <div>
                   <h2>Trip Tasks & Notes</h2>
-                  <p>Tasks added here also show on your main Tasks page.</p>
+                  <p>Tasks and notes are saved separately for each trip.</p>
                 </div>
               </div>
 
@@ -1223,7 +1261,7 @@ export default function TravelPage() {
               <textarea
                 className="tripNotesBox"
                 value={tripNotes}
-                onChange={(e) => setTripNotes(e.target.value)}
+                onChange={(e) => updateTripNotes(e.target.value)}
                 placeholder="Add trip notes, dealer follow-ups, reminders, hotel notes, visit details..."
               />
             </section>
