@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-const TASK_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pub?gid=1945000950&single=true&output=csv";
-
+const TASK_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=1945000950&single=true";
 const TRADESHOW_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=722935598&single=true";
 const COOP_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=290340762&single=true";
 
@@ -32,7 +31,10 @@ async function fetchTasks(url) {
 }
 
 function isCompleted(task) {
-  const value = `${task.Completed || task.Status || task.Done || ""}`.toLowerCase().trim();
+  const value = `${task.Completed || task.Status || task.Done || ""}`
+    .toLowerCase()
+    .trim();
+
   return ["true", "yes", "complete", "completed", "done"].includes(value);
 }
 
@@ -40,7 +42,10 @@ export default function EastCommandCenter() {
   const [tasks, setTasks] = useState([]);
   const [search, setSearch] = useState("");
   const [responsibleFilter, setResponsibleFilter] = useState("All");
-  const [hideCompleted, setHideCompleted] = useState(true);
+
+  // false = only open tasks show by default
+  // true = completed tasks also show
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const [tradeshowsOpen, setTradeshowsOpen] = useState(false);
   const [coopOpen, setCoopOpen] = useState(false);
@@ -60,7 +65,10 @@ export default function EastCommandCenter() {
 
   const responsibleOptions = useMemo(() => {
     const names = tasks
-      .map((task) => task.Responsible || task.Owner || task.Assigned || task["Assigned To"])
+      .map(
+        (task) =>
+          task.Responsible || task.Owner || task.Assigned || task["Assigned To"]
+      )
       .filter(Boolean);
 
     return ["All", ...Array.from(new Set(names))];
@@ -69,20 +77,28 @@ export default function EastCommandCenter() {
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       const allText = Object.values(task).join(" ").toLowerCase();
+
       const responsible =
-        task.Responsible || task.Owner || task.Assigned || task["Assigned To"] || "";
+        task.Responsible ||
+        task.Owner ||
+        task.Assigned ||
+        task["Assigned To"] ||
+        "";
 
       const matchesSearch = allText.includes(search.toLowerCase());
       const matchesResponsible =
         responsibleFilter === "All" || responsible === responsibleFilter;
-      const matchesCompleted = hideCompleted ? !isCompleted(task) : true;
+
+      const matchesCompleted = showCompleted ? true : !isCompleted(task);
 
       return matchesSearch && matchesResponsible && matchesCompleted;
     });
-  }, [tasks, search, responsibleFilter, hideCompleted]);
+  }, [tasks, search, responsibleFilter, showCompleted]);
 
   const progress =
-    tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
+    tasks.length > 0
+      ? Math.round((completedTasks.length / tasks.length) * 100)
+      : 0;
 
   return (
     <main className="east-page">
@@ -112,7 +128,7 @@ export default function EastCommandCenter() {
         <section className="filters-card">
           <div>
             <h3>Filters</h3>
-            <p>Search, filter by responsible person, or hide completed tasks.</p>
+            <p>Search, filter by responsible person, or show completed tasks.</p>
           </div>
 
           <div className="filters-right">
@@ -134,10 +150,10 @@ export default function EastCommandCenter() {
             <label className="hide-pill">
               <input
                 type="checkbox"
-                checked={hideCompleted}
-                onChange={(e) => setHideCompleted(e.target.checked)}
+                checked={showCompleted}
+                onChange={(e) => setShowCompleted(e.target.checked)}
               />
-              Hide completed
+              Show completed
             </label>
           </div>
         </section>
@@ -160,7 +176,7 @@ export default function EastCommandCenter() {
 
         <CollapsibleCard
           title="East Task List"
-          subtitle={`${filteredTasks.length} showing · ${openTasks.length} open · ${completedTasks.length} completed`}
+          subtitle={`${filteredTasks.length} showing · ${openTasks.length} left to complete · ${completedTasks.length} completed`}
           open={tasksOpen}
           setOpen={setTasksOpen}
         >
