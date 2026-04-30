@@ -5,46 +5,113 @@ const TRADESHOW_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1
 const COOP_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=290340762&single=true";
 
 function parseCSV(text) {
-  const rows = text.trim().split(/\r?\n/);
-  const headers = rows[0].split(",").map((h) => h.trim());
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let inQuotes = false;
 
-  return rows.slice(1).map((row) => {
-    const values = row.split(",").map((v) => v.trim());
-    return headers.reduce((obj, header, index) => {
-      obj[header] = values[index] || "";
-      return obj;
-    }, {});
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const next = text[i + 1];
+
+    if (char === '"' && inQuotes && next === '"') {
+      cell += '"';
+      i++;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      row.push(cell.trim());
+      cell = "";
+    } else if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (cell || row.length) {
+        row.push(cell.trim());
+        rows.push(row);
+        row = [];
+        cell = "";
+      }
+      if (char === "\r" && next === "\n") i++;
+    } else {
+      cell += char;
+    }
+  }
+
+  if (cell || row.length) {
+    row.push(cell.trim());
+    rows.push(row);
+  }
+
+  const cleanRows = rows.filter((r) => r.some((c) => c !== ""));
+  const headers = cleanRows[0] || [];
+
+  return cleanRows.slice(1).map((r) => {
+    const obj = {};
+    headers.forEach((header, index) => {
+      obj[header || `Column ${index + 1}`] = r[index] || "";
+    });
+    return obj;
   });
 }
 
 async function fetchTasks(url) {
   if (!url || !url.includes("http")) return [];
+
   const res = await fetch(url);
   const text = await res.text();
 
   if (text.includes("<html") || text.includes("<!DOCTYPE")) {
-    console.error("Task sheet URL is HTML, not CSV.");
+    console.error("Task sheet is loading HTML, not CSV.");
     return [];
   }
 
   return parseCSV(text);
 }
 
-function isCompleted(task) {
-  const value = `${task.Completed || task.Status || task.Done || ""}`
-    .toLowerCase()
-    .trim();
+function getTaskCompleteValue(task) {
+  const possibleColumns = [
+    "Completed",
+    "Complete",
+    "Done",
+    "Status",
+    "Task Status",
+    "Is Complete",
+    "is_complete",
+    "complete",
+    "completed",
+    "done",
+    "status",
+  ];
 
-  return ["true", "yes", "complete", "completed", "done"].includes(value);
+  for (const column of possibleColumns) {
+    if (Object.prototype.hasOwnProperty.call(task, column)) {
+      return `${task[column] || ""}`.trim().toLowerCase();
+    }
+  }
+
+  return "";
+}
+
+function isCompleted(task) {
+  const value = getTaskCompleteValue(task);
+
+  return [
+    "true",
+    "yes",
+    "y",
+    "complete",
+    "completed",
+    "done",
+    "closed",
+    "finished",
+    "✓",
+    "✔",
+    "checked",
+  ].includes(value);
 }
 
 export default function EastCommandCenter() {
   const [tasks, setTasks] = useState([]);
   const [search, setSearch] = useState("");
   const [responsibleFilter, setResponsibleFilter] = useState("All");
-
-  // false = only open tasks show by default
-  // true = completed tasks also show
   const [showCompleted, setShowCompleted] = useState(false);
 
   const [tradeshowsOpen, setTradeshowsOpen] = useState(false);
@@ -67,7 +134,12 @@ export default function EastCommandCenter() {
     const names = tasks
       .map(
         (task) =>
-          task.Responsible || task.Owner || task.Assigned || task["Assigned To"]
+          task.Responsible ||
+          task.Owner ||
+          task.Assigned ||
+          task["Assigned To"] ||
+          task.Person ||
+          task.Who
       )
       .filter(Boolean);
 
@@ -83,6 +155,8 @@ export default function EastCommandCenter() {
         task.Owner ||
         task.Assigned ||
         task["Assigned To"] ||
+        task.Person ||
+        task.Who ||
         "";
 
       const matchesSearch = allText.includes(search.toLowerCase());
@@ -489,7 +563,7 @@ function SheetEmbedCard({ title, subtitle, open, setOpen, url }) {
 
 function TaskTable({ rows }) {
   if (!rows || rows.length === 0) {
-    return <p className="empty">No tasks showing.</p>;
+    return <p className="empty">No tasks showing. Check “Show completed” if everything is completed.</p>;
   }
 
   const headers = Object.keys(rows[0]);
