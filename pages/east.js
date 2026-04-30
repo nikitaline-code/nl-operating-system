@@ -5,14 +5,14 @@ const TRADESHOW_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-
 const COOP_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=290340762&single=true";
 
 function parseCSV(text) {
-  const rows = text.trim().split("\n");
-  const headers = rows[0].split(",").map((h) => h.trim());
+  const lines = text.trim().split(/\r?\n/);
+  const headers = lines[0].split(",").map((h) => h.trim());
 
-  return rows.slice(1).map((row) => {
-    const values = row.split(",").map((v) => v.trim());
-    return headers.reduce((acc, header, index) => {
-      acc[header] = values[index] || "";
-      return acc;
+  return lines.slice(1).map((line) => {
+    const values = line.split(",").map((v) => v.trim());
+    return headers.reduce((obj, header, index) => {
+      obj[header] = values[index] || "";
+      return obj;
     }, {});
   });
 }
@@ -34,8 +34,8 @@ export default function EastCommandCenter() {
   const [hideCompleted, setHideCompleted] = useState(true);
 
   const [tradeshowsOpen, setTradeshowsOpen] = useState(false);
-  const [tasksOpen, setTasksOpen] = useState(false);
   const [coopOpen, setCoopOpen] = useState(false);
+  const [tasksOpen, setTasksOpen] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -48,16 +48,21 @@ export default function EastCommandCenter() {
   }, []);
 
   const completedTasks = tasks.filter((task) => {
-    const value = `${task.Completed || task.Status || ""}`.toLowerCase();
-    return value === "true" || value === "yes" || value === "complete" || value === "completed";
+    const status = `${task.Completed || task.Status || ""}`.toLowerCase();
+    return (
+      status === "true" ||
+      status === "yes" ||
+      status === "complete" ||
+      status === "completed"
+    );
   });
 
   const openTasks = tasks.filter((task) => !completedTasks.includes(task));
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
-      const searchable = Object.values(task).join(" ").toLowerCase();
-      const matchesSearch = searchable.includes(search.toLowerCase());
+      const text = Object.values(task).join(" ").toLowerCase();
+      const matchesSearch = text.includes(search.toLowerCase());
 
       const responsible =
         task.Responsible ||
@@ -78,7 +83,10 @@ export default function EastCommandCenter() {
 
   const responsibleOptions = useMemo(() => {
     const names = tasks
-      .map((task) => task.Responsible || task.Owner || task.Assigned || task["Assigned To"])
+      .map(
+        (task) =>
+          task.Responsible || task.Owner || task.Assigned || task["Assigned To"]
+      )
       .filter(Boolean);
 
     return ["All", ...Array.from(new Set(names))];
@@ -88,13 +96,13 @@ export default function EastCommandCenter() {
     tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
 
   return (
-    <main className="page">
-      <div className="shell">
-        <div className="top-row">
+    <main className="east-page">
+      <div className="east-shell">
+        <div className="east-top">
           <div>
-            <p className="eyebrow">GOOGLE SHEET SYNC</p>
+            <p className="east-eyebrow">GOOGLE SHEET SYNC</p>
             <h1>East Command Center</h1>
-            <p className="subtitle">
+            <p className="east-subtitle">
               Tasks and tradeshow calendar pulled from Google Sheets.
             </p>
           </div>
@@ -112,13 +120,13 @@ export default function EastCommandCenter() {
           <StatCard label="Showing" value={filteredTasks.length} />
         </div>
 
-        <section className="filter-card">
+        <section className="filters-card">
           <div>
             <h3>Filters</h3>
             <p>Search, filter by responsible person, or hide completed tasks.</p>
           </div>
 
-          <div className="filter-controls">
+          <div className="filters-right">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -134,7 +142,7 @@ export default function EastCommandCenter() {
               ))}
             </select>
 
-            <label className="check-pill">
+            <label className="hide-pill">
               <input
                 type="checkbox"
                 checked={hideCompleted}
@@ -173,46 +181,50 @@ export default function EastCommandCenter() {
         </CollapsibleCard>
       </div>
 
-      <style jsx>{`
-        .page {
-          min-height: 100vh;
-          background: #f4f5f7;
-          color: #020617;
-          font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-          padding: 28px 24px 80px;
+      <style jsx global>{`
+        body {
+          margin: 0;
+          background: #f5f6f8;
         }
 
-        .shell {
+        .east-page {
+          min-height: 100vh;
+          background: #f5f6f8;
+          color: #020617;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          padding: 26px 24px 80px;
+        }
+
+        .east-shell {
           width: 100%;
           max-width: 1220px;
           margin: 0 auto;
         }
 
-        .top-row {
+        .east-top {
           display: flex;
-          align-items: flex-start;
           justify-content: space-between;
-          gap: 24px;
+          align-items: flex-start;
           margin-bottom: 24px;
         }
 
-        .eyebrow {
-          margin: 0 0 10px;
+        .east-eyebrow {
+          margin: 0 0 12px;
           font-size: 10px;
           letter-spacing: 0.18em;
-          color: #64748b;
           font-weight: 600;
+          color: #64748b;
         }
 
-        h1 {
+        .east-top h1 {
           margin: 0;
-          font-size: 30px;
+          font-size: 29px;
           line-height: 1;
           font-weight: 800;
           letter-spacing: -0.04em;
         }
 
-        .subtitle {
+        .east-subtitle {
           margin: 10px 0 0;
           font-size: 12px;
           color: #475569;
@@ -221,14 +233,14 @@ export default function EastCommandCenter() {
         .progress-card {
           width: 150px;
           height: 76px;
-          border-radius: 20px;
-          background: #fff;
+          background: #ffffff;
           border: 1px solid #dfe3ea;
+          border-radius: 20px;
+          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.07);
           display: flex;
-          flex-direction: column;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+          flex-direction: column;
         }
 
         .progress-card p {
@@ -240,6 +252,7 @@ export default function EastCommandCenter() {
         .progress-card strong {
           font-size: 26px;
           line-height: 1;
+          font-weight: 800;
         }
 
         .stats-grid {
@@ -249,18 +262,13 @@ export default function EastCommandCenter() {
           margin-bottom: 18px;
         }
 
-        .stat-card,
-        .filter-card,
-        .section-card {
-          background: #fff;
+        .stat-card {
+          background: #ffffff;
           border: 1px solid #dfe3ea;
           border-radius: 20px;
-          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
-        }
-
-        .stat-card {
           padding: 20px 18px;
           min-height: 78px;
+          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
         }
 
         .stat-card p {
@@ -271,11 +279,14 @@ export default function EastCommandCenter() {
 
         .stat-card strong {
           font-size: 26px;
-          line-height: 1;
           font-weight: 800;
+          line-height: 1;
         }
 
-        .filter-card {
+        .filters-card {
+          background: #ffffff;
+          border: 1px solid #dfe3ea;
+          border-radius: 20px;
           min-height: 66px;
           padding: 16px 18px;
           display: flex;
@@ -283,40 +294,41 @@ export default function EastCommandCenter() {
           align-items: center;
           gap: 20px;
           margin-bottom: 18px;
+          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
         }
 
-        .filter-card h3 {
+        .filters-card h3 {
           margin: 0 0 6px;
           font-size: 13px;
           font-weight: 800;
         }
 
-        .filter-card p {
+        .filters-card p {
           margin: 0;
           font-size: 12px;
           color: #475569;
         }
 
-        .filter-controls {
+        .filters-right {
           display: grid;
           grid-template-columns: 310px 140px 142px;
           gap: 10px;
           align-items: center;
         }
 
-        input,
-        select {
+        .filters-right input,
+        .filters-right select {
           height: 34px;
           border-radius: 10px;
           border: 1px solid #cfd6df;
           background: #f8fafc;
           padding: 0 12px;
           font-size: 12px;
-          outline: none;
           color: #020617;
+          outline: none;
         }
 
-        .check-pill {
+        .hide-pill {
           height: 34px;
           border-radius: 12px;
           border: 1px solid #cfd6df;
@@ -332,27 +344,33 @@ export default function EastCommandCenter() {
         }
 
         .section-card {
+          background: #ffffff;
+          border: 1px solid #dfe3ea;
+          border-radius: 20px;
+          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
           margin-bottom: 18px;
           overflow: hidden;
+          width: 100%;
         }
 
         .section-header {
           width: 100%;
           min-height: 82px;
           padding: 18px;
+          background: #ffffff;
+          border: none;
           display: flex;
-          justify-content: space-between;
           align-items: center;
-          border: 0;
-          background: #fff;
-          cursor: pointer;
+          justify-content: space-between;
           text-align: left;
+          cursor: pointer;
         }
 
         .section-header h3 {
           margin: 0 0 7px;
           font-size: 14px;
           font-weight: 800;
+          color: #020617;
         }
 
         .section-header p {
@@ -363,11 +381,13 @@ export default function EastCommandCenter() {
 
         .open-btn {
           background: #020617;
-          color: #fff;
+          color: #ffffff;
           border-radius: 999px;
           padding: 8px 13px;
           font-size: 11px;
           font-weight: 800;
+          min-width: 48px;
+          text-align: center;
         }
 
         .section-body {
@@ -380,14 +400,14 @@ export default function EastCommandCenter() {
           border-radius: 14px;
         }
 
-        table {
+        .sheet-table {
           width: 100%;
           border-collapse: collapse;
+          background: #ffffff;
           font-size: 12px;
-          background: #fff;
         }
 
-        th {
+        .sheet-table th {
           background: #f8fafc;
           color: #64748b;
           text-align: left;
@@ -399,18 +419,18 @@ export default function EastCommandCenter() {
           white-space: nowrap;
         }
 
-        td {
+        .sheet-table td {
           padding: 12px;
           border-bottom: 1px solid #eef2f7;
           color: #0f172a;
           white-space: nowrap;
         }
 
-        tr:last-child td {
-          border-bottom: 0;
+        .sheet-table tr:last-child td {
+          border-bottom: none;
         }
 
-        tr:hover td {
+        .sheet-table tr:hover td {
           background: #fafafa;
         }
 
@@ -422,9 +442,10 @@ export default function EastCommandCenter() {
         }
 
         @media (max-width: 900px) {
-          .top-row,
-          .filter-card {
+          .east-top,
+          .filters-card {
             flex-direction: column;
+            align-items: stretch;
           }
 
           .progress-card {
@@ -435,8 +456,7 @@ export default function EastCommandCenter() {
             grid-template-columns: repeat(2, 1fr);
           }
 
-          .filter-controls {
-            width: 100%;
+          .filters-right {
             grid-template-columns: 1fr;
           }
         }
@@ -462,6 +482,7 @@ function CollapsibleCard({ title, subtitle, open, setOpen, children }) {
           <h3>{title}</h3>
           <p>{subtitle}</p>
         </div>
+
         <span className="open-btn">{open ? "Close" : "Open"}</span>
       </button>
 
@@ -479,7 +500,7 @@ function SheetTable({ rows }) {
 
   return (
     <div className="table-wrap">
-      <table>
+      <table className="sheet-table">
         <thead>
           <tr>
             {headers.map((header) => (
