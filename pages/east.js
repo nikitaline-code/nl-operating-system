@@ -3,10 +3,10 @@ import { useEffect, useMemo, useState } from "react";
 const TASK_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pub?gid=1945000950&single=true&output=csv";
 const TRADESHOW_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=722935598&single=true";
 const COOP_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=290340762&single=true";
+const DEALER_DIRECTORY_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pub?gid=1309415438&single=true&output=csv";
 
 function sheetToCsvUrl(url) {
   if (!url) return "";
-
   if (url.includes("format=csv") || url.includes("output=csv")) return url;
 
   const idMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
@@ -14,10 +14,9 @@ function sheetToCsvUrl(url) {
 
   if (!idMatch) return url;
 
-  const sheetId = idMatch[1];
-  const gid = gidMatch ? gidMatch[1] : "0";
-
-  return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+  return `https://docs.google.com/spreadsheets/d/${idMatch[1]}/export?format=csv&gid=${
+    gidMatch ? gidMatch[1] : "0"
+  }`;
 }
 
 function parseCSV(text) {
@@ -70,10 +69,7 @@ function parseCSV(text) {
       });
       return obj;
     })
-    .filter((task) => {
-      const taskName = String(task.Task || "").trim();
-      return taskName !== "";
-    });
+    .filter((task) => String(task.Task || "").trim() !== "");
 }
 
 function isCompleted(task) {
@@ -123,6 +119,7 @@ export default function EastCommandCenter() {
   const [tasksOpen, setTasksOpen] = useState(true);
   const [tradeshowsOpen, setTradeshowsOpen] = useState(false);
   const [coopOpen, setCoopOpen] = useState(false);
+  const [dealerDirectoryOpen, setDealerDirectoryOpen] = useState(false);
 
   useEffect(() => {
     async function loadTasks() {
@@ -162,12 +159,10 @@ export default function EastCommandCenter() {
         task["Assigned To"] ||
         "";
 
-      const matchesSearch = text.includes(search.toLowerCase());
-
-      const matchesResponsible =
-        responsibleFilter === "All" || responsible === responsibleFilter;
-
-      return matchesSearch && matchesResponsible;
+      return (
+        text.includes(search.toLowerCase()) &&
+        (responsibleFilter === "All" || responsible === responsibleFilter)
+      );
     });
   }, [openTasks, search, responsibleFilter]);
 
@@ -184,7 +179,7 @@ export default function EastCommandCenter() {
             <p className="eyebrow">GOOGLE SHEET SYNC</p>
             <h1>East Command Center</h1>
             <p className="subtitle">
-              Tasks and tradeshow calendar pulled from Google Sheets.
+              Tasks, tradeshows, co-op spend, and dealer directory pulled from Google Sheets.
             </p>
           </div>
 
@@ -207,7 +202,7 @@ export default function EastCommandCenter() {
             <p>Only open tasks are shown. Completed tasks are hidden automatically.</p>
           </div>
 
-          <div className="filters-right no-checkbox">
+          <div className="filters-right">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -239,6 +234,14 @@ export default function EastCommandCenter() {
           open={coopOpen}
           setOpen={setCoopOpen}
           url={COOP_EMBED_URL}
+        />
+
+        <SheetEmbedCard
+          title="Dealer Directory"
+          subtitle="Dealer contacts and key details pulled directly from Google Sheets"
+          open={dealerDirectoryOpen}
+          setOpen={setDealerDirectoryOpen}
+          url={DEALER_DIRECTORY_EMBED_URL}
         />
 
         <CollapsibleCard
@@ -544,9 +547,9 @@ function TaskTable({ rows }) {
     return <p className="empty">No open tasks showing.</p>;
   }
 
-  const headers = Object.keys(rows[0]).filter((header) => {
-    return ["Task", "Dealer", "Responsible", "Due Date"].includes(header);
-  });
+  const headers = Object.keys(rows[0]).filter((header) =>
+    ["Task", "Dealer", "Responsible", "Due Date"].includes(header)
+  );
 
   return (
     <div className="table-wrap">
