@@ -1,28 +1,44 @@
 import { useEffect, useMemo, useState } from "react";
 
-const TASK_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=1945000950&single=true";
+const TASK_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=1945000950&single=true";
 const TRADESHOW_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=722935598&single=true";
-const COOP_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=290340762&single=true";
+const COOP_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=722935598&single=true";
+
+function sheetToCsvUrl(url) {
+  if (!url) return "";
+
+  if (url.includes("output=csv") || url.includes("format=csv")) return url;
+
+  const idMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  const gidMatch = url.match(/gid=([0-9]+)/);
+
+  if (!idMatch) return url;
+
+  const sheetId = idMatch[1];
+  const gid = gidMatch ? gidMatch[1] : "0";
+
+  return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+}
 
 function parseCSV(text) {
   const rows = [];
   let row = [];
   let cell = "";
-  let inQuotes = false;
+  let quote = false;
 
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
     const next = text[i + 1];
 
-    if (char === '"' && inQuotes && next === '"') {
+    if (char === '"' && quote && next === '"') {
       cell += '"';
       i++;
     } else if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (char === "," && !inQuotes) {
+      quote = !quote;
+    } else if (char === "," && !quote) {
       row.push(cell.trim());
       cell = "";
-    } else if ((char === "\n" || char === "\r") && !inQuotes) {
+    } else if ((char === "\n" || char === "\r") && !quote) {
       if (cell || row.length) {
         row.push(cell.trim());
         rows.push(row);
@@ -41,39 +57,26 @@ function parseCSV(text) {
   }
 
   const cleanRows = rows.filter((r) => r.some((c) => c !== ""));
-  const headers = cleanRows[0] || [];
+  if (cleanRows.length < 2) return [];
+
+  const headers = cleanRows[0].map((h, i) => h || `Column ${i + 1}`);
 
   return cleanRows.slice(1).map((r) => {
     const obj = {};
-    headers.forEach((header, index) => {
-      obj[header || `Column ${index + 1}`] = r[index] || "";
+    headers.forEach((header, i) => {
+      obj[header] = r[i] || "";
     });
     return obj;
   });
 }
 
-async function fetchTasks(url) {
-  if (!url || !url.includes("http")) return [];
-
-  const res = await fetch(url);
-  const text = await res.text();
-
-  if (text.includes("<html") || text.includes("<!DOCTYPE")) {
-    console.error("Task sheet is loading HTML, not CSV.");
-    return [];
-  }
-
-  return parseCSV(text);
-}
-
-function getTaskCompleteValue(task) {
+function getCompleteValue(task) {
   const possibleColumns = [
     "Completed",
     "Complete",
     "Done",
     "Status",
     "Task Status",
-    "Is Complete",
     "is_complete",
     "complete",
     "completed",
@@ -83,7 +86,7 @@ function getTaskCompleteValue(task) {
 
   for (const column of possibleColumns) {
     if (Object.prototype.hasOwnProperty.call(task, column)) {
-      return `${task[column] || ""}`.trim().toLowerCase();
+      return String(task[column] || "").trim().toLowerCase();
     }
   }
 
@@ -91,15 +94,15 @@ function getTaskCompleteValue(task) {
 }
 
 function isCompleted(task) {
-  const value = getTaskCompleteValue(task);
+  const value = getCompleteValue(task);
 
   return [
     "true",
     "yes",
     "y",
+    "done",
     "complete",
     "completed",
-    "done",
     "closed",
     "finished",
     "✓",
@@ -108,8 +111,43 @@ function isCompleted(task) {
   ].includes(value);
 }
 
+async function fetchTasks(url) {
+  const csvUrl = sheetToCsvUrl(url);
+
+  if (!csvUrl || !csvUrl.includes("http")) {
+    return { rows: [], error: "Task sheet link is missing." };
+  }
+
+  try {
+    const res = await fetch(csvUrl);
+    const text = await res.text();
+
+    if (text.includes("<html") || text.includes("<!DOCTYPE")) {
+      return {
+        rows: [],
+        error:
+          "Task sheet is loading as a webpage, not CSV. Check that the Google Sheet is shared/published correctly.",
+      };
+    }
+
+    const rows = parseCSV(text);
+
+    return {
+      rows,
+      error: rows.length ? "" : "Task sheet loaded, but no task rows were found.",
+    };
+  } catch (err) {
+    return {
+      rows: [],
+      error: "Task sheet could not be loaded. Check the sheet link.",
+    };
+  }
+}
+
 export default function EastCommandCenter() {
   const [tasks, setTasks] = useState([]);
+  const [taskError, setTaskError] = useState("");
+
   const [search, setSearch] = useState("");
   const [responsibleFilter, setResponsibleFilter] = useState("All");
   const [showCompleted, setShowCompleted] = useState(false);
@@ -120,8 +158,9 @@ export default function EastCommandCenter() {
 
   useEffect(() => {
     async function load() {
-      const taskData = await fetchTasks(TASK_SHEET_CSV_URL);
-      setTasks(taskData);
+      const result = await fetchTasks(TASK_SHEET_URL);
+      setTasks(result.rows);
+      setTaskError(result.error);
     }
 
     load();
@@ -147,7 +186,9 @@ export default function EastCommandCenter() {
   }, [tasks]);
 
   const filteredTasks = useMemo(() => {
-    return tasks.filter((task) => {
+    const sourceTasks = showCompleted ? tasks : openTasks;
+
+    return sourceTasks.filter((task) => {
       const allText = Object.values(task).join(" ").toLowerCase();
 
       const responsible =
@@ -159,15 +200,12 @@ export default function EastCommandCenter() {
         task.Who ||
         "";
 
-      const matchesSearch = allText.includes(search.toLowerCase());
-      const matchesResponsible =
-        responsibleFilter === "All" || responsible === responsibleFilter;
-
-      const matchesCompleted = showCompleted ? true : !isCompleted(task);
-
-      return matchesSearch && matchesResponsible && matchesCompleted;
+      return (
+        allText.includes(search.toLowerCase()) &&
+        (responsibleFilter === "All" || responsible === responsibleFilter)
+      );
     });
-  }, [tasks, search, responsibleFilter, showCompleted]);
+  }, [tasks, openTasks, search, responsibleFilter, showCompleted]);
 
   const progress =
     tasks.length > 0
@@ -202,7 +240,7 @@ export default function EastCommandCenter() {
         <section className="filters-card">
           <div>
             <h3>Filters</h3>
-            <p>Search, filter by responsible person, or show completed tasks.</p>
+            <p>Open tasks show by default. Tick show completed to include done items.</p>
           </div>
 
           <div className="filters-right">
@@ -254,6 +292,7 @@ export default function EastCommandCenter() {
           open={tasksOpen}
           setOpen={setTasksOpen}
         >
+          {taskError ? <p className="error-box">{taskError}</p> : null}
           <TaskTable rows={filteredTasks} />
         </CollapsibleCard>
       </div>
@@ -519,6 +558,17 @@ export default function EastCommandCenter() {
           font-size: 12px;
           color: #64748b;
         }
+
+        .error-box {
+          margin: 0 0 12px;
+          padding: 12px 14px;
+          border-radius: 12px;
+          background: #fff7ed;
+          border: 1px solid #fed7aa;
+          color: #9a3412;
+          font-size: 12px;
+          font-weight: 700;
+        }
       `}</style>
     </main>
   );
@@ -563,7 +613,7 @@ function SheetEmbedCard({ title, subtitle, open, setOpen, url }) {
 
 function TaskTable({ rows }) {
   if (!rows || rows.length === 0) {
-    return <p className="empty">No tasks showing. Check “Show completed” if everything is completed.</p>;
+    return <p className="empty">No open tasks showing.</p>;
   }
 
   const headers = Object.keys(rows[0]);
