@@ -112,7 +112,7 @@ async function fetchTasks(url) {
   return parseCSV(text);
 }
 
-export default function EastCommandCenter() {
+export default function SouthCommandCenter() {
   const [tasks, setTasks] = useState([]);
   const [search, setSearch] = useState("");
   const [responsibleFilter, setResponsibleFilter] = useState("All");
@@ -174,14 +174,14 @@ export default function EastCommandCenter() {
       : 0;
 
   return (
-    <main className="east-page">
-      <div className="east-shell">
-        <div className="east-top">
+    <main className="south-page">
+      <div className="south-shell">
+        <div className="south-top">
           <div>
             <p className="eyebrow">GOOGLE SHEET SYNC</p>
-            <h1>East Command Center</h1>
+            <h1>South Command Center</h1>
             <p className="subtitle">
-              Tasks, tradeshows, co-op spend, dealer directory, and small sales orders pulled from Google Sheets.
+              South territory operations, tracking, and execution pulled from Google Sheets.
             </p>
           </div>
 
@@ -255,7 +255,7 @@ export default function EastCommandCenter() {
         />
 
         <CollapsibleCard
-          title="East Task List"
+          title="South Task List"
           subtitle={`${filteredTasks.length} open tasks showing · ${completedTasks.length} completed hidden`}
           open={tasksOpen}
           setOpen={setTasksOpen}
@@ -270,7 +270,7 @@ export default function EastCommandCenter() {
           background: #f5f6f8;
         }
 
-        .east-page {
+        .south-page {
           min-height: 100vh;
           background: #f5f6f8;
           color: #020617;
@@ -278,13 +278,13 @@ export default function EastCommandCenter() {
           padding: 26px 24px 80px;
         }
 
-        .east-shell {
+        .south-shell {
           width: 100%;
           max-width: 1220px;
           margin: 0 auto;
         }
 
-        .east-top {
+        .south-top {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
