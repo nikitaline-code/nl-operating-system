@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 
 const TASK_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pub?gid=1945000950&single=true&output=csv";
 const TRADESHOW_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=722935598&single=true";
-const COOP_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=722935598&single=true";
+const COOP_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=290340762&single=true";
 
 function sheetToCsvUrl(url) {
   if (!url) return "";
 
-  if (url.includes("output=csv") || url.includes("format=csv")) return url;
+  if (url.includes("format=csv") || url.includes("output=csv")) return url;
 
   const idMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
   const gidMatch = url.match(/gid=([0-9]+)/);
@@ -24,21 +24,21 @@ function parseCSV(text) {
   const rows = [];
   let row = [];
   let cell = "";
-  let quote = false;
+  let insideQuotes = false;
 
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
     const next = text[i + 1];
 
-    if (char === '"' && quote && next === '"') {
+    if (char === '"' && insideQuotes && next === '"') {
       cell += '"';
       i++;
     } else if (char === '"') {
-      quote = !quote;
-    } else if (char === "," && !quote) {
+      insideQuotes = !insideQuotes;
+    } else if (char === "," && !insideQuotes) {
       row.push(cell.trim());
       cell = "";
-    } else if ((char === "\n" || char === "\r") && !quote) {
+    } else if ((char === "\n" || char === "\r") && !insideQuotes) {
       if (cell || row.length) {
         row.push(cell.trim());
         rows.push(row);
@@ -70,31 +70,17 @@ function parseCSV(text) {
   });
 }
 
-function getCompleteValue(task) {
-  const possibleColumns = [
-    "Completed",
-    "Complete",
-    "Done",
-    "Status",
-    "Task Status",
-    "is_complete",
-    "complete",
-    "completed",
-    "done",
-    "status",
-  ];
-
-  for (const column of possibleColumns) {
-    if (Object.prototype.hasOwnProperty.call(task, column)) {
-      return String(task[column] || "").trim().toLowerCase();
-    }
-  }
-
-  return "";
-}
-
 function isCompleted(task) {
-  const value = getCompleteValue(task);
+  const completedValue = String(
+    task["Completed?"] ||
+      task.Completed ||
+      task.Complete ||
+      task.Done ||
+      task.Status ||
+      ""
+  )
+    .trim()
+    .toLowerCase();
 
   return [
     "true",
@@ -103,67 +89,43 @@ function isCompleted(task) {
     "done",
     "complete",
     "completed",
-    "closed",
-    "finished",
+    "checked",
     "✓",
     "✔",
-    "checked",
-  ].includes(value);
+  ].includes(completedValue);
 }
 
 async function fetchTasks(url) {
-  const csvUrl = sheetToCsvUrl(url);
+  if (!url || !url.includes("http")) return [];
 
-  if (!csvUrl || !csvUrl.includes("http")) {
-    return { rows: [], error: "Task sheet link is missing." };
+  const res = await fetch(sheetToCsvUrl(url));
+  const text = await res.text();
+
+  if (text.includes("<html") || text.includes("<!DOCTYPE")) {
+    console.error("Task sheet is loading HTML, not CSV.");
+    return [];
   }
 
-  try {
-    const res = await fetch(csvUrl);
-    const text = await res.text();
-
-    if (text.includes("<html") || text.includes("<!DOCTYPE")) {
-      return {
-        rows: [],
-        error:
-          "Task sheet is loading as a webpage, not CSV. Check that the Google Sheet is shared/published correctly.",
-      };
-    }
-
-    const rows = parseCSV(text);
-
-    return {
-      rows,
-      error: rows.length ? "" : "Task sheet loaded, but no task rows were found.",
-    };
-  } catch (err) {
-    return {
-      rows: [],
-      error: "Task sheet could not be loaded. Check the sheet link.",
-    };
-  }
+  return parseCSV(text);
 }
 
 export default function EastCommandCenter() {
   const [tasks, setTasks] = useState([]);
-  const [taskError, setTaskError] = useState("");
-
   const [search, setSearch] = useState("");
   const [responsibleFilter, setResponsibleFilter] = useState("All");
   const [showCompleted, setShowCompleted] = useState(false);
 
+  const [tasksOpen, setTasksOpen] = useState(true);
   const [tradeshowsOpen, setTradeshowsOpen] = useState(false);
   const [coopOpen, setCoopOpen] = useState(false);
-  const [tasksOpen, setTasksOpen] = useState(true);
 
   useEffect(() => {
-    async function load() {
-      const result = await fetchTasks(TASK_SHEET_URL);
-      setTasks(result.rows);
-      setTaskError(result.error);
+    async function loadTasks() {
+      const data = await fetchTasks(TASK_SHEET_URL);
+      setTasks(data);
     }
 
-    load();
+    loadTasks();
   }, []);
 
   const completedTasks = tasks.filter(isCompleted);
@@ -177,8 +139,7 @@ export default function EastCommandCenter() {
           task.Owner ||
           task.Assigned ||
           task["Assigned To"] ||
-          task.Person ||
-          task.Who
+          ""
       )
       .filter(Boolean);
 
@@ -186,26 +147,26 @@ export default function EastCommandCenter() {
   }, [tasks]);
 
   const filteredTasks = useMemo(() => {
-    const sourceTasks = showCompleted ? tasks : openTasks;
-
-    return sourceTasks.filter((task) => {
-      const allText = Object.values(task).join(" ").toLowerCase();
+    return tasks.filter((task) => {
+      const text = Object.values(task).join(" ").toLowerCase();
 
       const responsible =
         task.Responsible ||
         task.Owner ||
         task.Assigned ||
         task["Assigned To"] ||
-        task.Person ||
-        task.Who ||
         "";
 
-      return (
-        allText.includes(search.toLowerCase()) &&
-        (responsibleFilter === "All" || responsible === responsibleFilter)
-      );
+      const matchesSearch = text.includes(search.toLowerCase());
+
+      const matchesResponsible =
+        responsibleFilter === "All" || responsible === responsibleFilter;
+
+      const matchesCompletion = showCompleted ? true : !isCompleted(task);
+
+      return matchesSearch && matchesResponsible && matchesCompletion;
     });
-  }, [tasks, openTasks, search, responsibleFilter, showCompleted]);
+  }, [tasks, search, responsibleFilter, showCompleted]);
 
   const progress =
     tasks.length > 0
@@ -292,7 +253,6 @@ export default function EastCommandCenter() {
           open={tasksOpen}
           setOpen={setTasksOpen}
         >
-          {taskError ? <p className="error-box">{taskError}</p> : null}
           <TaskTable rows={filteredTasks} />
         </CollapsibleCard>
       </div>
@@ -554,20 +514,9 @@ export default function EastCommandCenter() {
 
         .empty {
           margin: 0;
-          padding: 10px 0;
+          padding: 14px;
           font-size: 12px;
           color: #64748b;
-        }
-
-        .error-box {
-          margin: 0 0 12px;
-          padding: 12px 14px;
-          border-radius: 12px;
-          background: #fff7ed;
-          border: 1px solid #fed7aa;
-          color: #9a3412;
-          font-size: 12px;
-          font-weight: 700;
         }
       `}</style>
     </main>
