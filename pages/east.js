@@ -61,13 +61,19 @@ function parseCSV(text) {
 
   const headers = cleanRows[0].map((h, i) => h || `Column ${i + 1}`);
 
-  return cleanRows.slice(1).map((r) => {
-    const obj = {};
-    headers.forEach((header, i) => {
-      obj[header] = r[i] || "";
+  return cleanRows
+    .slice(1)
+    .map((r) => {
+      const obj = {};
+      headers.forEach((header, i) => {
+        obj[header] = r[i] || "";
+      });
+      return obj;
+    })
+    .filter((task) => {
+      const taskName = String(task.Task || "").trim();
+      return taskName !== "";
     });
-    return obj;
-  });
 }
 
 function isCompleted(task) {
@@ -113,7 +119,6 @@ export default function EastCommandCenter() {
   const [tasks, setTasks] = useState([]);
   const [search, setSearch] = useState("");
   const [responsibleFilter, setResponsibleFilter] = useState("All");
-  const [showCompleted, setShowCompleted] = useState(false);
 
   const [tasksOpen, setTasksOpen] = useState(true);
   const [tradeshowsOpen, setTradeshowsOpen] = useState(false);
@@ -132,7 +137,7 @@ export default function EastCommandCenter() {
   const openTasks = tasks.filter((task) => !isCompleted(task));
 
   const responsibleOptions = useMemo(() => {
-    const names = tasks
+    const names = openTasks
       .map(
         (task) =>
           task.Responsible ||
@@ -144,10 +149,10 @@ export default function EastCommandCenter() {
       .filter(Boolean);
 
     return ["All", ...Array.from(new Set(names))];
-  }, [tasks]);
+  }, [openTasks]);
 
   const filteredTasks = useMemo(() => {
-    return tasks.filter((task) => {
+    return openTasks.filter((task) => {
       const text = Object.values(task).join(" ").toLowerCase();
 
       const responsible =
@@ -162,11 +167,9 @@ export default function EastCommandCenter() {
       const matchesResponsible =
         responsibleFilter === "All" || responsible === responsibleFilter;
 
-      const matchesCompletion = showCompleted ? true : !isCompleted(task);
-
-      return matchesSearch && matchesResponsible && matchesCompletion;
+      return matchesSearch && matchesResponsible;
     });
-  }, [tasks, search, responsibleFilter, showCompleted]);
+  }, [openTasks, search, responsibleFilter]);
 
   const progress =
     tasks.length > 0
@@ -201,10 +204,10 @@ export default function EastCommandCenter() {
         <section className="filters-card">
           <div>
             <h3>Filters</h3>
-            <p>Open tasks show by default. Tick show completed to include done items.</p>
+            <p>Only open tasks are shown. Completed tasks are hidden automatically.</p>
           </div>
 
-          <div className="filters-right">
+          <div className="filters-right no-checkbox">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -219,15 +222,6 @@ export default function EastCommandCenter() {
                 <option key={name}>{name}</option>
               ))}
             </select>
-
-            <label className="hide-pill">
-              <input
-                type="checkbox"
-                checked={showCompleted}
-                onChange={(e) => setShowCompleted(e.target.checked)}
-              />
-              Show completed
-            </label>
           </div>
         </section>
 
@@ -249,7 +243,7 @@ export default function EastCommandCenter() {
 
         <CollapsibleCard
           title="East Task List"
-          subtitle={`${filteredTasks.length} showing · ${openTasks.length} left to complete · ${completedTasks.length} completed`}
+          subtitle={`${filteredTasks.length} open tasks showing · ${completedTasks.length} completed hidden`}
           open={tasksOpen}
           setOpen={setTasksOpen}
         >
@@ -385,7 +379,7 @@ export default function EastCommandCenter() {
 
         .filters-right {
           display: grid;
-          grid-template-columns: 310px 140px 142px;
+          grid-template-columns: 310px 140px;
           gap: 10px;
           align-items: center;
         }
@@ -400,21 +394,6 @@ export default function EastCommandCenter() {
           font-size: 12px;
           color: #020617;
           outline: none;
-        }
-
-        .hide-pill {
-          height: 34px;
-          border-radius: 12px;
-          border: 1px solid #cfd6df;
-          background: #f8fafc;
-          padding: 0 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          font-size: 12px;
-          font-weight: 700;
-          white-space: nowrap;
         }
 
         .section-card {
@@ -565,7 +544,9 @@ function TaskTable({ rows }) {
     return <p className="empty">No open tasks showing.</p>;
   }
 
-  const headers = Object.keys(rows[0]);
+  const headers = Object.keys(rows[0]).filter((header) => {
+    return ["Task", "Dealer", "Responsible", "Due Date"].includes(header);
+  });
 
   return (
     <div className="table-wrap">
