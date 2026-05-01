@@ -4,6 +4,7 @@ const TASK_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0
 const TRADESHOW_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=722935598&single=true";
 const COOP_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=290340762&single=true";
 const DEALER_DIRECTORY_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=1309415438&single=true";
+const SMALL_SALES_ORDERS_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1AfbA0b8VKuuf8Ho2FSmzK1JH_bq1yn07umiQurWyLRW96NuQ8s-vz6M-4NKp3WFKf4fI353l2UlO/pubhtml?gid=1894449174&single=true";
 
 function sheetToCsvUrl(url) {
   if (!url) return "";
@@ -120,6 +121,7 @@ export default function EastCommandCenter() {
   const [tradeshowsOpen, setTradeshowsOpen] = useState(false);
   const [coopOpen, setCoopOpen] = useState(false);
   const [dealerDirectoryOpen, setDealerDirectoryOpen] = useState(false);
+  const [smallSalesOrdersOpen, setSmallSalesOrdersOpen] = useState(false);
 
   useEffect(() => {
     async function loadTasks() {
@@ -179,7 +181,7 @@ export default function EastCommandCenter() {
             <p className="eyebrow">GOOGLE SHEET SYNC</p>
             <h1>East Command Center</h1>
             <p className="subtitle">
-              Tasks, tradeshows, co-op spend, and dealer directory pulled from Google Sheets.
+              Tasks, tradeshows, co-op spend, dealer directory, and small sales orders pulled from Google Sheets.
             </p>
           </div>
 
@@ -242,6 +244,14 @@ export default function EastCommandCenter() {
           open={dealerDirectoryOpen}
           setOpen={setDealerDirectoryOpen}
           url={DEALER_DIRECTORY_EMBED_URL}
+        />
+
+        <SheetEmbedCard
+          title="Small Sales Orders"
+          subtitle="Small sales order tracking pulled directly from Google Sheets"
+          open={smallSalesOrdersOpen}
+          setOpen={setSmallSalesOrdersOpen}
+          url={SMALL_SALES_ORDERS_EMBED_URL}
         />
 
         <CollapsibleCard
