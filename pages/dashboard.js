@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function Dashboard() {
   const [followUps, setFollowUps] = useState([]);
-  const [newFollowUp, setNewFollowUp] = useState("");
+  const [newFollowUp, setNewFollowUp] = "";
 
   const [tasks] = useState([
     {
@@ -11,6 +11,7 @@ export default function Dashboard() {
       dealer: "Jonsey",
       responsible: "Ryan",
       dueDate: "3/18/2026",
+      completed: false,
     },
     {
       id: 2,
@@ -18,6 +19,15 @@ export default function Dashboard() {
       dealer: "Chatsworth",
       responsible: "Ryan",
       dueDate: "3/20/2026",
+      completed: false,
+    },
+    {
+      id: 3,
+      task: "Completed example task",
+      dealer: "Capital",
+      responsible: "Ryan",
+      dueDate: "3/25/2026",
+      completed: true,
     },
   ]);
 
@@ -29,6 +39,12 @@ export default function Dashboard() {
   useEffect(() => {
     localStorage.setItem("dashboard-follow-ups", JSON.stringify(followUps));
   }, [followUps]);
+
+  const openTasks = tasks.filter((task) => !task.completed);
+  const completedTasks = tasks.filter((task) => task.completed);
+
+  const openFollowUps = followUps.filter((item) => !item.completed);
+  const completedFollowUps = followUps.filter((item) => item.completed);
 
   function addFollowUp(text, sourceTask = null) {
     if (!text.trim()) return;
@@ -57,9 +73,6 @@ export default function Dashboard() {
     setFollowUps(followUps.filter((item) => item.id !== id));
   }
 
-  const openFollowUps = followUps.filter((item) => !item.completed);
-  const completedFollowUps = followUps.filter((item) => item.completed);
-
   return (
     <main className="page">
       <div className="shell">
@@ -68,15 +81,16 @@ export default function Dashboard() {
             <p className="eyebrow">EA COMMAND CENTER</p>
             <h1>Dashboard</h1>
             <p className="subtitle">
-              Follow-ups, priorities, and task actions in one place.
+              Tasks, follow-ups, and items that need to be chased.
             </p>
           </div>
         </div>
 
         <div className="stats-grid">
-          <StatCard label="Follow-Ups" value={openFollowUps.length} />
+          <StatCard label="Open Tasks" value={openTasks.length} />
+          <StatCard label="Completed Tasks" value={completedTasks.length} />
+          <StatCard label="Open Follow-Ups" value={openFollowUps.length} />
           <StatCard label="Completed Follow-Ups" value={completedFollowUps.length} />
-          <StatCard label="Tasks" value={tasks.length} />
         </div>
 
         <section className="card">
@@ -118,13 +132,13 @@ export default function Dashboard() {
         <section className="card">
           <div className="card-header">
             <div>
-              <h2>Task List</h2>
+              <h2>Open Tasks</h2>
               <p>Add any task into Follow-Ups when it needs to be chased later.</p>
             </div>
           </div>
 
           <div className="task-list">
-            {tasks.map((task) => (
+            {openTasks.map((task) => (
               <div className="task-row" key={task.id}>
                 <div>
                   <h3>{task.task}</h3>
@@ -156,7 +170,7 @@ export default function Dashboard() {
             <div className="card-header">
               <div>
                 <h2>Completed Follow-Ups</h2>
-                <p>Finished items kept here for reference.</p>
+                <p>Finished follow-ups kept here for reference.</p>
               </div>
             </div>
 
@@ -195,9 +209,6 @@ export default function Dashboard() {
         }
 
         .top {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
           margin-bottom: 24px;
         }
 
@@ -225,7 +236,7 @@ export default function Dashboard() {
 
         .stats-grid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(4, 1fr);
           gap: 14px;
           margin-bottom: 18px;
         }
@@ -261,9 +272,6 @@ export default function Dashboard() {
         }
 
         .card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
           margin-bottom: 16px;
         }
 
@@ -376,9 +384,9 @@ export default function Dashboard() {
           color: #64748b;
         }
 
-        @media (max-width: 800px) {
+        @media (max-width: 900px) {
           .stats-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, 1fr);
           }
 
           .add-row {
