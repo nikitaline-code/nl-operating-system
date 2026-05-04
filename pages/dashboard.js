@@ -1,491 +1,436 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-export default function DashboardPage() {
-  const [tasks, setTasks] = useState([]);
-  const [priorities, setPriorities] = useState([]);
-  const [travelData, setTravelData] = useState(null);
-  const [today, setToday] = useState("");
+export default function Dashboard() {
+  const [followUps, setFollowUps] = useState([]);
+  const [newFollowUp, setNewFollowUp] = useState("");
+
+  const [tasks] = useState([
+    {
+      id: 1,
+      task: "Plan for current Powerpack inventory",
+      dealer: "Jonsey",
+      responsible: "Ryan",
+      dueDate: "3/18/2026",
+    },
+    {
+      id: 2,
+      task: "Schedule marketing review session with Brodie",
+      dealer: "Chatsworth",
+      responsible: "Ryan",
+      dueDate: "3/20/2026",
+    },
+  ]);
 
   useEffect(() => {
-    const savedTasks = JSON.parse(localStorage.getItem("tasks") || "[]");
-    const savedPriorities = JSON.parse(localStorage.getItem("weeklyPriorities") || "[]");
-    const savedTravel = JSON.parse(localStorage.getItem("travelPageData") || "null");
-
-    setTasks(savedTasks);
-    setPriorities(savedPriorities);
-    setTravelData(savedTravel);
-
-    const now = new Date();
-    setToday(
-      now.toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-      })
-    );
+    const saved = localStorage.getItem("dashboard-follow-ups");
+    if (saved) setFollowUps(JSON.parse(saved));
   }, []);
 
-  const stats = useMemo(() => {
-    const total = tasks.length;
-    const completed = tasks.filter((task) => task.complete).length;
-    const open = total - completed;
-    const high = tasks.filter((task) => task.urgency === "High" && !task.complete).length;
-    const progress = total ? Math.round((completed / total) * 100) : 0;
+  useEffect(() => {
+    localStorage.setItem("dashboard-follow-ups", JSON.stringify(followUps));
+  }, [followUps]);
 
-    return { total, completed, open, high, progress };
-  }, [tasks]);
+  function addFollowUp(text, sourceTask = null) {
+    if (!text.trim()) return;
 
-  const activeTrips = travelData?.trips || [];
-  const upcomingTrips = activeTrips.slice(0, 4);
-  const openTasks = tasks.filter((task) => !task.complete).slice(0, 6);
-  const activePriorities = priorities.filter((priority) => priority && priority.trim());
+    const item = {
+      id: Date.now(),
+      text,
+      sourceTask,
+      completed: false,
+      createdAt: new Date().toLocaleDateString(),
+    };
+
+    setFollowUps([item, ...followUps]);
+    setNewFollowUp("");
+  }
+
+  function toggleFollowUp(id) {
+    setFollowUps(
+      followUps.map((item) =>
+        item.id === id ? { ...item, completed: !item.completed } : item
+      )
+    );
+  }
+
+  function deleteFollowUp(id) {
+    setFollowUps(followUps.filter((item) => item.id !== id));
+  }
+
+  const openFollowUps = followUps.filter((item) => !item.completed);
+  const completedFollowUps = followUps.filter((item) => item.completed);
 
   return (
-    <div className="dashboardPage">
-      <header className="hero">
-        <div>
-          <p className="eyebrow">Command Center</p>
-          <h1>Dashboard</h1>
-          <p className="subtext">{today} · Your operating system overview</p>
+    <main className="page">
+      <div className="shell">
+        <div className="top">
+          <div>
+            <p className="eyebrow">EA COMMAND CENTER</p>
+            <h1>Dashboard</h1>
+            <p className="subtitle">
+              Follow-ups, priorities, and task actions in one place.
+            </p>
+          </div>
         </div>
 
-        <div className="scoreCard">
-          <span>Weekly Progress</span>
-          <strong>{stats.progress}%</strong>
-        </div>
-      </header>
-
-      <section className="statsGrid">
-        <div className="statCard">
-          <span>Open Tasks</span>
-          <strong>{stats.open}</strong>
+        <div className="stats-grid">
+          <StatCard label="Follow-Ups" value={openFollowUps.length} />
+          <StatCard label="Completed Follow-Ups" value={completedFollowUps.length} />
+          <StatCard label="Tasks" value={tasks.length} />
         </div>
 
-        <div className="statCard">
-          <span>Completed</span>
-          <strong>{stats.completed}</strong>
-        </div>
-
-        <div className="statCard">
-          <span>High Priority</span>
-          <strong>{stats.high}</strong>
-        </div>
-
-        <div className="statCard">
-          <span>Trips</span>
-          <strong>{activeTrips.length}</strong>
-        </div>
-      </section>
-
-      <main className="grid">
-        <section className="card large">
-          <div className="sectionHeader">
+        <section className="card">
+          <div className="card-header">
             <div>
-              <h2>Top Priorities</h2>
-              <p>Weekly focus items from your Tasks page.</p>
+              <h2>Follow-Ups</h2>
+              <p>Items that need to be checked on, chased, or brought forward.</p>
             </div>
-            <a href="/tasks">Open Tasks</a>
           </div>
 
-          <div className="priorityList">
-            {activePriorities.length > 0 ? (
-              activePriorities.map((priority, index) => (
-                <div className="priorityItem" key={index}>
-                  <span>{index + 1}</span>
-                  <p>{priority}</p>
-                </div>
-              ))
+          <div className="add-row">
+            <input
+              value={newFollowUp}
+              onChange={(e) => setNewFollowUp(e.target.value)}
+              placeholder="Add a follow-up..."
+              onKeyDown={(e) => {
+                if (e.key === "Enter") addFollowUp(newFollowUp);
+              }}
+            />
+            <button onClick={() => addFollowUp(newFollowUp)}>Add</button>
+          </div>
+
+          <div className="follow-list">
+            {openFollowUps.length === 0 ? (
+              <p className="empty">No open follow-ups.</p>
             ) : (
-              <div className="empty">No priorities added yet.</div>
+              openFollowUps.map((item) => (
+                <FollowUpItem
+                  key={item.id}
+                  item={item}
+                  toggleFollowUp={toggleFollowUp}
+                  deleteFollowUp={deleteFollowUp}
+                />
+              ))
             )}
           </div>
         </section>
 
         <section className="card">
-          <div className="sectionHeader">
+          <div className="card-header">
             <div>
-              <h2>Progress</h2>
-              <p>Task completion overview.</p>
+              <h2>Task List</h2>
+              <p>Add any task into Follow-Ups when it needs to be chased later.</p>
             </div>
           </div>
 
-          <div className="progressRing">
-            <div>
-              <strong>{stats.progress}%</strong>
-              <span>complete</span>
-            </div>
-          </div>
-
-          <div className="progressBar">
-            <div style={{ width: `${stats.progress}%` }} />
-          </div>
-
-          <p className="tiny">
-            {stats.completed} of {stats.total} tasks completed.
-          </p>
-        </section>
-
-        <section className="card large">
-          <div className="sectionHeader">
-            <div>
-              <h2>Open Tasks</h2>
-              <p>Most recent active items.</p>
-            </div>
-            <a href="/tasks">View All</a>
-          </div>
-
-          <div className="taskList">
-            {openTasks.length > 0 ? (
-              openTasks.map((task) => (
-                <div className="taskItem" key={task.id}>
-                  <div>
-                    <strong>{task.title}</strong>
-                    <p>
-                      From: {task.assignedFrom || "N/A"}
-                      {task.dueDate ? ` · Due: ${task.dueDate}` : ""}
-                    </p>
-                  </div>
-
-                  <span className={`badge ${task.urgency?.toLowerCase() || "medium"}`}>
-                    {task.urgency || "Medium"}
-                  </span>
+          <div className="task-list">
+            {tasks.map((task) => (
+              <div className="task-row" key={task.id}>
+                <div>
+                  <h3>{task.task}</h3>
+                  <p>
+                    {task.dealer || "No dealer"} · {task.responsible || "No owner"} ·{" "}
+                    {task.dueDate || "No due date"}
+                  </p>
                 </div>
-              ))
-            ) : (
-              <div className="empty">No open tasks.</div>
-            )}
+
+                <button
+                  className="secondary-btn"
+                  onClick={() =>
+                    addFollowUp(task.task, {
+                      dealer: task.dealer,
+                      responsible: task.responsible,
+                      dueDate: task.dueDate,
+                    })
+                  }
+                >
+                  Add to Follow-Ups
+                </button>
+              </div>
+            ))}
           </div>
         </section>
 
-        <section className="card">
-          <div className="sectionHeader">
-            <div>
-              <h2>Travel</h2>
-              <p>Upcoming trip planning.</p>
+        {completedFollowUps.length > 0 && (
+          <section className="card">
+            <div className="card-header">
+              <div>
+                <h2>Completed Follow-Ups</h2>
+                <p>Finished items kept here for reference.</p>
+              </div>
             </div>
-            <a href="/travel">Open Travel</a>
-          </div>
 
-          <div className="tripList">
-            {upcomingTrips.length > 0 ? (
-              upcomingTrips.map((trip) => (
-                <div className="tripItem" key={trip.id}>
-                  <strong>{trip.name}</strong>
-                  <p>{trip.owner} · {trip.date}</p>
-                  <span>{trip.status}</span>
-                </div>
-              ))
-            ) : (
-              <div className="empty">No trips added yet.</div>
-            )}
-          </div>
-        </section>
+            <div className="follow-list">
+              {completedFollowUps.map((item) => (
+                <FollowUpItem
+                  key={item.id}
+                  item={item}
+                  toggleFollowUp={toggleFollowUp}
+                  deleteFollowUp={deleteFollowUp}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
 
-        <section className="card quick">
-          <h2>Quick Launch</h2>
+      <style jsx global>{`
+        body {
+          margin: 0;
+          background: #f5f6f8;
+        }
 
-          <div className="quickGrid">
-            <a href="/tasks">Tasks</a>
-            <a href="/meetings">Meetings</a>
-            <a href="/travel">Travel</a>
-            <a href="/communications">Comms</a>
-          </div>
-        </section>
-      </main>
-
-      <style jsx>{`
-        .dashboardPage {
+        .page {
           min-height: 100vh;
           background: #f5f6f8;
-          color: #111;
+          color: #020617;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-          padding: 32px;
-          max-width: 1380px;
+          padding: 26px 24px 80px;
+        }
+
+        .shell {
+          width: 100%;
+          max-width: 1220px;
           margin: 0 auto;
         }
 
-        .hero {
+        .top {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 22px;
+          margin-bottom: 24px;
         }
 
         .eyebrow {
-          margin: 0 0 7px;
+          margin: 0 0 12px;
           font-size: 10px;
-          letter-spacing: 0.16em;
-          text-transform: uppercase;
-          color: #6b7280;
+          letter-spacing: 0.18em;
+          font-weight: 600;
+          color: #64748b;
         }
 
         h1 {
           margin: 0;
-          font-size: 36px;
-          letter-spacing: -0.05em;
-        }
-
-        h2 {
-          margin: 0;
-          font-size: 14px;
-          letter-spacing: -0.02em;
-        }
-
-        .subtext,
-        p {
-          margin: 5px 0 0;
-          font-size: 12px;
-          color: #6b7280;
-        }
-
-        .scoreCard,
-        .statCard,
-        .card {
-          background: #fff;
-          border: 1px solid #e5e7eb;
-          border-radius: 22px;
-          box-shadow: 0 16px 38px rgba(15, 23, 42, 0.06);
-        }
-
-        .scoreCard {
-          padding: 16px 20px;
-          min-width: 160px;
-          text-align: right;
-        }
-
-        .scoreCard span,
-        .statCard span {
-          display: block;
-          font-size: 11px;
-          color: #6b7280;
-          margin-bottom: 6px;
-        }
-
-        .scoreCard strong {
-          font-size: 30px;
-        }
-
-        .statsGrid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 14px;
-          margin-bottom: 16px;
-        }
-
-        .statCard {
-          padding: 16px;
-        }
-
-        .statCard strong {
-          font-size: 28px;
+          font-size: 29px;
+          line-height: 1;
+          font-weight: 800;
           letter-spacing: -0.04em;
         }
 
-        .grid {
+        .subtitle {
+          margin: 10px 0 0;
+          font-size: 12px;
+          color: #475569;
+        }
+
+        .stats-grid {
           display: grid;
-          grid-template-columns: 1.4fr 0.9fr;
-          gap: 16px;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 14px;
+          margin-bottom: 18px;
+        }
+
+        .stat-card,
+        .card {
+          background: #ffffff;
+          border: 1px solid #dfe3ea;
+          border-radius: 20px;
+          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
+        }
+
+        .stat-card {
+          padding: 20px 18px;
+          min-height: 78px;
+        }
+
+        .stat-card p {
+          margin: 0 0 8px;
+          font-size: 11px;
+          color: #64748b;
+        }
+
+        .stat-card strong {
+          font-size: 26px;
+          font-weight: 800;
+          line-height: 1;
         }
 
         .card {
           padding: 18px;
+          margin-bottom: 18px;
         }
 
-        .large {
-          min-height: 220px;
-        }
-
-        .sectionHeader {
+        .card-header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          gap: 14px;
-          margin-bottom: 14px;
+          margin-bottom: 16px;
         }
 
-        a {
-          color: #111;
-          font-size: 12px;
-          font-weight: 700;
-          text-decoration: none;
-          background: #f3f4f6;
-          padding: 7px 10px;
-          border-radius: 999px;
-        }
-
-        .priorityList,
-        .taskList,
-        .tripList {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .priorityItem {
-          display: grid;
-          grid-template-columns: 26px 1fr;
-          align-items: center;
-          gap: 10px;
-          padding: 10px;
-          border: 1px solid #eceef2;
-          border-radius: 14px;
-          background: #fafafa;
-        }
-
-        .priorityItem span {
-          width: 22px;
-          height: 22px;
-          background: #111;
-          color: #fff;
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 11px;
+        .card-header h2 {
+          margin: 0 0 6px;
+          font-size: 16px;
           font-weight: 800;
         }
 
-        .priorityItem p {
+        .card-header p {
           margin: 0;
-          color: #111;
-          font-size: 13px;
-          font-weight: 650;
+          font-size: 12px;
+          color: #475569;
         }
 
-        .taskItem,
-        .tripItem {
+        .add-row {
+          display: grid;
+          grid-template-columns: 1fr 90px;
+          gap: 10px;
+          margin-bottom: 16px;
+        }
+
+        input {
+          height: 38px;
+          border-radius: 12px;
+          border: 1px solid #cfd6df;
+          background: #f8fafc;
+          padding: 0 12px;
+          font-size: 13px;
+          color: #020617;
+          outline: none;
+        }
+
+        button {
+          border: none;
+          background: #020617;
+          color: #ffffff;
+          border-radius: 999px;
+          padding: 9px 14px;
+          font-size: 12px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .secondary-btn {
+          background: #f8fafc;
+          color: #020617;
+          border: 1px solid #cfd6df;
+        }
+
+        .follow-list,
+        .task-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .follow-item,
+        .task-row {
+          border: 1px solid #e5e7eb;
+          border-radius: 14px;
+          padding: 13px 14px;
+          background: #ffffff;
           display: flex;
           justify-content: space-between;
-          gap: 12px;
+          gap: 14px;
           align-items: center;
-          padding: 11px;
-          border: 1px solid #eceef2;
-          border-radius: 14px;
-          background: #fafafa;
         }
 
-        .taskItem strong,
-        .tripItem strong {
-          font-size: 13px;
+        .follow-item.done {
+          opacity: 0.55;
         }
 
-        .tripItem span {
-          font-size: 10px;
-          font-weight: 700;
-          background: #111;
-          color: #fff;
-          padding: 5px 8px;
-          border-radius: 999px;
-        }
-
-        .badge {
-          font-size: 11px;
-          font-weight: 700;
-          padding: 6px 9px;
-          border-radius: 999px;
-        }
-
-        .badge.high {
-          background: #fee2e2;
-          color: #991b1b;
-        }
-
-        .badge.medium {
-          background: #fef3c7;
-          color: #92400e;
-        }
-
-        .badge.low {
-          background: #dcfce7;
-          color: #166534;
-        }
-
-        .progressRing {
-          width: 150px;
-          height: 150px;
-          border-radius: 999px;
-          border: 16px solid #111;
-          margin: 18px auto;
+        .follow-main {
           display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .progressRing div {
-          text-align: center;
-        }
-
-        .progressRing strong {
-          display: block;
-          font-size: 28px;
-        }
-
-        .progressRing span {
-          font-size: 11px;
-          color: #6b7280;
-        }
-
-        .progressBar {
-          height: 9px;
-          background: #f1f1f1;
-          border-radius: 999px;
-          overflow: hidden;
-        }
-
-        .progressBar div {
-          height: 100%;
-          background: #111;
-          border-radius: 999px;
-        }
-
-        .tiny {
-          text-align: center;
-          margin-top: 10px;
-        }
-
-        .quickGrid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
           gap: 10px;
-          margin-top: 14px;
+          align-items: flex-start;
         }
 
-        .quickGrid a {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: 52px;
-          border-radius: 16px;
-          background: #111;
-          color: #fff;
+        .follow-main input {
+          width: 16px;
+          height: 16px;
+          margin-top: 3px;
+        }
+
+        .follow-main h3,
+        .task-row h3 {
+          margin: 0 0 5px;
+          font-size: 13px;
+          font-weight: 800;
+        }
+
+        .follow-main p,
+        .task-row p {
+          margin: 0;
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        .delete-btn {
+          background: #ffffff;
+          color: #991b1b;
+          border: 1px solid #fecaca;
         }
 
         .empty {
-          padding: 18px;
-          text-align: center;
-          color: #777;
-          font-size: 13px;
-          border: 1px dashed #d1d5db;
-          border-radius: 14px;
-          background: #fafafa;
+          margin: 0;
+          padding: 14px;
+          font-size: 12px;
+          color: #64748b;
         }
 
-        @media (max-width: 1000px) {
-          .hero,
-          .sectionHeader {
-            flex-direction: column;
-          }
-
-          .statsGrid,
-          .grid {
+        @media (max-width: 800px) {
+          .stats-grid {
             grid-template-columns: 1fr;
           }
 
-          .scoreCard {
-            text-align: left;
+          .add-row {
+            grid-template-columns: 1fr;
+          }
+
+          .follow-item,
+          .task-row {
+            align-items: flex-start;
+            flex-direction: column;
           }
         }
       `}</style>
+    </main>
+  );
+}
+
+function StatCard({ label, value }) {
+  return (
+    <div className="stat-card">
+      <p>{label}</p>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function FollowUpItem({ item, toggleFollowUp, deleteFollowUp }) {
+  return (
+    <div className={`follow-item ${item.completed ? "done" : ""}`}>
+      <div className="follow-main">
+        <input
+          type="checkbox"
+          checked={item.completed}
+          onChange={() => toggleFollowUp(item.id)}
+        />
+
+        <div>
+          <h3>{item.text}</h3>
+          <p>
+            Added {item.createdAt}
+            {item.sourceTask?.dealer ? ` · Dealer: ${item.sourceTask.dealer}` : ""}
+            {item.sourceTask?.responsible
+              ? ` · Owner: ${item.sourceTask.responsible}`
+              : ""}
+            {item.sourceTask?.dueDate ? ` · Due: ${item.sourceTask.dueDate}` : ""}
+          </p>
+        </div>
+      </div>
+
+      <button className="delete-btn" onClick={() => deleteFollowUp(item.id)}>
+        Delete
+      </button>
     </div>
   );
 }
