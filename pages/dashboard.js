@@ -1,43 +1,23 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+
+const TASKS_KEY = "os-tasks";
+const FOLLOWUPS_KEY = "dashboard-follow-ups";
 
 export default function Dashboard() {
+  const [tasks, setTasks] = useState([]);
   const [followUps, setFollowUps] = useState([]);
-  const [newFollowUp, setNewFollowUp] = "";
-
-  const [tasks] = useState([
-    {
-      id: 1,
-      task: "Plan for current Powerpack inventory",
-      dealer: "Jonsey",
-      responsible: "Ryan",
-      dueDate: "3/18/2026",
-      completed: false,
-    },
-    {
-      id: 2,
-      task: "Schedule marketing review session with Brodie",
-      dealer: "Chatsworth",
-      responsible: "Ryan",
-      dueDate: "3/20/2026",
-      completed: false,
-    },
-    {
-      id: 3,
-      task: "Completed example task",
-      dealer: "Capital",
-      responsible: "Ryan",
-      dueDate: "3/25/2026",
-      completed: true,
-    },
-  ]);
+  const [newFollowUp, setNewFollowUp] = useState("");
 
   useEffect(() => {
-    const saved = localStorage.getItem("dashboard-follow-ups");
-    if (saved) setFollowUps(JSON.parse(saved));
+    const savedTasks = localStorage.getItem(TASKS_KEY);
+    const savedFollowUps = localStorage.getItem(FOLLOWUPS_KEY);
+
+    if (savedTasks) setTasks(JSON.parse(savedTasks));
+    if (savedFollowUps) setFollowUps(JSON.parse(savedFollowUps));
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("dashboard-follow-ups", JSON.stringify(followUps));
+    localStorage.setItem(FOLLOWUPS_KEY, JSON.stringify(followUps));
   }, [followUps]);
 
   const openTasks = tasks.filter((task) => !task.completed);
@@ -46,13 +26,12 @@ export default function Dashboard() {
   const openFollowUps = followUps.filter((item) => !item.completed);
   const completedFollowUps = followUps.filter((item) => item.completed);
 
-  function addFollowUp(text, sourceTask = null) {
+  function addFollowUp(text) {
     if (!text.trim()) return;
 
     const item = {
       id: Date.now(),
       text,
-      sourceTask,
       completed: false,
       createdAt: new Date().toLocaleDateString(),
     };
@@ -81,7 +60,7 @@ export default function Dashboard() {
             <p className="eyebrow">EA COMMAND CENTER</p>
             <h1>Dashboard</h1>
             <p className="subtitle">
-              Tasks, follow-ups, and items that need to be chased.
+              Tasks and follow-ups pulled from your operating system.
             </p>
           </div>
         </div>
@@ -133,77 +112,47 @@ export default function Dashboard() {
           <div className="card-header">
             <div>
               <h2>Open Tasks</h2>
-              <p>Add any task into Follow-Ups when it needs to be chased later.</p>
+              <p>These are pulled from your Tasks page.</p>
             </div>
           </div>
 
           <div className="task-list">
-            {openTasks.map((task) => (
-              <div className="task-row" key={task.id}>
-                <div>
-                  <h3>{task.task}</h3>
-                  <p>
-                    {task.dealer || "No dealer"} · {task.responsible || "No owner"} ·{" "}
-                    {task.dueDate || "No due date"}
-                  </p>
+            {openTasks.length === 0 ? (
+              <p className="empty">No open tasks.</p>
+            ) : (
+              openTasks.map((task) => (
+                <div className="task-row" key={task.id}>
+                  <div>
+                    <h3>{task.text}</h3>
+                    <p>
+                      From: {task.assignedFrom || "N/A"}
+                      {task.dueDate ? ` · Due: ${task.dueDate}` : ""}
+                    </p>
+                  </div>
+                  <span className={`badge ${task.urgency?.toLowerCase()}`}>
+                    {task.urgency}
+                  </span>
                 </div>
-
-                <button
-                  className="secondary-btn"
-                  onClick={() =>
-                    addFollowUp(task.task, {
-                      dealer: task.dealer,
-                      responsible: task.responsible,
-                      dueDate: task.dueDate,
-                    })
-                  }
-                >
-                  Add to Follow-Ups
-                </button>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </section>
-
-        {completedFollowUps.length > 0 && (
-          <section className="card">
-            <div className="card-header">
-              <div>
-                <h2>Completed Follow-Ups</h2>
-                <p>Finished follow-ups kept here for reference.</p>
-              </div>
-            </div>
-
-            <div className="follow-list">
-              {completedFollowUps.map((item) => (
-                <FollowUpItem
-                  key={item.id}
-                  item={item}
-                  toggleFollowUp={toggleFollowUp}
-                  deleteFollowUp={deleteFollowUp}
-                />
-              ))}
-            </div>
-          </section>
-        )}
       </div>
 
       <style jsx global>{`
         body {
           margin: 0;
           background: #f5f6f8;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          color: #020617;
         }
 
         .page {
           min-height: 100vh;
-          background: #f5f6f8;
-          color: #020617;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-          padding: 26px 24px 80px;
+          padding: 40px 24px;
         }
 
         .shell {
-          width: 100%;
           max-width: 1220px;
           margin: 0 auto;
         }
@@ -222,16 +171,14 @@ export default function Dashboard() {
 
         h1 {
           margin: 0;
-          font-size: 29px;
-          line-height: 1;
-          font-weight: 800;
+          font-size: 32px;
           letter-spacing: -0.04em;
         }
 
         .subtitle {
-          margin: 10px 0 0;
-          font-size: 12px;
-          color: #475569;
+          margin: 8px 0 0;
+          font-size: 13px;
+          color: #64748b;
         }
 
         .stats-grid {
@@ -243,7 +190,7 @@ export default function Dashboard() {
 
         .stat-card,
         .card {
-          background: #ffffff;
+          background: white;
           border: 1px solid #dfe3ea;
           border-radius: 20px;
           box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
@@ -263,16 +210,11 @@ export default function Dashboard() {
         .stat-card strong {
           font-size: 26px;
           font-weight: 800;
-          line-height: 1;
         }
 
         .card {
           padding: 18px;
           margin-bottom: 18px;
-        }
-
-        .card-header {
-          margin-bottom: 16px;
         }
 
         .card-header h2 {
@@ -282,9 +224,9 @@ export default function Dashboard() {
         }
 
         .card-header p {
-          margin: 0;
+          margin: 0 0 16px;
           font-size: 12px;
-          color: #475569;
+          color: #64748b;
         }
 
         .add-row {
@@ -301,25 +243,18 @@ export default function Dashboard() {
           background: #f8fafc;
           padding: 0 12px;
           font-size: 13px;
-          color: #020617;
           outline: none;
         }
 
         button {
           border: none;
           background: #020617;
-          color: #ffffff;
+          color: white;
           border-radius: 999px;
           padding: 9px 14px;
           font-size: 12px;
           font-weight: 800;
           cursor: pointer;
-        }
-
-        .secondary-btn {
-          background: #f8fafc;
-          color: #020617;
-          border: 1px solid #cfd6df;
         }
 
         .follow-list,
@@ -334,27 +269,17 @@ export default function Dashboard() {
           border: 1px solid #e5e7eb;
           border-radius: 14px;
           padding: 13px 14px;
-          background: #ffffff;
+          background: white;
           display: flex;
           justify-content: space-between;
-          gap: 14px;
           align-items: center;
-        }
-
-        .follow-item.done {
-          opacity: 0.55;
+          gap: 14px;
         }
 
         .follow-main {
           display: flex;
           gap: 10px;
           align-items: flex-start;
-        }
-
-        .follow-main input {
-          width: 16px;
-          height: 16px;
-          margin-top: 3px;
         }
 
         .follow-main h3,
@@ -372,9 +297,18 @@ export default function Dashboard() {
         }
 
         .delete-btn {
-          background: #ffffff;
+          background: white;
           color: #991b1b;
           border: 1px solid #fecaca;
+        }
+
+        .badge {
+          border-radius: 999px;
+          padding: 7px 11px;
+          font-size: 12px;
+          font-weight: 800;
+          background: #fef3c7;
+          color: #b45309;
         }
 
         .empty {
@@ -382,22 +316,6 @@ export default function Dashboard() {
           padding: 14px;
           font-size: 12px;
           color: #64748b;
-        }
-
-        @media (max-width: 900px) {
-          .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-
-          .add-row {
-            grid-template-columns: 1fr;
-          }
-
-          .follow-item,
-          .task-row {
-            align-items: flex-start;
-            flex-direction: column;
-          }
         }
       `}</style>
     </main>
@@ -415,7 +333,7 @@ function StatCard({ label, value }) {
 
 function FollowUpItem({ item, toggleFollowUp, deleteFollowUp }) {
   return (
-    <div className={`follow-item ${item.completed ? "done" : ""}`}>
+    <div className="follow-item">
       <div className="follow-main">
         <input
           type="checkbox"
@@ -427,10 +345,7 @@ function FollowUpItem({ item, toggleFollowUp, deleteFollowUp }) {
           <h3>{item.text}</h3>
           <p>
             Added {item.createdAt}
-            {item.sourceTask?.dealer ? ` · Dealer: ${item.sourceTask.dealer}` : ""}
-            {item.sourceTask?.responsible
-              ? ` · Owner: ${item.sourceTask.responsible}`
-              : ""}
+            {item.sourceTask?.from ? ` · From: ${item.sourceTask.from}` : ""}
             {item.sourceTask?.dueDate ? ` · Due: ${item.sourceTask.dueDate}` : ""}
           </p>
         </div>
