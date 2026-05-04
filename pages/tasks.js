@@ -1,56 +1,46 @@
 import { useEffect, useState } from "react";
 
-const defaultTasks = [];
-const defaultPriorities = ["", "", ""];
+const TASKS_KEY = "os-tasks";
+const FOLLOWUPS_KEY = "dashboard-follow-ups";
 
 export default function TasksPage() {
-  const [tasks, setTasks] = useState(defaultTasks);
-  const [priorities, setPriorities] = useState(defaultPriorities);
-  const [newTask, setNewTask] = useState("");
+  const [tasks, setTasks] = useState([]);
+  const [taskText, setTaskText] = useState("");
   const [assignedFrom, setAssignedFrom] = useState("Mark");
   const [urgency, setUrgency] = useState("Medium");
   const [dueDate, setDueDate] = useState("");
   const [hideCompleted, setHideCompleted] = useState(false);
 
   useEffect(() => {
-    const savedTasks = localStorage.getItem("tasks");
-    const savedPriorities = localStorage.getItem("weeklyPriorities");
-
-    if (savedTasks) setTasks(JSON.parse(savedTasks));
-    if (savedPriorities) setPriorities(JSON.parse(savedPriorities));
+    const saved = localStorage.getItem(TASKS_KEY);
+    if (saved) setTasks(JSON.parse(saved));
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("tasks", JSON.stringify(tasks));
+    localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
   }, [tasks]);
 
-  useEffect(() => {
-    localStorage.setItem("weeklyPriorities", JSON.stringify(priorities));
-  }, [priorities]);
-
   function addTask() {
-    if (!newTask.trim()) return;
+    if (!taskText.trim()) return;
 
-    const task = {
+    const newTask = {
       id: Date.now(),
-      title: newTask,
+      text: taskText,
       assignedFrom,
       urgency,
       dueDate,
-      complete: false,
+      completed: false,
     };
 
-    setTasks([task, ...tasks]);
-    setNewTask("");
+    setTasks([newTask, ...tasks]);
+    setTaskText("");
     setDueDate("");
-    setUrgency("Medium");
-    setAssignedFrom("Mark");
   }
 
   function toggleTask(id) {
     setTasks(
       tasks.map((task) =>
-        task.id === id ? { ...task, complete: !task.complete } : task
+        task.id === id ? { ...task, completed: !task.completed } : task
       )
     );
   }
@@ -59,446 +49,299 @@ export default function TasksPage() {
     setTasks(tasks.filter((task) => task.id !== id));
   }
 
-  function updatePriority(index, value) {
-    const updated = [...priorities];
-    updated[index] = value;
-    setPriorities(updated);
-  }
+  function addTaskToFollowUps(task) {
+    const saved = localStorage.getItem(FOLLOWUPS_KEY);
+    const existing = saved ? JSON.parse(saved) : [];
 
-  function addPriority() {
-    setPriorities([...priorities, ""]);
-  }
+    const followUp = {
+      id: Date.now(),
+      text: task.text,
+      sourceTask: {
+        from: task.assignedFrom,
+        dueDate: task.dueDate,
+        urgency: task.urgency,
+      },
+      completed: false,
+      createdAt: new Date().toLocaleDateString(),
+    };
 
-  function deletePriority(index) {
-    setPriorities(priorities.filter((_, i) => i !== index));
+    localStorage.setItem(FOLLOWUPS_KEY, JSON.stringify([followUp, ...existing]));
+    alert("Added to Follow-Ups");
   }
 
   const visibleTasks = hideCompleted
-    ? tasks.filter((task) => !task.complete)
+    ? tasks.filter((task) => !task.completed)
     : tasks;
 
   return (
-    <div className="tasksPage">
-      <div className="tasksHeader">
-        <div>
-          <h1>Tasks</h1>
-          <p>One clean place for priorities, delegated items, and follow-ups.</p>
+    <main className="page">
+      <div className="shell">
+        <div className="top">
+          <div>
+            <h1>Tasks</h1>
+            <p>One clean place for priorities, delegated items, and follow-ups.</p>
+          </div>
+
+          <label className="hide-toggle">
+            <input
+              type="checkbox"
+              checked={hideCompleted}
+              onChange={(e) => setHideCompleted(e.target.checked)}
+            />
+            Hide completed
+          </label>
         </div>
 
-        <label className="hideToggle">
-          <input
-            type="checkbox"
-            checked={hideCompleted}
-            onChange={() => setHideCompleted(!hideCompleted)}
-          />
-          Hide completed
-        </label>
-      </div>
+        <section className="add-card">
+          <h2>Add Task</h2>
 
-      <div className="tasksLayout">
-        <aside className="prioritySide">
-          <div className="sideCard">
-            <div className="sectionHeader">
-              <div>
-                <h2>Weekly Priorities</h2>
-                <p>Top focus items</p>
-              </div>
+          <div className="add-row">
+            <input
+              value={taskText}
+              onChange={(e) => setTaskText(e.target.value)}
+              placeholder="Add a new task..."
+            />
 
-              <button className="smallBlackBtn" onClick={addPriority}>
-                +
-              </button>
-            </div>
+            <select
+              value={assignedFrom}
+              onChange={(e) => setAssignedFrom(e.target.value)}
+            >
+              <option>Mark</option>
+              <option>Dane</option>
+              <option>Weekly Meeting</option>
+            </select>
 
-            <div className="priorityList">
-              {priorities.map((priority, index) => (
-                <div className="priorityItem" key={index}>
-                  <span>{index + 1}</span>
+            <select value={urgency} onChange={(e) => setUrgency(e.target.value)}>
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+            </select>
 
-                  <input
-                    value={priority}
-                    onChange={(e) => updatePriority(index, e.target.value)}
-                    placeholder="Add priority..."
-                  />
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
 
-                  <button onClick={() => deletePriority(index)}>×</button>
-                </div>
-              ))}
-            </div>
+            <button onClick={addTask}>Add</button>
           </div>
-        </aside>
+        </section>
 
-        <main className="taskMain">
-          <section className="taskCard">
-            <h2>Add Task</h2>
+        <section className="task-card">
+          <div className="card-head">
+            <h2>Task List</h2>
+            <span>{visibleTasks.length} items</span>
+          </div>
 
-            <div className="addTaskGrid">
-              <input
-                className="taskInput"
-                value={newTask}
-                onChange={(e) => setNewTask(e.target.value)}
-                placeholder="Add a new task..."
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") addTask();
-                }}
-              />
+          <div className="task-list">
+            {visibleTasks.map((task) => (
+              <div className={`task-row ${task.completed ? "done" : ""}`} key={task.id}>
+                <input
+                  type="checkbox"
+                  checked={task.completed}
+                  onChange={() => toggleTask(task.id)}
+                />
 
-              <select
-                value={assignedFrom}
-                onChange={(e) => setAssignedFrom(e.target.value)}
-              >
-                <option>Mark</option>
-                <option>Dane</option>
-                <option>Nikita</option>
-              </select>
-
-              <select
-                value={urgency}
-                onChange={(e) => setUrgency(e.target.value)}
-              >
-                <option>High</option>
-                <option>Medium</option>
-                <option>Low</option>
-              </select>
-
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-              />
-
-              <button className="addTaskBtn" onClick={addTask}>
-                Add
-              </button>
-            </div>
-          </section>
-
-          <section className="taskCard">
-            <div className="sectionHeader">
-              <h2>Task List</h2>
-              <span>{visibleTasks.length} items</span>
-            </div>
-
-            <div className="taskList">
-              {visibleTasks.map((task) => (
-                <div
-                  className={`taskItem ${task.complete ? "completed" : ""}`}
-                  key={task.id}
-                >
-                  <div className="taskLeft">
-                    <input
-                      type="checkbox"
-                      checked={task.complete}
-                      onChange={() => toggleTask(task.id)}
-                    />
-
-                    <div>
-                      <div className="taskTitle">{task.title}</div>
-                      <div className="taskMeta">
-                        <span>From: {task.assignedFrom}</span>
-                        {task.dueDate && <span>Due: {task.dueDate}</span>}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="taskRight">
-                    <span className={`urgencyBadge ${task.urgency.toLowerCase()}`}>
-                      {task.urgency}
-                    </span>
-                    <button onClick={() => deleteTask(task.id)}>×</button>
-                  </div>
+                <div className="task-main">
+                  <h3>{task.text}</h3>
+                  <p>
+                    From: {task.assignedFrom}
+                    {task.dueDate ? ` · Due: ${task.dueDate}` : ""}
+                  </p>
                 </div>
-              ))}
 
-              {visibleTasks.length === 0 && (
-                <div className="emptyState">No tasks showing.</div>
-              )}
-            </div>
-          </section>
-        </main>
+                <span className={`badge ${task.urgency.toLowerCase()}`}>
+                  {task.urgency}
+                </span>
+
+                <button
+                  className="followup-btn"
+                  onClick={() => addTaskToFollowUps(task)}
+                >
+                  Add to Follow-Ups
+                </button>
+
+                <button className="delete-btn" onClick={() => deleteTask(task.id)}>
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
 
-      <style jsx>{`
-        .tasksPage {
-          padding: 32px;
-          max-width: 1280px;
-          margin: 0 auto;
-          color: #111;
+      <style jsx global>{`
+        body {
+          margin: 0;
+          background: #f5f6f8;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          color: #020617;
         }
 
-        .tasksHeader {
+        .page {
+          min-height: 100vh;
+          padding: 40px 24px;
+        }
+
+        .shell {
+          max-width: 1220px;
+          margin: 0 auto;
+        }
+
+        .top {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          gap: 20px;
           margin-bottom: 24px;
         }
 
         h1 {
           margin: 0;
-          font-size: 34px;
+          font-size: 32px;
           letter-spacing: -0.04em;
         }
 
-        h2 {
-          margin: 0;
-          font-size: 15px;
-          letter-spacing: -0.02em;
-        }
-
-        p {
-          margin: 4px 0 0;
-          color: #6b7280;
-          font-size: 12px;
-        }
-
-        .tasksLayout {
-          display: grid;
-          grid-template-columns: 280px 1fr;
-          gap: 18px;
-          align-items: start;
-        }
-
-        .prioritySide {
-          position: sticky;
-          top: 24px;
-        }
-
-        .sideCard,
-        .taskCard {
-          background: #ffffff;
-          border: 1px solid #e5e7eb;
-          border-radius: 14px;
-          padding: 14px;
-          box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035);
-        }
-
-        .taskCard {
-          margin-bottom: 18px;
-        }
-
-        .sectionHeader {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 10px;
-        }
-
-        .priorityList,
-        .taskList {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .priorityList {
-          gap: 3px;
-        }
-
-        .taskList {
-          gap: 7px;
-        }
-
-        .priorityItem {
-          display: grid;
-          grid-template-columns: 16px 1fr 18px;
-          gap: 5px;
-          align-items: center;
-          background: transparent;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          padding: 4px 6px;
-          height: 32px;
-        }
-
-        .priorityItem span {
-          width: 14px;
-          height: 14px;
-          border-radius: 4px;
-          background: #111;
-          color: #fff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 9px;
-          font-weight: 700;
-        }
-
-        .priorityItem input {
-          border: none;
-          background: transparent;
-          padding: 0;
-          font-size: 12px;
-          height: 100%;
-          color: #111;
-          outline: none;
-          min-width: 0;
-        }
-
-        .priorityItem button {
-          background: #f3f4f6;
-          color: #111;
-          width: 16px;
-          height: 16px;
-          border-radius: 5px;
-          font-size: 10px;
-          padding: 0;
-          line-height: 1;
-        }
-
-        .hideToggle {
+        .top p {
+          margin: 8px 0 0;
           font-size: 13px;
-          color: #555;
-          display: flex;
-          gap: 8px;
-          align-items: center;
-          margin-top: 8px;
+          color: #64748b;
         }
 
-        .addTaskGrid {
+        .hide-toggle {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          color: #334155;
+        }
+
+        .add-card,
+        .task-card {
+          background: #ffffff;
+          border: 1px solid #dfe3ea;
+          border-radius: 18px;
+          padding: 18px;
+          margin-bottom: 18px;
+          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
+        }
+
+        h2 {
+          margin: 0 0 14px;
+          font-size: 16px;
+          font-weight: 800;
+        }
+
+        .add-row {
           display: grid;
-          grid-template-columns: 1fr 130px 130px 150px 80px;
+          grid-template-columns: 1fr 130px 130px 150px 90px;
           gap: 10px;
-          margin-top: 14px;
         }
 
         input,
         select {
-          border: 1px solid #e5e7eb;
-          background: #f9fafb;
+          height: 40px;
           border-radius: 12px;
-          padding: 11px 12px;
-          font-size: 14px;
+          border: 1px solid #cfd6df;
+          background: #f8fafc;
+          padding: 0 12px;
+          font-size: 13px;
           outline: none;
-          color: #111;
-        }
-
-        input:focus,
-        select:focus {
-          border-color: #111;
-          background: #fff;
         }
 
         button {
           border: none;
-          background: #111;
-          color: #fff;
-          border-radius: 10px;
-          padding: 9px 12px;
-          font-size: 13px;
+          border-radius: 999px;
+          background: #020617;
+          color: white;
+          font-size: 12px;
+          font-weight: 800;
+          padding: 8px 13px;
           cursor: pointer;
-          transition: all 0.18s ease;
         }
 
-        button:hover {
-          transform: translateY(-1px);
-          opacity: 0.9;
-        }
-
-        .smallBlackBtn {
-          width: 28px;
-          height: 28px;
-          padding: 0;
-          border-radius: 9px;
-          font-size: 14px;
-        }
-
-        .taskItem {
+        .card-head {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 16px;
-          background: #f9fafb;
-          border: 1px solid #eeeeee;
+          margin-bottom: 12px;
+        }
+
+        .card-head span {
+          font-size: 14px;
+          color: #020617;
+        }
+
+        .task-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .task-row {
+          display: grid;
+          grid-template-columns: 24px 1fr auto auto 34px;
+          align-items: center;
+          gap: 12px;
+          border: 1px solid #e5e7eb;
+          background: #ffffff;
           border-radius: 14px;
           padding: 14px;
         }
 
-        .taskItem.completed {
-          opacity: 0.55;
+        .task-row.done {
+          opacity: 0.5;
         }
 
-        .taskItem.completed .taskTitle {
+        .task-row.done h3 {
           text-decoration: line-through;
         }
 
-        .taskLeft {
-          display: flex;
-          align-items: flex-start;
-          gap: 12px;
-        }
-
-        .taskTitle {
+        .task-main h3 {
+          margin: 0 0 5px;
           font-size: 14px;
-          font-weight: 600;
+          font-weight: 800;
         }
 
-        .taskMeta {
-          display: flex;
-          gap: 12px;
-          margin-top: 5px;
-          color: #6b7280;
+        .task-main p {
+          margin: 0;
           font-size: 12px;
+          color: #64748b;
         }
 
-        .taskRight {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .taskRight button {
-          background: #f3f4f6;
-          color: #111;
-          width: 24px;
-          height: 24px;
-          padding: 0;
-          border-radius: 8px;
-          font-size: 13px;
-        }
-
-        .urgencyBadge {
-          font-size: 12px;
-          padding: 6px 10px;
+        .badge {
           border-radius: 999px;
-          font-weight: 600;
+          padding: 7px 11px;
+          font-size: 12px;
+          font-weight: 800;
         }
 
-        .urgencyBadge.high {
-          background: #fee2e2;
-          color: #991b1b;
-        }
-
-        .urgencyBadge.medium {
-          background: #fef3c7;
-          color: #92400e;
-        }
-
-        .urgencyBadge.low {
+        .badge.low {
           background: #dcfce7;
           color: #166534;
         }
 
-        .emptyState {
-          padding: 24px;
-          text-align: center;
-          color: #777;
-          font-size: 14px;
+        .badge.medium {
+          background: #fef3c7;
+          color: #b45309;
         }
 
-        @media (max-width: 1000px) {
-          .tasksLayout {
-            grid-template-columns: 1fr;
-          }
+        .badge.high {
+          background: #fee2e2;
+          color: #b91c1c;
+        }
 
-          .prioritySide {
-            position: static;
-          }
+        .followup-btn {
+          background: #f8fafc;
+          color: #020617;
+          border: 1px solid #cfd6df;
+        }
 
-          .addTaskGrid {
-            grid-template-columns: 1fr;
-          }
+        .delete-btn {
+          background: #f8fafc;
+          color: #64748b;
+          padding: 7px 10px;
         }
       `}</style>
-    </div>
+    </main>
   );
 }
