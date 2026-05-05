@@ -127,20 +127,20 @@ export default function MeetingsPage() {
   );
 
   const taskItems = taskRows.filter((item) => item.title || item.details);
-
   const decisionItems = decisionRows.filter((item) => item.title || item.details);
 
   function renderCalendar() {
-    if (!calendarItems.length) return `<p class="empty">No calendar items entered.</p>`;
+    if (!calendarItems.length) return `<p class="empty">No meeting review items entered.</p>`;
 
     return calendarItems
       .map(
         (item) => `
-          <div class="agendaItem">
+          <div class="item">
             <div class="itemTitle">${item.name || "Untitled Meeting"}</div>
             <div class="itemMeta">
-              ${item.time ? `<span>${item.time}</span>` : ""}
-              ${item.location ? `<span>${item.location}</span>` : ""}
+              ${item.time ? `${item.time}` : ""}
+              ${item.time && item.location ? " · " : ""}
+              ${item.location ? `${item.location}` : ""}
             </div>
           </div>
         `
@@ -149,21 +149,15 @@ export default function MeetingsPage() {
   }
 
   function renderTasks() {
-    if (!taskItems.length) return `<p class="empty">No tasks entered.</p>`;
+    if (!taskItems.length) return `<p class="empty">No task review items entered.</p>`;
 
     return taskItems
       .map(
         (item) => `
-          <div class="agendaItem">
-            <div class="itemTop">
-              <div class="itemTitle">${item.title || "Untitled Task"}</div>
-              <span class="pill">${item.urgency || "Medium"}</span>
-            </div>
-            ${
-              item.details
-                ? `<div class="itemDetails">${item.details}</div>`
-                : ""
-            }
+          <div class="item">
+            <div class="itemTitle">${item.title || "Untitled Task"}</div>
+            <div class="itemMeta">${item.urgency || "Medium"} priority</div>
+            ${item.details ? `<div class="itemDetails">${item.details}</div>` : ""}
           </div>
         `
       )
@@ -176,13 +170,9 @@ export default function MeetingsPage() {
     return decisionItems
       .map(
         (item) => `
-          <div class="agendaItem">
+          <div class="item">
             <div class="itemTitle">${item.title || "Untitled Decision"}</div>
-            ${
-              item.details
-                ? `<div class="itemDetails">${item.details}</div>`
-                : ""
-            }
+            ${item.details ? `<div class="itemDetails">${item.details}</div>` : ""}
           </div>
         `
       )
@@ -197,142 +187,121 @@ export default function MeetingsPage() {
         <title>${agendaTitle}</title>
         <style>
           body {
-            font-family: Arial, sans-serif;
-            color: #111;
+            margin: 0;
             background: #ffffff;
-            padding: 34px;
+            color: #111111;
+            font-family: Arial, Helvetica, sans-serif;
+            padding: 36px 42px;
           }
 
           .page {
-            max-width: 900px;
+            max-width: 820px;
             margin: 0 auto;
           }
 
-          .header {
-            border-bottom: 4px solid #111;
+          .topLine {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid #111111;
             padding-bottom: 18px;
-            margin-bottom: 24px;
+            margin-bottom: 28px;
           }
 
-          .logoText {
-            font-size: 24px;
-            font-weight: 900;
-            letter-spacing: -0.04em;
+          .brand {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
             text-transform: uppercase;
           }
 
-          .subbrand {
-            margin-top: 4px;
-            font-size: 11px;
+          .brandSub {
+            margin-top: 3px;
+            font-size: 10px;
             letter-spacing: 0.16em;
             text-transform: uppercase;
-            color: #666;
+            color: #555555;
+          }
+
+          .dateBlock {
+            text-align: right;
+            font-size: 11px;
+            color: #555555;
+            line-height: 1.5;
           }
 
           h1 {
-            margin: 18px 0 4px;
-            font-size: 28px;
-            line-height: 1.1;
-          }
-
-          .meta {
-            font-size: 12px;
-            color: #666;
+            margin: 0 0 24px;
+            font-size: 24px;
+            font-weight: 500;
+            letter-spacing: -0.02em;
           }
 
           .section {
-            margin-top: 24px;
-            break-inside: avoid;
+            margin-bottom: 24px;
           }
 
-          .sectionHeader {
-            background: #111;
-            color: #fff;
-            padding: 10px 13px;
-            border-radius: 8px 8px 0 0;
+          .sectionTitle {
             font-size: 12px;
-            font-weight: 800;
+            font-weight: 700;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
+            border-bottom: 1px solid #d8d8d8;
+            padding-bottom: 7px;
+            margin-bottom: 8px;
           }
 
-          .sectionBody {
-            border: 1px solid #d8dee6;
-            border-top: none;
-            border-radius: 0 0 8px 8px;
-            padding: 12px;
+          .item {
+            padding: 9px 0;
+            border-bottom: 1px solid #eeeeee;
           }
 
-          .agendaItem {
-            padding: 12px 10px;
-            border-bottom: 1px solid #e5e7eb;
-          }
-
-          .agendaItem:last-child {
+          .item:last-child {
             border-bottom: none;
           }
 
-          .itemTop {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            align-items: center;
-          }
-
           .itemTitle {
-            font-size: 14px;
-            font-weight: 800;
-            line-height: 1.35;
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1.4;
           }
 
           .itemMeta {
-            margin-top: 5px;
-            display: flex;
-            gap: 10px;
-            font-size: 12px;
-            color: #555;
+            margin-top: 3px;
+            font-size: 11px;
+            color: #666666;
           }
 
           .itemDetails {
-            margin-top: 6px;
+            margin-top: 5px;
             font-size: 12px;
-            color: #444;
+            color: #333333;
             line-height: 1.45;
-          }
-
-          .pill {
-            background: #f4f0e8;
-            color: #111;
-            border: 1px solid #d6c9b8;
-            border-radius: 999px;
-            padding: 4px 9px;
-            font-size: 10px;
-            font-weight: 800;
-            white-space: nowrap;
           }
 
           .empty {
             margin: 0;
-            padding: 8px 4px;
+            padding: 8px 0;
             font-size: 12px;
-            color: #777;
+            color: #777777;
           }
 
           .footer {
-            margin-top: 30px;
+            margin-top: 36px;
             padding-top: 12px;
-            border-top: 3px solid #111;
+            border-top: 1px solid #111111;
+            font-size: 9.5px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #333333;
             display: flex;
             justify-content: space-between;
-            font-size: 10px;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: #555;
+            gap: 16px;
           }
 
           @media print {
             body {
-              padding: 22px;
+              padding: 28px 34px;
             }
           }
         </style>
@@ -340,37 +309,38 @@ export default function MeetingsPage() {
 
       <body>
         <div class="page">
-          <div class="header">
-            <div class="logoText">Arrowquip</div>
-            <div class="subbrand">Ranch | Outdoor</div>
-            <h1>${agendaTitle}</h1>
-            <div class="meta">Agenda Export · ${agendaDate}</div>
-          </div>
+          <div class="topLine">
+            <div>
+              <div class="brand">Arrowquip</div>
+              <div class="brandSub">Ranch | Outdoor</div>
+            </div>
 
-          <div class="section">
-            <div class="sectionHeader">Meeting Review</div>
-            <div class="sectionBody">
-              ${renderCalendar()}
+            <div class="dateBlock">
+              Agenda Export<br />
+              ${agendaDate}
             </div>
           </div>
 
+          <h1>${agendaTitle}</h1>
+
           <div class="section">
-            <div class="sectionHeader">Tasks Review</div>
-            <div class="sectionBody">
-              ${renderTasks()}
-            </div>
+            <div class="sectionTitle">Meeting Review</div>
+            ${renderCalendar()}
           </div>
 
           <div class="section">
-            <div class="sectionHeader">Decisions Needed</div>
-            <div class="sectionBody">
-              ${renderDecisions()}
-            </div>
+            <div class="sectionTitle">Tasks Review</div>
+            ${renderTasks()}
+          </div>
+
+          <div class="section">
+            <div class="sectionTitle">Decisions Needed</div>
+            ${renderDecisions()}
           </div>
 
           <div class="footer">
-            <span>Arrowquip Internal Agenda</span>
-            <span>Ranch | Outdoor</span>
+            <span>141 Railway Avenue, Woodlands, MB R0C 3H0</span>
+            <span>1-866-383-7827 | Arrowquip.com</span>
           </div>
         </div>
 
