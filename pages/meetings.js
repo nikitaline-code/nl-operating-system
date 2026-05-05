@@ -44,7 +44,7 @@ export default function MeetingsPage() {
   const [markDailyDecisions, setMarkDailyDecisions] = useState([{ ...blankDecision }]);
   const [daneDailyDecisions, setDaneDailyDecisions] = useState([{ ...blankDecision }]);
 
-@@ -68,45 +51,17 @@ export default function MeetingsPage() {
+export default function MeetingsPage() {
     setDaneDailyDecisions(savedDaneDecisions ? JSON.parse(savedDaneDecisions) : [{ ...blankDecision }]);
   }, [selectedDate]);
 
