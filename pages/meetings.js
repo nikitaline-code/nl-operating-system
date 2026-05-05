@@ -100,7 +100,7 @@ export default function MeetingsPage() {
 
   function changeDay(amount) {
     const d = new Date(selectedDate);
-@@ -116,10 +71,7 @@ export default function MeetingsPage() {
+export default function MeetingsPage() {
 
   function updateRow(array, setArray, index, field, value) {
     const updated = [...array];
@@ -112,7 +112,7 @@ export default function MeetingsPage() {
     setArray(updated);
   }
 
-@@ -131,20 +83,6 @@ export default function MeetingsPage() {
+export default function MeetingsPage() {
     setArray(array.filter((_, i) => i !== index));
   }
 
@@ -133,7 +133,7 @@ export default function MeetingsPage() {
   function sendMeetingTaskToTasks(task, assignedFrom) {
     if (!task.title.trim()) return;
 
-@@ -164,166 +102,12 @@ export default function MeetingsPage() {
+export default function MeetingsPage() {
     localStorage.setItem("tasks", JSON.stringify([newTask, ...existingTasks]));
   }
 
@@ -306,7 +306,7 @@ export default function MeetingsPage() {
 
   return (
     <div className="meetingsPage">
-@@ -334,18 +118,8 @@ export default function MeetingsPage() {
+export default function MeetingsPage() {
         </div>
 
         <div className="topToggle">
@@ -327,7 +327,7 @@ export default function MeetingsPage() {
         </div>
       </div>
 
-@@ -358,9 +132,7 @@ export default function MeetingsPage() {
+export default function MeetingsPage() {
                   <h2>Weekly Priorities</h2>
                   <p>Top focus items</p>
                 </div>
@@ -338,7 +338,7 @@ export default function MeetingsPage() {
               </div>
 
               <div className="priorityList">
-@@ -369,35 +141,24 @@ export default function MeetingsPage() {
+export default function MeetingsPage() {
                     <span>{index + 1}</span>
                     <input
                       value={priority}
@@ -383,7 +383,7 @@ export default function MeetingsPage() {
           </main>
         </div>
       )}
-@@ -406,53 +167,22 @@ export default function MeetingsPage() {
+export default function MeetingsPage() {
         <>
           <div className="dateBar">
             <button onClick={() => changeDay(-1)}>← Previous Day</button>
@@ -444,7 +444,7 @@ export default function MeetingsPage() {
         .meetingsPage {
           padding: 32px;
           max-width: 1280px;
-@@ -468,19 +198,21 @@ export default function MeetingsPage() {
+export default function MeetingsPage() {
           margin-bottom: 24px;
         }
 
@@ -469,7 +469,7 @@ export default function MeetingsPage() {
           margin: 4px 0 0;
           color: #6b7280;
           font-size: 12px;
-@@ -518,7 +250,7 @@ export default function MeetingsPage() {
+export default function MeetingsPage() {
           justify-content: space-between;
           align-items: center;
           gap: 10px;
@@ -478,7 +478,7 @@ export default function MeetingsPage() {
         }
 
         .topToggle,
-@@ -546,20 +278,26 @@ export default function MeetingsPage() {
+export default function MeetingsPage() {
           width: 160px;
         }
 
@@ -507,7 +507,7 @@ export default function MeetingsPage() {
         }
 
         .topToggle button,
-@@ -574,9 +312,9 @@ export default function MeetingsPage() {
+export default function MeetingsPage() {
           color: #fff;
         }
 
@@ -520,7 +520,7 @@ export default function MeetingsPage() {
           border: 1px solid #e5e7eb;
           background: #f9fafb;
           border-radius: 10px;
-@@ -585,18 +323,21 @@ export default function MeetingsPage() {
+export default function MeetingsPage() {
           outline: none;
           color: #111;
           font-family: inherit;
@@ -546,7 +546,7 @@ export default function MeetingsPage() {
           display: flex;
           flex-direction: column;
           gap: 8px;
-@@ -626,7 +367,7 @@ export default function MeetingsPage() {
+export default function MeetingsPage() {
 
         .decisionRow {
           display: grid;
@@ -555,7 +555,7 @@ export default function MeetingsPage() {
           gap: 8px;
           align-items: center;
         }
-@@ -639,21 +380,19 @@ export default function MeetingsPage() {
+export default function MeetingsPage() {
         }
 
         .detailBtn {
@@ -582,7 +582,7 @@ export default function MeetingsPage() {
           gap: 3px;
         }
 
-@@ -682,22 +421,22 @@ export default function MeetingsPage() {
+export default function MeetingsPage() {
         }
 
         .priorityItem input {
@@ -612,7 +612,7 @@ export default function MeetingsPage() {
         }
 
         @media (max-width: 1000px) {
-@@ -729,3 +468,114 @@ export default function MeetingsPage() {
+export default function MeetingsPage() {
     </div>
   );
 }
