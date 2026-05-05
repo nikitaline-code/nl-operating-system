@@ -110,213 +110,279 @@ export default function MeetingsPage() {
   const setActiveDailyDecisions = dailyPerson === "Mark" ? setMarkDailyDecisions : setDaneDailyDecisions;
 
   function exportArrowquipAgenda() {
-    const agendaTitle =
-      mode === "weekly"
-        ? "Weekly Meeting Agenda"
-        : `${dailyPerson} Daily Meeting Agenda`;
+  const agendaTitle =
+    mode === "weekly"
+      ? "Weekly Meeting Agenda"
+      : `${dailyPerson} Daily Meeting Agenda`;
 
-    const agendaDate =
-      mode === "daily"
-        ? selectedDate
-        : new Date().toISOString().slice(0, 10);
+  const agendaDate =
+    mode === "daily" ? selectedDate : new Date().toISOString().slice(0, 10);
 
-    const calendarRows =
-      mode === "weekly" ? weeklyCalendar : activeDailyCalendar;
+  const calendarRows = mode === "weekly" ? weeklyCalendar : activeDailyCalendar;
+  const taskRows = mode === "weekly" ? weeklyTasks : activeDailyTasks;
+  const decisionRows = mode === "weekly" ? weeklyDecisions : activeDailyDecisions;
 
-    const taskRows =
-      mode === "weekly" ? weeklyTasks : activeDailyTasks;
+  const calendarItems = calendarRows.filter(
+    (item) => item.name || item.location || item.time
+  );
 
-    const decisionRows =
-      mode === "weekly" ? weeklyDecisions : activeDailyDecisions;
+  const taskItems = taskRows.filter((item) => item.title || item.details);
 
-    const agendaItems = [
-      ...calendarRows
-        .filter((item) => item.name || item.location || item.time)
-        .map((item) => ({
-          section: "Calendar Review",
-          item: item.name || "",
-          details: [item.location, item.time].filter(Boolean).join(" · "),
-          owner: "",
-        })),
+  const decisionItems = decisionRows.filter((item) => item.title || item.details);
 
-      ...taskRows
-        .filter((item) => item.title || item.details)
-        .map((item) => ({
-          section: mode === "weekly" ? "Weekly Tasks" : `${dailyPerson} Daily Tasks`,
-          item: item.title || "",
-          details: item.details || "",
-          owner: mode === "weekly" ? "Weekly Meeting" : dailyPerson,
-          priority: item.urgency || "",
-        })),
+  function renderCalendar() {
+    if (!calendarItems.length) return `<p class="empty">No calendar items entered.</p>`;
 
-      ...decisionRows
-        .filter((item) => item.title || item.details)
-        .map((item) => ({
-          section: "Decisions Needed",
-          item: item.title || "",
-          details: item.details || "",
-          owner: "",
-        })),
-    ];
-
-    const rows = agendaItems
+    return calendarItems
       .map(
-        (item, index) => `
-          <tr>
-            <td>${index + 1}</td>
-            <td>${item.section || ""}</td>
-            <td>
-              <strong>${item.item || ""}</strong>
-              ${item.details ? `<div class="details">${item.details}</div>` : ""}
-            </td>
-            <td>${item.owner || ""}</td>
-            <td>${item.priority || ""}</td>
-          </tr>
+        (item) => `
+          <div class="agendaItem">
+            <div class="itemTitle">${item.name || "Untitled Meeting"}</div>
+            <div class="itemMeta">
+              ${item.time ? `<span>${item.time}</span>` : ""}
+              ${item.location ? `<span>${item.location}</span>` : ""}
+            </div>
+          </div>
         `
       )
       .join("");
+  }
 
-    const printWindow = window.open("", "_blank");
+  function renderTasks() {
+    if (!taskItems.length) return `<p class="empty">No tasks entered.</p>`;
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>${agendaTitle}</title>
-          <style>
+    return taskItems
+      .map(
+        (item) => `
+          <div class="agendaItem">
+            <div class="itemTop">
+              <div class="itemTitle">${item.title || "Untitled Task"}</div>
+              <span class="pill">${item.urgency || "Medium"}</span>
+            </div>
+            ${
+              item.details
+                ? `<div class="itemDetails">${item.details}</div>`
+                : ""
+            }
+          </div>
+        `
+      )
+      .join("");
+  }
+
+  function renderDecisions() {
+    if (!decisionItems.length) return `<p class="empty">No decisions entered.</p>`;
+
+    return decisionItems
+      .map(
+        (item) => `
+          <div class="agendaItem">
+            <div class="itemTitle">${item.title || "Untitled Decision"}</div>
+            ${
+              item.details
+                ? `<div class="itemDetails">${item.details}</div>`
+                : ""
+            }
+          </div>
+        `
+      )
+      .join("");
+  }
+
+  const printWindow = window.open("", "_blank");
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>${agendaTitle}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            color: #111;
+            background: #ffffff;
+            padding: 34px;
+          }
+
+          .page {
+            max-width: 900px;
+            margin: 0 auto;
+          }
+
+          .header {
+            border-bottom: 4px solid #111;
+            padding-bottom: 18px;
+            margin-bottom: 24px;
+          }
+
+          .logoText {
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            text-transform: uppercase;
+          }
+
+          .subbrand {
+            margin-top: 4px;
+            font-size: 11px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: #666;
+          }
+
+          h1 {
+            margin: 18px 0 4px;
+            font-size: 28px;
+            line-height: 1.1;
+          }
+
+          .meta {
+            font-size: 12px;
+            color: #666;
+          }
+
+          .section {
+            margin-top: 24px;
+            break-inside: avoid;
+          }
+
+          .sectionHeader {
+            background: #111;
+            color: #fff;
+            padding: 10px 13px;
+            border-radius: 8px 8px 0 0;
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+          }
+
+          .sectionBody {
+            border: 1px solid #d8dee6;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            padding: 12px;
+          }
+
+          .agendaItem {
+            padding: 12px 10px;
+            border-bottom: 1px solid #e5e7eb;
+          }
+
+          .agendaItem:last-child {
+            border-bottom: none;
+          }
+
+          .itemTop {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+          }
+
+          .itemTitle {
+            font-size: 14px;
+            font-weight: 800;
+            line-height: 1.35;
+          }
+
+          .itemMeta {
+            margin-top: 5px;
+            display: flex;
+            gap: 10px;
+            font-size: 12px;
+            color: #555;
+          }
+
+          .itemDetails {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #444;
+            line-height: 1.45;
+          }
+
+          .pill {
+            background: #f4f0e8;
+            color: #111;
+            border: 1px solid #d6c9b8;
+            border-radius: 999px;
+            padding: 4px 9px;
+            font-size: 10px;
+            font-weight: 800;
+            white-space: nowrap;
+          }
+
+          .empty {
+            margin: 0;
+            padding: 8px 4px;
+            font-size: 12px;
+            color: #777;
+          }
+
+          .footer {
+            margin-top: 30px;
+            padding-top: 12px;
+            border-top: 3px solid #111;
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #555;
+          }
+
+          @media print {
             body {
-              font-family: Arial, sans-serif;
-              color: #111;
-              padding: 36px;
-              background: #ffffff;
+              padding: 22px;
             }
+          }
+        </style>
+      </head>
 
-            .header {
-              border-bottom: 5px solid #111;
-              padding-bottom: 18px;
-              margin-bottom: 26px;
-            }
-
-            .brand {
-              font-size: 15px;
-              font-weight: 900;
-              letter-spacing: 0.2em;
-              text-transform: uppercase;
-            }
-
-            .subbrand {
-              margin-top: 5px;
-              font-size: 11px;
-              letter-spacing: 0.16em;
-              text-transform: uppercase;
-              color: #666;
-            }
-
-            h1 {
-              margin: 18px 0 4px;
-              font-size: 30px;
-              line-height: 1.1;
-            }
-
-            .meta {
-              font-size: 12px;
-              color: #666;
-            }
-
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-top: 18px;
-            }
-
-            th {
-              background: #111;
-              color: #fff;
-              text-align: left;
-              padding: 11px;
-              font-size: 11px;
-              text-transform: uppercase;
-              letter-spacing: 0.08em;
-            }
-
-            td {
-              border: 1px solid #d8dee6;
-              padding: 11px;
-              font-size: 13px;
-              vertical-align: top;
-            }
-
-            tr:nth-child(even) td {
-              background: #f7f7f4;
-            }
-
-            .details {
-              margin-top: 5px;
-              font-size: 12px;
-              color: #555;
-              line-height: 1.4;
-            }
-
-            .footer {
-              margin-top: 32px;
-              padding-top: 14px;
-              border-top: 3px solid #111;
-              display: flex;
-              justify-content: space-between;
-              font-size: 10px;
-              letter-spacing: 0.12em;
-              text-transform: uppercase;
-              color: #555;
-            }
-
-            @media print {
-              body {
-                padding: 24px;
-              }
-            }
-          </style>
-        </head>
-
-        <body>
+      <body>
+        <div class="page">
           <div class="header">
-            <div class="brand">Arrowquip</div>
+            <div class="logoText">Arrowquip</div>
             <div class="subbrand">Ranch | Outdoor</div>
             <h1>${agendaTitle}</h1>
             <div class="meta">Agenda Export · ${agendaDate}</div>
           </div>
 
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Section</th>
-                <th>Agenda Item</th>
-                <th>Owner</th>
-                <th>Priority</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${
-                rows ||
-                `<tr><td colspan="5">No agenda items entered.</td></tr>`
-              }
-            </tbody>
-          </table>
+          <div class="section">
+            <div class="sectionHeader">Meeting Review</div>
+            <div class="sectionBody">
+              ${renderCalendar()}
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="sectionHeader">Tasks Review</div>
+            <div class="sectionBody">
+              ${renderTasks()}
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="sectionHeader">Decisions Needed</div>
+            <div class="sectionBody">
+              ${renderDecisions()}
+            </div>
+          </div>
 
           <div class="footer">
             <span>Arrowquip Internal Agenda</span>
             <span>Ranch | Outdoor</span>
           </div>
+        </div>
 
-          <script>
-            window.print();
-          </script>
-        </body>
-      </html>
-    `);
+        <script>
+          window.print();
+        </script>
+      </body>
+    </html>
+  `);
 
-    printWindow.document.close();
-  }
-
+  printWindow.document.close();
+}
   return (
     <div className="meetingsPage">
       <div className="meetingsHeader">
