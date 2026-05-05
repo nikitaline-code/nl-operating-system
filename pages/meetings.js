@@ -1,4 +1,4 @@
-@@ -2,41 +2,24 @@ import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 const today = new Date().toISOString().slice(0, 10);
 
