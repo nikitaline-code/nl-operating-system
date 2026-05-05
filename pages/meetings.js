@@ -1,506 +1,729 @@
-import { useEffect, useState } from "react";
+@@ -2,41 +2,24 @@ import { useEffect, useState } from "react";
 
-const MEETINGS_KEY = "os-meetings";
-const LEGACY_KEYS = [
-  "meetings",
-  "meeting-data",
-  "meetingItems",
-  "daily-meetings",
-  "weekly-meetings",
-  "os-meeting-data",
-];
+const today = new Date().toISOString().slice(0, 10);
 
-const DEFAULT_MEETINGS = {
-  daily: {
-    title: "Daily Meeting",
-    sections: {
-      calendar: [],
-      tasks: [],
-      decisions: [],
-    },
-  },
-  weekly: {
-    title: "Weekly Meeting",
-    sections: {
-      calendar: [],
-      tasks: [],
-      decisions: [],
-    },
-  },
+const blankMeeting = {
+  name: "",
+  location: "",
+  time: "",
 };
 
+const blankTask = {
+  title: "",
+  urgency: "Medium",
+  details: "",
+  showDetails: false,
+};
+
+const blankDecision = {
+  title: "",
+  details: "",
+};
+const blankMeeting = { name: "", location: "", time: "" };
+const blankTask = { title: "", urgency: "Medium", details: "", showDetails: false };
+const blankDecision = { title: "", details: "", showDetails: false };
+
 export default function MeetingsPage() {
-  const [loaded, setLoaded] = useState(false);
-  const [mode, setMode] = useState("daily");
-  const [meetings, setMeetings] = useState(DEFAULT_MEETINGS);
+  const [mode, setMode] = useState("weekly");
+  const [dailyPerson, setDailyPerson] = useState("Mark");
+  const [selectedDate, setSelectedDate] = useState(today);
 
-  const current = meetings[mode];
+  const [weeklyPriorities, setWeeklyPriorities] = useState(["", "", ""]);
 
-  useEffect(() => {
-    const saved = localStorage.getItem(MEETINGS_KEY);
+  const [weeklyPriorities, setWeeklyPriorities] = useState(["", ""]);
+  const [weeklyCalendar, setWeeklyCalendar] = useState([{ ...blankMeeting }]);
+  const [weeklyTasks, setWeeklyTasks] = useState([{ ...blankTask }]);
+  const [weeklyDecisions, setWeeklyDecisions] = useState([{ ...blankDecision }]);
 
-    if (saved) {
-      setMeetings(safeMerge(JSON.parse(saved)));
-      setLoaded(true);
-      return;
-    }
+  const [markDailyCalendar, setMarkDailyCalendar] = useState([{ ...blankMeeting }]);
+  const [daneDailyCalendar, setDaneDailyCalendar] = useState([{ ...blankMeeting }]);
 
-    for (const key of LEGACY_KEYS) {
-      const oldData = localStorage.getItem(key);
+  const [markDailyTasks, setMarkDailyTasks] = useState([{ ...blankTask }]);
+  const [daneDailyTasks, setDaneDailyTasks] = useState([{ ...blankTask }]);
 
-      if (oldData) {
-        const parsed = JSON.parse(oldData);
-        const restored = safeMerge(parsed);
+  const [markDailyDecisions, setMarkDailyDecisions] = useState([{ ...blankDecision }]);
+  const [daneDailyDecisions, setDaneDailyDecisions] = useState([{ ...blankDecision }]);
 
-        localStorage.setItem(MEETINGS_KEY, JSON.stringify(restored));
-        setMeetings(restored);
-        setLoaded(true);
-        return;
-      }
-    }
-
-    setMeetings(DEFAULT_MEETINGS);
-    setLoaded(true);
-  }, []);
+@@ -68,45 +51,17 @@ export default function MeetingsPage() {
+    setDaneDailyDecisions(savedDaneDecisions ? JSON.parse(savedDaneDecisions) : [{ ...blankDecision }]);
+  }, [selectedDate]);
 
   useEffect(() => {
-    if (!loaded) return;
-    localStorage.setItem(MEETINGS_KEY, JSON.stringify(meetings));
-  }, [meetings, loaded]);
+    localStorage.setItem("weeklyPriorities", JSON.stringify(weeklyPriorities));
+  }, [weeklyPriorities]);
+  useEffect(() => localStorage.setItem("weeklyPriorities", JSON.stringify(weeklyPriorities)), [weeklyPriorities]);
+  useEffect(() => localStorage.setItem("meetingWeeklyCalendar", JSON.stringify(weeklyCalendar)), [weeklyCalendar]);
+  useEffect(() => localStorage.setItem("meetingWeeklyTasks", JSON.stringify(weeklyTasks)), [weeklyTasks]);
+  useEffect(() => localStorage.setItem("meetingWeeklyDecisions", JSON.stringify(weeklyDecisions)), [weeklyDecisions]);
 
-  function safeMerge(data) {
-    return {
-      daily: {
-        ...DEFAULT_MEETINGS.daily,
-        ...(data.daily || {}),
-        sections: {
-          ...DEFAULT_MEETINGS.daily.sections,
-          ...(data.daily?.sections || data.sections || {}),
-        },
-      },
-      weekly: {
-        ...DEFAULT_MEETINGS.weekly,
-        ...(data.weekly || {}),
-        sections: {
-          ...DEFAULT_MEETINGS.weekly.sections,
-          ...(data.weekly?.sections || {}),
-        },
-      },
+  useEffect(() => {
+    localStorage.setItem("meetingWeeklyCalendar", JSON.stringify(weeklyCalendar));
+  }, [weeklyCalendar]);
+
+  useEffect(() => {
+    localStorage.setItem("meetingWeeklyTasks", JSON.stringify(weeklyTasks));
+  }, [weeklyTasks]);
+
+  useEffect(() => {
+    localStorage.setItem("meetingWeeklyDecisions", JSON.stringify(weeklyDecisions));
+  }, [weeklyDecisions]);
+
+  useEffect(() => {
+    localStorage.setItem(`meetingMarkDailyCalendar-${selectedDate}`, JSON.stringify(markDailyCalendar));
+  }, [markDailyCalendar, selectedDate]);
+
+  useEffect(() => {
+    localStorage.setItem(`meetingDaneDailyCalendar-${selectedDate}`, JSON.stringify(daneDailyCalendar));
+  }, [daneDailyCalendar, selectedDate]);
+
+  useEffect(() => {
+    localStorage.setItem(`meetingMarkDailyTasks-${selectedDate}`, JSON.stringify(markDailyTasks));
+  }, [markDailyTasks, selectedDate]);
+
+  useEffect(() => {
+    localStorage.setItem(`meetingDaneDailyTasks-${selectedDate}`, JSON.stringify(daneDailyTasks));
+  }, [daneDailyTasks, selectedDate]);
+
+  useEffect(() => {
+    localStorage.setItem(`meetingMarkDailyDecisions-${selectedDate}`, JSON.stringify(markDailyDecisions));
+  }, [markDailyDecisions, selectedDate]);
+
+  useEffect(() => {
+    localStorage.setItem(`meetingDaneDailyDecisions-${selectedDate}`, JSON.stringify(daneDailyDecisions));
+  }, [daneDailyDecisions, selectedDate]);
+  useEffect(() => localStorage.setItem(`meetingMarkDailyCalendar-${selectedDate}`, JSON.stringify(markDailyCalendar)), [markDailyCalendar, selectedDate]);
+  useEffect(() => localStorage.setItem(`meetingDaneDailyCalendar-${selectedDate}`, JSON.stringify(daneDailyCalendar)), [daneDailyCalendar, selectedDate]);
+  useEffect(() => localStorage.setItem(`meetingMarkDailyTasks-${selectedDate}`, JSON.stringify(markDailyTasks)), [markDailyTasks, selectedDate]);
+  useEffect(() => localStorage.setItem(`meetingDaneDailyTasks-${selectedDate}`, JSON.stringify(daneDailyTasks)), [daneDailyTasks, selectedDate]);
+  useEffect(() => localStorage.setItem(`meetingMarkDailyDecisions-${selectedDate}`, JSON.stringify(markDailyDecisions)), [markDailyDecisions, selectedDate]);
+  useEffect(() => localStorage.setItem(`meetingDaneDailyDecisions-${selectedDate}`, JSON.stringify(daneDailyDecisions)), [daneDailyDecisions, selectedDate]);
+
+  function changeDay(amount) {
+    const d = new Date(selectedDate);
+@@ -116,10 +71,7 @@ export default function MeetingsPage() {
+
+  function updateRow(array, setArray, index, field, value) {
+    const updated = [...array];
+    updated[index] = {
+      ...updated[index],
+      [field]: value,
     };
+    updated[index] = { ...updated[index], [field]: value };
+    setArray(updated);
   }
 
-  function addItem(section) {
-    const item = {
-      id: Date.now(),
-      text: "",
-      owner: "Nikita",
-      status: "Open",
-    };
-
-    setMeetings((prev) => ({
-      ...prev,
-      [mode]: {
-        ...prev[mode],
-        sections: {
-          ...prev[mode].sections,
-          [section]: [...(prev[mode].sections[section] || []), item],
-        },
-      },
-    }));
+@@ -131,20 +83,6 @@ export default function MeetingsPage() {
+    setArray(array.filter((_, i) => i !== index));
   }
 
-  function updateItem(section, id, field, value) {
-    setMeetings((prev) => ({
-      ...prev,
-      [mode]: {
-        ...prev[mode],
-        sections: {
-          ...prev[mode].sections,
-          [section]: prev[mode].sections[section].map((item) =>
-            item.id === id ? { ...item, [field]: value } : item
-          ),
-        },
-      },
-    }));
+  function updatePriority(index, value) {
+    const updated = [...weeklyPriorities];
+    updated[index] = value;
+    setWeeklyPriorities(updated);
   }
 
-  function deleteItem(section, id) {
-    setMeetings((prev) => ({
-      ...prev,
-      [mode]: {
-        ...prev[mode],
-        sections: {
-          ...prev[mode].sections,
-          [section]: prev[mode].sections[section].filter((item) => item.id !== id),
-        },
-      },
-    }));
+  function addPriority() {
+    setWeeklyPriorities([...weeklyPriorities, ""]);
   }
 
-  function exportAgenda() {
-    const allItems = [
-      ...current.sections.calendar.map((item) => ({
-        section: "Calendar Review",
-        ...item,
-      })),
-      ...current.sections.tasks.map((item) => ({
-        section: "Tasks",
-        ...item,
-      })),
-      ...current.sections.decisions.map((item) => ({
-        section: "Decisions Needed",
-        ...item,
-      })),
-    ].filter((item) => item.text?.trim());
-
-    const rows = allItems
-      .map(
-        (item, index) => `
-          <tr>
-            <td>${index + 1}</td>
-            <td>${item.section}</td>
-            <td>${item.text || ""}</td>
-            <td>${item.owner || ""}</td>
-            <td>${item.status || ""}</td>
-          </tr>
-        `
-      )
-      .join("");
-
-    const win = window.open("", "_blank");
-
-    win.document.write(`
-      <html>
-        <head>
-          <title>${current.title} Agenda</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              padding: 36px;
-              color: #111;
-            }
-
-            .header {
-              border-bottom: 4px solid #111;
-              padding-bottom: 14px;
-              margin-bottom: 24px;
-            }
-
-            .brand {
-              font-size: 12px;
-              letter-spacing: 0.15em;
-              font-weight: 700;
-              text-transform: uppercase;
-            }
-
-            h1 {
-              margin: 8px 0 4px;
-              font-size: 28px;
-            }
-
-            .meta {
-              font-size: 13px;
-              color: #555;
-            }
-
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-top: 20px;
-            }
-
-            th {
-              background: #111;
-              color: white;
-              text-align: left;
-              padding: 10px;
-              font-size: 12px;
-              text-transform: uppercase;
-            }
-
-            td {
-              border: 1px solid #ddd;
-              padding: 10px;
-              font-size: 13px;
-              vertical-align: top;
-            }
-
-            tr:nth-child(even) td {
-              background: #f7f7f7;
-            }
-
-            .footer {
-              margin-top: 28px;
-              font-size: 11px;
-              color: #777;
-            }
-          </style>
-        </head>
-
-        <body>
-          <div class="header">
-            <div class="brand">Arrowquip</div>
-            <h1>${current.title} Agenda</h1>
-            <div class="meta">Exported ${new Date().toLocaleDateString()}</div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Section</th>
-                <th>Agenda Item</th>
-                <th>Owner</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-
-          <div class="footer">Arrowquip Internal Meeting Agenda</div>
-
-          <script>window.print();</script>
-        </body>
-      </html>
-    `);
-
-    win.document.close();
+  function deletePriority(index) {
+    setWeeklyPriorities(weeklyPriorities.filter((_, i) => i !== index));
   }
 
-  return (
-    <main className="page">
-      <div className="shell">
-        <div className="top">
+  function sendMeetingTaskToTasks(task, assignedFrom) {
+    if (!task.title.trim()) return;
+
+@@ -164,166 +102,12 @@ export default function MeetingsPage() {
+    localStorage.setItem("tasks", JSON.stringify([newTask, ...existingTasks]));
+  }
+
+  const activeDailyCalendar =
+    dailyPerson === "Mark" ? markDailyCalendar : daneDailyCalendar;
+  const setActiveDailyCalendar =
+    dailyPerson === "Mark" ? setMarkDailyCalendar : setDaneDailyCalendar;
+
+  const activeDailyTasks =
+    dailyPerson === "Mark" ? markDailyTasks : daneDailyTasks;
+  const setActiveDailyTasks =
+    dailyPerson === "Mark" ? setMarkDailyTasks : setDaneDailyTasks;
+
+  const activeDailyDecisions =
+    dailyPerson === "Mark" ? markDailyDecisions : daneDailyDecisions;
+  const setActiveDailyDecisions =
+    dailyPerson === "Mark" ? setMarkDailyDecisions : setDaneDailyDecisions;
+
+  function CalendarSection({ title, rows, setRows }) {
+    return (
+      <section className="meetingCard">
+        <div className="sectionHeader">
           <div>
-            <p className="eyebrow">MEETING CENTER</p>
-            <h1>Meetings</h1>
-            <p className="subtitle">
-              Daily and weekly agendas with clean Arrowquip agenda export.
-            </p>
+            <h2>{title}</h2>
+            <p>Add meeting name, location, and time.</p>
           </div>
-
-          <button onClick={exportAgenda}>Export Agenda</button>
+          <button className="smallBtn" onClick={() => addRow(rows, setRows, blankMeeting)}>
+            +
+          </button>
         </div>
 
-        <div className="mode-row">
-          <button
-            className={mode === "daily" ? "active" : ""}
-            onClick={() => setMode("daily")}
-          >
-            Daily
+        <div className="calendarList">
+          {rows.map((meeting, index) => (
+            <div className="calendarRow" key={index}>
+              <input
+                value={meeting.name}
+                onChange={(e) => updateRow(rows, setRows, index, "name", e.target.value)}
+                placeholder="Meeting name"
+              />
+              <input
+                value={meeting.location}
+                onChange={(e) => updateRow(rows, setRows, index, "location", e.target.value)}
+                placeholder="Location"
+              />
+              <input
+                type="time"
+                value={meeting.time}
+                onChange={(e) => updateRow(rows, setRows, index, "time", e.target.value)}
+              />
+              <button className="deleteBtn" onClick={() => deleteRow(rows, setRows, index)}>
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  function TasksSection({ title, rows, setRows, assignedFrom }) {
+    return (
+      <section className="meetingCard">
+        <div className="sectionHeader">
+          <div>
+            <h2>{title}</h2>
+            <p>Add task name, priority, and optional hidden details.</p>
+          </div>
+          <button className="smallBtn" onClick={() => addRow(rows, setRows, blankTask)}>
+            +
           </button>
+        </div>
+
+        <div className="taskFlowList">
+          {rows.map((task, index) => (
+            <div className="taskBlock" key={index}>
+              <div className="taskFlowRow">
+                <input
+                  value={task.title}
+                  onChange={(e) => updateRow(rows, setRows, index, "title", e.target.value)}
+                  placeholder="Task name"
+                />
+
+                <select
+                  value={task.urgency}
+                  onChange={(e) => updateRow(rows, setRows, index, "urgency", e.target.value)}
+                >
+                  <option>High</option>
+                  <option>Medium</option>
+                  <option>Low</option>
+                </select>
+
+                <button
+                  className="detailBtn"
+                  onClick={() =>
+                    updateRow(rows, setRows, index, "showDetails", !task.showDetails)
+                  }
+                >
+                  Details
+                </button>
+
+                <button onClick={() => sendMeetingTaskToTasks(task, assignedFrom)}>
+                  Send
+                </button>
+
+                <button className="deleteBtn" onClick={() => deleteRow(rows, setRows, index)}>
+                  ×
+                </button>
+              </div>
+
+              {task.showDetails && (
+                <textarea
+                  className="detailsBox"
+                  value={task.details}
+                  onChange={(e) => updateRow(rows, setRows, index, "details", e.target.value)}
+                  placeholder="Add more details here..."
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  function DecisionsSection({ title, rows, setRows }) {
+    return (
+      <section className="meetingCard">
+        <div className="sectionHeader">
+          <div>
+            <h2>{title}</h2>
+            <p>Add each decision as its own item.</p>
+          </div>
+          <button className="smallBtn" onClick={() => addRow(rows, setRows, blankDecision)}>
+            +
+          </button>
+        </div>
+
+        <div className="decisionList">
+          {rows.map((decision, index) => (
+            <div className="decisionBlock" key={index}>
+              <div className="decisionRow">
+                <input
+                  value={decision.title}
+                  onChange={(e) => updateRow(rows, setRows, index, "title", e.target.value)}
+                  placeholder="Decision needed"
+                />
+                <button className="deleteBtn" onClick={() => deleteRow(rows, setRows, index)}>
+                  ×
+                </button>
+              </div>
+
+              <textarea
+                className="detailsBox"
+                value={decision.details}
+                onChange={(e) => updateRow(rows, setRows, index, "details", e.target.value)}
+                placeholder="Notes / context..."
+              />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+  const activeDailyCalendar = dailyPerson === "Mark" ? markDailyCalendar : daneDailyCalendar;
+  const setActiveDailyCalendar = dailyPerson === "Mark" ? setMarkDailyCalendar : setDaneDailyCalendar;
+  const activeDailyTasks = dailyPerson === "Mark" ? markDailyTasks : daneDailyTasks;
+  const setActiveDailyTasks = dailyPerson === "Mark" ? setMarkDailyTasks : setDaneDailyTasks;
+  const activeDailyDecisions = dailyPerson === "Mark" ? markDailyDecisions : daneDailyDecisions;
+  const setActiveDailyDecisions = dailyPerson === "Mark" ? setMarkDailyDecisions : setDaneDailyDecisions;
+
+  return (
+    <div className="meetingsPage">
+@@ -334,18 +118,8 @@ export default function MeetingsPage() {
+        </div>
+
+        <div className="topToggle">
           <button
             className={mode === "weekly" ? "active" : ""}
             onClick={() => setMode("weekly")}
           >
             Weekly
           </button>
+          <button
+            className={mode === "daily" ? "active" : ""}
+            onClick={() => setMode("daily")}
+          >
+            Daily
+          </button>
+          <button className={mode === "weekly" ? "active" : ""} onClick={() => setMode("weekly")}>Weekly</button>
+          <button className={mode === "daily" ? "active" : ""} onClick={() => setMode("daily")}>Daily</button>
         </div>
-
-        <SectionCard
-          title="Calendar Review"
-          section="calendar"
-          items={current.sections.calendar}
-          addItem={addItem}
-          updateItem={updateItem}
-          deleteItem={deleteItem}
-        />
-
-        <SectionCard
-          title="Tasks"
-          section="tasks"
-          items={current.sections.tasks}
-          addItem={addItem}
-          updateItem={updateItem}
-          deleteItem={deleteItem}
-        />
-
-        <SectionCard
-          title="Decisions Needed"
-          section="decisions"
-          items={current.sections.decisions}
-          addItem={addItem}
-          updateItem={updateItem}
-          deleteItem={deleteItem}
-        />
       </div>
 
+@@ -358,9 +132,7 @@ export default function MeetingsPage() {
+                  <h2>Weekly Priorities</h2>
+                  <p>Top focus items</p>
+                </div>
+                <button className="smallBtn" onClick={addPriority}>
+                  +
+                </button>
+                <button className="smallBtn" onClick={() => setWeeklyPriorities([...weeklyPriorities, ""])}>+</button>
+              </div>
+
+              <div className="priorityList">
+@@ -369,35 +141,24 @@ export default function MeetingsPage() {
+                    <span>{index + 1}</span>
+                    <input
+                      value={priority}
+                      onChange={(e) => updatePriority(index, e.target.value)}
+                      onChange={(e) => {
+                        const updated = [...weeklyPriorities];
+                        updated[index] = e.target.value;
+                        setWeeklyPriorities(updated);
+                      }}
+                      placeholder="Add priority..."
+                    />
+                    <button onClick={() => deletePriority(index)}>×</button>
+                    <button onClick={() => setWeeklyPriorities(weeklyPriorities.filter((_, i) => i !== index))}>×</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </aside>
+
+          <main className="mainColumn">
+            <CalendarSection
+              title="Calendar Review"
+              rows={weeklyCalendar}
+              setRows={setWeeklyCalendar}
+            />
+
+            <TasksSection
+              title="Weekly Tasks"
+              rows={weeklyTasks}
+              setRows={setWeeklyTasks}
+              assignedFrom="Weekly Meeting"
+            />
+
+            <DecisionsSection
+              title="Decisions Needed"
+              rows={weeklyDecisions}
+              setRows={setWeeklyDecisions}
+            />
+            <CalendarSection title="Calendar Review" rows={weeklyCalendar} setRows={setWeeklyCalendar} updateRow={updateRow} addRow={addRow} deleteRow={deleteRow} />
+            <TasksSection title="Weekly Tasks" rows={weeklyTasks} setRows={setWeeklyTasks} assignedFrom="Weekly Meeting" updateRow={updateRow} addRow={addRow} deleteRow={deleteRow} sendMeetingTaskToTasks={sendMeetingTaskToTasks} />
+            <DecisionsSection title="Decisions Needed" rows={weeklyDecisions} setRows={setWeeklyDecisions} updateRow={updateRow} addRow={addRow} deleteRow={deleteRow} />
+          </main>
+        </div>
+      )}
+@@ -406,53 +167,22 @@ export default function MeetingsPage() {
+        <>
+          <div className="dateBar">
+            <button onClick={() => changeDay(-1)}>← Previous Day</button>
+
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
+
+            <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+            <button onClick={() => changeDay(1)}>Next Day →</button>
+          </div>
+
+          <div className="personToggle">
+            <button
+              className={dailyPerson === "Mark" ? "active" : ""}
+              onClick={() => setDailyPerson("Mark")}
+            >
+              Mark
+            </button>
+            <button
+              className={dailyPerson === "Dane" ? "active" : ""}
+              onClick={() => setDailyPerson("Dane")}
+            >
+              Dane
+            </button>
+            <button className={dailyPerson === "Mark" ? "active" : ""} onClick={() => setDailyPerson("Mark")}>Mark</button>
+            <button className={dailyPerson === "Dane" ? "active" : ""} onClick={() => setDailyPerson("Dane")}>Dane</button>
+          </div>
+
+          <CalendarSection
+            title={`${dailyPerson} Daily Calendar`}
+            rows={activeDailyCalendar}
+            setRows={setActiveDailyCalendar}
+          />
+
+          <TasksSection
+            title={`${dailyPerson} Daily Tasks`}
+            rows={activeDailyTasks}
+            setRows={setActiveDailyTasks}
+            assignedFrom={dailyPerson}
+          />
+
+          <DecisionsSection
+            title={`${dailyPerson} Decisions Needed`}
+            rows={activeDailyDecisions}
+            setRows={setActiveDailyDecisions}
+          />
+          <CalendarSection title={`${dailyPerson} Daily Calendar`} rows={activeDailyCalendar} setRows={setActiveDailyCalendar} updateRow={updateRow} addRow={addRow} deleteRow={deleteRow} />
+          <TasksSection title={`${dailyPerson} Daily Tasks`} rows={activeDailyTasks} setRows={setActiveDailyTasks} assignedFrom={dailyPerson} updateRow={updateRow} addRow={addRow} deleteRow={deleteRow} sendMeetingTaskToTasks={sendMeetingTaskToTasks} />
+          <DecisionsSection title={`${dailyPerson} Decisions Needed`} rows={activeDailyDecisions} setRows={setActiveDailyDecisions} updateRow={updateRow} addRow={addRow} deleteRow={deleteRow} />
+        </>
+      )}
+
+      <style jsx>{`
       <style jsx global>{`
-        body {
-          margin: 0;
-          background: #f5f6f8;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-          color: #020617;
-        }
-
-        .page {
-          min-height: 100vh;
-          padding: 32px 24px 80px;
-        }
-
-        .shell {
-          max-width: 1220px;
-          margin: 0 auto;
-        }
-
-        .top {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 20px;
-        }
-
-        .eyebrow {
-          margin: 0 0 10px;
-          font-size: 10px;
-          letter-spacing: 0.18em;
-          font-weight: 700;
-          color: #64748b;
+        .meetingsPage {
+          padding: 32px;
+          max-width: 1280px;
+@@ -468,19 +198,21 @@ export default function MeetingsPage() {
+          margin-bottom: 24px;
         }
 
         h1 {
+        .meetingsPage h1 {
           margin: 0;
-          font-size: 30px;
-          font-weight: 800;
+          font-size: 34px;
           letter-spacing: -0.04em;
-        }
-
-        .subtitle {
-          margin: 8px 0 0;
-          font-size: 12px;
-          color: #64748b;
-        }
-
-        button {
-          border: none;
-          border-radius: 999px;
-          background: #020617;
-          color: #ffffff;
-          font-size: 12px;
           font-weight: 800;
-          padding: 8px 14px;
-          cursor: pointer;
         }
 
-        .mode-row {
-          display: flex;
-          gap: 8px;
-          margin-bottom: 18px;
+        h2 {
+        .meetingsPage h2 {
+          margin: 0;
+          font-size: 15px;
+          letter-spacing: -0.02em;
+          font-weight: 700;
         }
 
-        .mode-row button {
-          background: #ffffff;
-          color: #020617;
-          border: 1px solid #dfe3ea;
-        }
-
-        .mode-row button.active {
-          background: #020617;
-          color: #ffffff;
-        }
-
-        .card {
-          background: #ffffff;
-          border: 1px solid #dfe3ea;
-          border-radius: 20px;
-          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
-          padding: 18px;
-          margin-bottom: 16px;
-        }
-
-        .card-head {
-          display: flex;
+        p {
+        .meetingsPage p {
+          margin: 4px 0 0;
+          color: #6b7280;
+          font-size: 12px;
+@@ -518,7 +250,7 @@ export default function MeetingsPage() {
           justify-content: space-between;
           align-items: center;
+          gap: 10px;
+          margin-bottom: 10px;
           margin-bottom: 12px;
         }
 
-        .card-head h2 {
-          margin: 0;
-          font-size: 15px;
-          font-weight: 800;
+        .topToggle,
+@@ -546,20 +278,26 @@ export default function MeetingsPage() {
+          width: 160px;
         }
 
-        .agenda-row {
-          display: grid;
-          grid-template-columns: 1fr 120px 120px 34px;
-          gap: 8px;
-          margin-bottom: 8px;
-          align-items: center;
+        button {
+        .meetingsPage button {
+          border: none;
+          background: #111;
+          color: #fff;
+          border-radius: 9px;
+          padding: 8px 12px;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.18s ease;
+        }
+
+        .meetingsPage button:hover {
+          opacity: 0.9;
+          transform: translateY(-1px);
+        }
+
+        .smallBtn {
+          width: 28px;
+          height: 28px;
+          padding: 0;
+          padding: 0 !important;
+        }
+
+        .topToggle button,
+@@ -574,9 +312,9 @@ export default function MeetingsPage() {
+          color: #fff;
         }
 
         input,
-        select {
-          height: 34px;
+        select,
+        textarea {
+        .meetingsPage input,
+        .meetingsPage select,
+        .meetingsPage textarea {
+          border: 1px solid #e5e7eb;
+          background: #f9fafb;
           border-radius: 10px;
-          border: 1px solid #d1d5db;
-          background: #f8fafc;
-          padding: 0 10px;
-          font-size: 12px;
+@@ -585,18 +323,21 @@ export default function MeetingsPage() {
           outline: none;
+          color: #111;
+          font-family: inherit;
+          width: 100%;
+          box-sizing: border-box;
         }
 
-        .delete-btn {
+        input:focus,
+        select:focus,
+        textarea:focus {
+        .meetingsPage input:focus,
+        .meetingsPage select:focus,
+        .meetingsPage textarea:focus {
+          border-color: #111;
+          background: #fff;
+        }
+
+        .calendarList,
+        .taskFlowList,
+        .decisionList {
+        .decisionList,
+        .priorityList {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+@@ -626,7 +367,7 @@ export default function MeetingsPage() {
+
+        .decisionRow {
+          display: grid;
+          grid-template-columns: 1fr 32px;
+          grid-template-columns: 1fr 82px 32px;
+          gap: 8px;
+          align-items: center;
+        }
+@@ -639,21 +380,19 @@ export default function MeetingsPage() {
+        }
+
+        .detailBtn {
+          background: #f3f4f6;
+          color: #111;
+          background: #f3f4f6 !important;
+          color: #111 !important;
+        }
+
+        .deleteBtn {
+          background: #f3f4f6;
+          color: #111;
+          background: #f3f4f6 !important;
+          color: #111 !important;
+          width: 32px;
+          height: 32px;
+          padding: 0;
+          padding: 0 !important;
+        }
+
+        .priorityList {
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+
+@@ -682,22 +421,22 @@ export default function MeetingsPage() {
+        }
+
+        .priorityItem input {
+          border: none;
           background: transparent;
-          color: #9ca3af;
-          padding: 5px 8px;
-          font-size: 14px;
+          padding: 0;
+          font-size: 12px;
+          border: none !important;
+          background: transparent !important;
+          padding: 0 !important;
+          font-size: 12px !important;
+          height: 100%;
+          min-width: 0;
         }
 
-        .empty {
-          margin: 0;
-          padding: 8px 0;
-          font-size: 12px;
-          color: #64748b;
+        .priorityItem button {
+          background: #f3f4f6;
+          color: #111;
+          background: #f3f4f6 !important;
+          color: #111 !important;
+          width: 16px;
+          height: 16px;
+          border-radius: 5px;
+          font-size: 10px;
+          padding: 0;
+          padding: 0 !important;
         }
-      `}</style>
-    </main>
+
+        @media (max-width: 1000px) {
+@@ -729,3 +468,114 @@ export default function MeetingsPage() {
+    </div>
   );
 }
 
-function SectionCard({ title, section, items, addItem, updateItem, deleteItem }) {
+function CalendarSection({ title, rows, setRows, updateRow, addRow, deleteRow }) {
   return (
-    <section className="card">
-      <div className="card-head">
-        <h2>{title}</h2>
-        <button onClick={() => addItem(section)}>Add</button>
+    <section className="meetingCard">
+      <div className="sectionHeader">
+        <div>
+          <h2>{title}</h2>
+          <p>Add meeting name, location, and time.</p>
+        </div>
+        <button className="smallBtn" onClick={() => addRow(rows, setRows, blankMeeting)}>+</button>
       </div>
 
-      {items.length === 0 ? (
-        <p className="empty">No items yet.</p>
-      ) : (
-        items.map((item) => (
-          <div className="agenda-row" key={item.id}>
-            <input
-              value={item.text || ""}
-              onChange={(e) => updateItem(section, item.id, "text", e.target.value)}
-              placeholder="Agenda item..."
-            />
-
-            <select
-              value={item.owner || "Nikita"}
-              onChange={(e) => updateItem(section, item.id, "owner", e.target.value)}
-            >
-              <option>Nikita</option>
-              <option>Mark</option>
-              <option>Dane</option>
-            </select>
-
-            <select
-              value={item.status || "Open"}
-              onChange={(e) => updateItem(section, item.id, "status", e.target.value)}
-            >
-              <option>Open</option>
-              <option>Pending</option>
-              <option>Complete</option>
-            </select>
-
-            <button className="delete-btn" onClick={() => deleteItem(section, item.id)}>
-              ×
-            </button>
+      <div className="calendarList">
+        {rows.map((meeting, index) => (
+          <div className="calendarRow" key={index}>
+            <input value={meeting.name} onChange={(e) => updateRow(rows, setRows, index, "name", e.target.value)} placeholder="Meeting name" />
+            <input value={meeting.location} onChange={(e) => updateRow(rows, setRows, index, "location", e.target.value)} placeholder="Location" />
+            <input type="time" value={meeting.time} onChange={(e) => updateRow(rows, setRows, index, "time", e.target.value)} />
+            <button className="deleteBtn" onClick={() => deleteRow(rows, setRows, index)}>×</button>
           </div>
-        ))
-      )}
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function TasksSection({ title, rows, setRows, assignedFrom, updateRow, addRow, deleteRow, sendMeetingTaskToTasks }) {
+  return (
+    <section className="meetingCard">
+      <div className="sectionHeader">
+        <div>
+          <h2>{title}</h2>
+          <p>Add task name, priority, and optional hidden details.</p>
+        </div>
+        <button className="smallBtn" onClick={() => addRow(rows, setRows, blankTask)}>+</button>
+      </div>
+
+      <div className="taskFlowList">
+        {rows.map((task, index) => (
+          <div className="taskBlock" key={index}>
+            <div className="taskFlowRow">
+              <input value={task.title} onChange={(e) => updateRow(rows, setRows, index, "title", e.target.value)} placeholder="Task name" />
+
+              <select value={task.urgency} onChange={(e) => updateRow(rows, setRows, index, "urgency", e.target.value)}>
+                <option>High</option>
+                <option>Medium</option>
+                <option>Low</option>
+              </select>
+
+              <button className="detailBtn" onClick={() => updateRow(rows, setRows, index, "showDetails", !task.showDetails)}>
+                Details
+              </button>
+
+              <button onClick={() => sendMeetingTaskToTasks(task, assignedFrom)}>Send</button>
+
+              <button className="deleteBtn" onClick={() => deleteRow(rows, setRows, index)}>×</button>
+            </div>
+
+            {task.showDetails && (
+              <textarea
+                className="detailsBox"
+                value={task.details}
+                onChange={(e) => updateRow(rows, setRows, index, "details", e.target.value)}
+                placeholder="Add more details here..."
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function DecisionsSection({ title, rows, setRows, updateRow, addRow, deleteRow }) {
+  return (
+    <section className="meetingCard">
+      <div className="sectionHeader">
+        <div>
+          <h2>{title}</h2>
+          <p>Add each decision as its own item.</p>
+        </div>
+        <button className="smallBtn" onClick={() => addRow(rows, setRows, blankDecision)}>+</button>
+      </div>
+
+      <div className="decisionList">
+        {rows.map((decision, index) => (
+          <div className="decisionBlock" key={index}>
+            <div className="decisionRow">
+              <input value={decision.title} onChange={(e) => updateRow(rows, setRows, index, "title", e.target.value)} placeholder="Decision needed" />
+
+              <button className="detailBtn" onClick={() => updateRow(rows, setRows, index, "showDetails", !decision.showDetails)}>
+                Details
+              </button>
+
+              <button className="deleteBtn" onClick={() => deleteRow(rows, setRows, index)}>×</button>
+            </div>
+
+            {decision.showDetails && (
+              <textarea
+                className="detailsBox"
+                value={decision.details}
+                onChange={(e) => updateRow(rows, setRows, index, "details", e.target.value)}
+                placeholder="Notes / context..."
+              />
+            )}
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
