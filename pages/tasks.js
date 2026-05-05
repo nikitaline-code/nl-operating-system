@@ -20,6 +20,38 @@ export default function TasksPage() {
     localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
   }, [tasks]);
 
+  function restoreTasks() {
+    const possibleKeys = [
+      "tasks",
+      "taskList",
+      "myTasks",
+      "Task List",
+      "weeklyTasks",
+      "allTasks",
+      "operating-tasks",
+      "nl-tasks",
+      "east-tasks",
+      "dashboard-tasks",
+    ];
+
+    for (let key of possibleKeys) {
+      const data = localStorage.getItem(key);
+
+      if (data) {
+        const parsed = JSON.parse(data);
+
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          localStorage.setItem(TASKS_KEY, data);
+          setTasks(parsed);
+          alert(`Restored tasks from: ${key}`);
+          return;
+        }
+      }
+    }
+
+    alert("No old tasks found in the common storage spots.");
+  }
+
   function addTask() {
     if (!taskText.trim()) return;
 
@@ -92,6 +124,10 @@ export default function TasksPage() {
           </label>
         </div>
 
+        <button className="restore-btn" onClick={restoreTasks}>
+          Restore Old Tasks
+        </button>
+
         <section className="add-card">
           <h2>Add Task</h2>
 
@@ -143,15 +179,15 @@ export default function TasksPage() {
                 />
 
                 <div className="task-main">
-                  <h3>{task.text}</h3>
+                  <h3>{task.text || task.task || task.title}</h3>
                   <p>
-                    From: {task.assignedFrom}
+                    From: {task.assignedFrom || task.from || "N/A"}
                     {task.dueDate ? ` · Due: ${task.dueDate}` : ""}
                   </p>
                 </div>
 
-                <span className={`badge ${task.urgency.toLowerCase()}`}>
-                  {task.urgency}
+                <span className={`badge ${(task.urgency || "Medium").toLowerCase()}`}>
+                  {task.urgency || "Medium"}
                 </span>
 
                 <button
@@ -166,6 +202,10 @@ export default function TasksPage() {
                 </button>
               </div>
             ))}
+
+            {visibleTasks.length === 0 && (
+              <p className="empty">No tasks showing. Try Restore Old Tasks above.</p>
+            )}
           </div>
         </section>
       </div>
@@ -192,7 +232,7 @@ export default function TasksPage() {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 24px;
+          margin-bottom: 18px;
         }
 
         h1 {
@@ -213,6 +253,13 @@ export default function TasksPage() {
           gap: 8px;
           font-size: 13px;
           color: #334155;
+        }
+
+        .restore-btn {
+          margin-bottom: 16px;
+          background: #fff7ed;
+          color: #9a3412;
+          border: 1px solid #fed7aa;
         }
 
         .add-card,
@@ -340,6 +387,13 @@ export default function TasksPage() {
           background: #f8fafc;
           color: #64748b;
           padding: 7px 10px;
+        }
+
+        .empty {
+          margin: 0;
+          padding: 14px;
+          font-size: 13px;
+          color: #64748b;
         }
       `}</style>
     </main>
