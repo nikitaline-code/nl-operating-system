@@ -20,38 +20,6 @@ export default function TasksPage() {
     localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
   }, [tasks]);
 
-  function restoreTasks() {
-    const possibleKeys = [
-      "tasks",
-      "taskList",
-      "myTasks",
-      "Task List",
-      "weeklyTasks",
-      "allTasks",
-      "operating-tasks",
-      "nl-tasks",
-      "east-tasks",
-      "dashboard-tasks",
-    ];
-
-    for (let key of possibleKeys) {
-      const data = localStorage.getItem(key);
-
-      if (data) {
-        const parsed = JSON.parse(data);
-
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          localStorage.setItem(TASKS_KEY, data);
-          setTasks(parsed);
-          alert(`Restored tasks from: ${key}`);
-          return;
-        }
-      }
-    }
-
-    alert("No old tasks found in the common storage spots.");
-  }
-
   function addTask() {
     if (!taskText.trim()) return;
 
@@ -124,10 +92,6 @@ export default function TasksPage() {
           </label>
         </div>
 
-        <button className="restore-btn" onClick={restoreTasks}>
-          Restore Old Tasks
-        </button>
-
         <section className="add-card">
           <h2>Add Task</h2>
 
@@ -171,7 +135,10 @@ export default function TasksPage() {
 
           <div className="task-list">
             {visibleTasks.map((task) => (
-              <div className={`task-row ${task.completed ? "done" : ""}`} key={task.id}>
+              <div
+                className={`task-row ${task.completed ? "done" : ""}`}
+                key={task.id}
+              >
                 <input
                   type="checkbox"
                   checked={task.completed}
@@ -179,15 +146,15 @@ export default function TasksPage() {
                 />
 
                 <div className="task-main">
-                  <h3>{task.text || task.task || task.title}</h3>
+                  <h3>{task.text}</h3>
                   <p>
-                    From: {task.assignedFrom || task.from || "N/A"}
+                    From: {task.assignedFrom}
                     {task.dueDate ? ` · Due: ${task.dueDate}` : ""}
                   </p>
                 </div>
 
-                <span className={`badge ${(task.urgency || "Medium").toLowerCase()}`}>
-                  {task.urgency || "Medium"}
+                <span className={`badge ${task.urgency.toLowerCase()}`}>
+                  {task.urgency}
                 </span>
 
                 <button
@@ -197,14 +164,17 @@ export default function TasksPage() {
                   Add to Follow-Ups
                 </button>
 
-                <button className="delete-btn" onClick={() => deleteTask(task.id)}>
+                <button
+                  className="delete-btn"
+                  onClick={() => deleteTask(task.id)}
+                >
                   ×
                 </button>
               </div>
             ))}
 
             {visibleTasks.length === 0 && (
-              <p className="empty">No tasks showing. Try Restore Old Tasks above.</p>
+              <p className="empty">No tasks showing.</p>
             )}
           </div>
         </section>
@@ -231,135 +201,107 @@ export default function TasksPage() {
         .top {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 18px;
+          margin-bottom: 20px;
         }
 
         h1 {
           margin: 0;
-          font-size: 32px;
-          letter-spacing: -0.04em;
+          font-size: 28px;
+          font-weight: 800;
         }
 
         .top p {
-          margin: 8px 0 0;
-          font-size: 13px;
+          margin: 6px 0 0;
+          font-size: 12px;
           color: #64748b;
         }
 
         .hide-toggle {
           display: flex;
           align-items: center;
-          gap: 8px;
-          font-size: 13px;
-          color: #334155;
-        }
-
-        .restore-btn {
-          margin-bottom: 16px;
-          background: #fff7ed;
-          color: #9a3412;
-          border: 1px solid #fed7aa;
+          gap: 6px;
+          font-size: 12px;
         }
 
         .add-card,
         .task-card {
-          background: #ffffff;
-          border: 1px solid #dfe3ea;
-          border-radius: 18px;
-          padding: 18px;
-          margin-bottom: 18px;
-          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
+          background: #fff;
+          border: 1px solid #e5e7eb;
+          border-radius: 16px;
+          padding: 16px;
+          margin-bottom: 16px;
         }
 
         h2 {
-          margin: 0 0 14px;
-          font-size: 16px;
+          margin: 0 0 12px;
+          font-size: 14px;
           font-weight: 800;
         }
 
         .add-row {
           display: grid;
-          grid-template-columns: 1fr 130px 130px 150px 90px;
-          gap: 10px;
+          grid-template-columns: 1fr 110px 110px 140px 80px;
+          gap: 8px;
         }
 
         input,
         select {
-          height: 40px;
-          border-radius: 12px;
-          border: 1px solid #cfd6df;
-          background: #f8fafc;
-          padding: 0 12px;
-          font-size: 13px;
-          outline: none;
+          height: 36px;
+          border-radius: 10px;
+          border: 1px solid #d1d5db;
+          background: #f9fafb;
+          padding: 0 10px;
+          font-size: 12px;
         }
 
         button {
           border: none;
           border-radius: 999px;
           background: #020617;
-          color: white;
-          font-size: 12px;
-          font-weight: 800;
-          padding: 8px 13px;
+          color: #fff;
+          font-size: 11px;
+          font-weight: 700;
+          padding: 6px 10px;
           cursor: pointer;
-        }
-
-        .card-head {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 12px;
-        }
-
-        .card-head span {
-          font-size: 14px;
-          color: #020617;
         }
 
         .task-list {
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 8px;
         }
 
         .task-row {
           display: grid;
-          grid-template-columns: 24px 1fr auto auto 34px;
+          grid-template-columns: 18px 1fr auto auto 28px;
           align-items: center;
-          gap: 12px;
+          gap: 8px;
           border: 1px solid #e5e7eb;
-          background: #ffffff;
-          border-radius: 14px;
-          padding: 14px;
+          border-radius: 10px;
+          padding: 8px 10px;
         }
 
         .task-row.done {
           opacity: 0.5;
         }
 
-        .task-row.done h3 {
-          text-decoration: line-through;
-        }
-
         .task-main h3 {
-          margin: 0 0 5px;
-          font-size: 14px;
-          font-weight: 800;
+          margin: 0;
+          font-size: 12.5px;
+          font-weight: 600;
         }
 
         .task-main p {
-          margin: 0;
-          font-size: 12px;
+          margin: 2px 0 0;
+          font-size: 10.5px;
           color: #64748b;
         }
 
         .badge {
           border-radius: 999px;
-          padding: 7px 11px;
-          font-size: 12px;
-          font-weight: 800;
+          padding: 4px 7px;
+          font-size: 10px;
+          font-weight: 700;
         }
 
         .badge.low {
@@ -378,22 +320,22 @@ export default function TasksPage() {
         }
 
         .followup-btn {
-          background: #f8fafc;
+          background: #f1f5f9;
           color: #020617;
-          border: 1px solid #cfd6df;
+          border: 1px solid #d1d5db;
+          font-size: 10px;
         }
 
         .delete-btn {
-          background: #f8fafc;
-          color: #64748b;
-          padding: 7px 10px;
+          background: transparent;
+          color: #9ca3af;
+          font-size: 12px;
         }
 
         .empty {
-          margin: 0;
-          padding: 14px;
-          font-size: 13px;
+          font-size: 12px;
           color: #64748b;
+          padding: 10px;
         }
       `}</style>
     </main>
