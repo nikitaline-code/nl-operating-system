@@ -129,174 +129,168 @@ export default function MeetingsPage() {
   const taskItems = taskRows.filter((item) => item.title || item.details);
   const decisionItems = decisionRows.filter((item) => item.title || item.details);
 
-  function renderCalendar() {
-    if (!calendarItems.length) return `<p class="empty">No meeting review items entered.</p>`;
+  const renderItems = (items, type) => {
+    if (!items.length) return `<p class="empty">No items entered.</p>`;
 
-    return calendarItems
-      .map(
-        (item) => `
+    return items.map((item) => {
+      if (type === "meeting") {
+        return `
           <div class="item">
-            <div class="itemTitle">${item.name || "Untitled Meeting"}</div>
-            <div class="itemMeta">
-              ${item.time ? `${item.time}` : ""}
-              ${item.time && item.location ? " · " : ""}
-              ${item.location ? `${item.location}` : ""}
-            </div>
+            <div class="title">${item.name || "Untitled Meeting"}</div>
+            <div class="meta">${[item.time, item.location].filter(Boolean).join(" · ")}</div>
           </div>
-        `
-      )
-      .join("");
-  }
+        `;
+      }
 
-  function renderTasks() {
-    if (!taskItems.length) return `<p class="empty">No task review items entered.</p>`;
+      return `
+        <div class="item">
+          <div class="title">${item.title || "Untitled Item"}</div>
+          ${item.urgency ? `<div class="meta">${item.urgency} priority</div>` : ""}
+          ${item.details ? `<div class="details">${item.details}</div>` : ""}
+        </div>
+      `;
+    }).join("");
+  };
 
-    return taskItems
-      .map(
-        (item) => `
-          <div class="item">
-            <div class="itemTitle">${item.title || "Untitled Task"}</div>
-            <div class="itemMeta">${item.urgency || "Medium"} priority</div>
-            ${item.details ? `<div class="itemDetails">${item.details}</div>` : ""}
-          </div>
-        `
-      )
-      .join("");
-  }
+  const win = window.open("", "_blank");
 
-  function renderDecisions() {
-    if (!decisionItems.length) return `<p class="empty">No decisions entered.</p>`;
-
-    return decisionItems
-      .map(
-        (item) => `
-          <div class="item">
-            <div class="itemTitle">${item.title || "Untitled Decision"}</div>
-            ${item.details ? `<div class="itemDetails">${item.details}</div>` : ""}
-          </div>
-        `
-      )
-      .join("");
-  }
-
-  const printWindow = window.open("", "_blank");
-
-  printWindow.document.write(`
+  win.document.write(`
     <html>
       <head>
         <title>${agendaTitle}</title>
         <style>
           body {
             margin: 0;
-            background: #ffffff;
-            color: #111111;
+            background: #fff;
             font-family: Arial, Helvetica, sans-serif;
-            padding: 36px 42px;
+            color: #111;
+            padding: 38px 48px;
           }
 
           .page {
             max-width: 820px;
             margin: 0 auto;
+            position: relative;
           }
 
-          .topLine {
+          /* WATERMARK */
+          .watermark {
+            position: absolute;
+            top: 180px;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0.035;
+            z-index: 0;
+          }
+
+          .watermark img {
+            width: 420px;
+          }
+
+          /* HEADER */
+          .header {
+            position: relative;
+            z-index: 2;
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            border-bottom: 1px solid #111111;
-            padding-bottom: 18px;
-            margin-bottom: 28px;
+            border-bottom: 1px solid #111;
+            padding-bottom: 16px;
+            margin-bottom: 26px;
           }
 
-          .brand {
-            font-size: 22px;
-            font-weight: 700;
-            letter-spacing: -0.03em;
-            text-transform: uppercase;
+          .logo {
+            height: 36px;
+            display: block;
           }
 
-          .brandSub {
-            margin-top: 3px;
-            font-size: 10px;
+          .sub {
+            margin-top: 6px;
+            font-size: 9.5px;
             letter-spacing: 0.16em;
             text-transform: uppercase;
-            color: #555555;
+            color: #666;
           }
 
-          .dateBlock {
+          .date {
             text-align: right;
-            font-size: 11px;
-            color: #555555;
-            line-height: 1.5;
+            font-size: 10.5px;
+            color: #666;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
           }
 
           h1 {
-            margin: 0 0 24px;
+            position: relative;
+            z-index: 2;
+            margin: 0 0 26px;
             font-size: 24px;
             font-weight: 500;
             letter-spacing: -0.02em;
           }
 
+          /* SECTIONS */
           .section {
+            position: relative;
+            z-index: 2;
             margin-bottom: 24px;
           }
 
           .sectionTitle {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 700;
-            letter-spacing: 0.08em;
             text-transform: uppercase;
+            letter-spacing: 0.08em;
             border-bottom: 1px solid #d8d8d8;
-            padding-bottom: 7px;
-            margin-bottom: 8px;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
           }
 
           .item {
-            padding: 9px 0;
-            border-bottom: 1px solid #eeeeee;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
           }
 
           .item:last-child {
             border-bottom: none;
           }
 
-          .itemTitle {
+          .title {
             font-size: 13px;
             font-weight: 500;
-            line-height: 1.4;
           }
 
-          .itemMeta {
+          .meta {
             margin-top: 3px;
             font-size: 11px;
-            color: #666666;
+            color: #666;
           }
 
-          .itemDetails {
+          .details {
             margin-top: 5px;
             font-size: 12px;
-            color: #333333;
+            color: #333;
             line-height: 1.45;
           }
 
           .empty {
-            margin: 0;
-            padding: 8px 0;
             font-size: 12px;
-            color: #777777;
+            color: #777;
           }
 
+          /* FOOTER */
           .footer {
+            position: relative;
+            z-index: 2;
             margin-top: 36px;
             padding-top: 12px;
-            border-top: 1px solid #111111;
+            border-top: 1px solid #111;
             font-size: 9.5px;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.05em;
             text-transform: uppercase;
-            color: #333333;
+            color: #333;
             display: flex;
             justify-content: space-between;
-            gap: 16px;
           }
 
           @media print {
@@ -309,14 +303,19 @@ export default function MeetingsPage() {
 
       <body>
         <div class="page">
-          <div class="topLine">
+
+          <div class="watermark">
+            <img src="/arrowquip-logo.png" />
+          </div>
+
+          <div class="header">
             <div>
-              <div class="brand">Arrowquip</div>
-              <div class="brandSub">Ranch | Outdoor</div>
+              <img src="/arrowquip-logo.png" class="logo" />
+              <div class="sub">Ranch | Outdoor</div>
             </div>
 
-            <div class="dateBlock">
-              Agenda Export<br />
+            <div class="date">
+              Agenda Export<br/>
               ${agendaDate}
             </div>
           </div>
@@ -325,17 +324,17 @@ export default function MeetingsPage() {
 
           <div class="section">
             <div class="sectionTitle">Meeting Review</div>
-            ${renderCalendar()}
+            ${renderItems(calendarItems, "meeting")}
           </div>
 
           <div class="section">
             <div class="sectionTitle">Tasks Review</div>
-            ${renderTasks()}
+            ${renderItems(taskItems, "task")}
           </div>
 
           <div class="section">
             <div class="sectionTitle">Decisions Needed</div>
-            ${renderDecisions()}
+            ${renderItems(decisionItems, "decision")}
           </div>
 
           <div class="footer">
@@ -344,14 +343,12 @@ export default function MeetingsPage() {
           </div>
         </div>
 
-        <script>
-          window.print();
-        </script>
+        <script>window.print();</script>
       </body>
     </html>
   `);
 
-  printWindow.document.close();
+  win.document.close();
 }
   return (
     <div className="meetingsPage">
