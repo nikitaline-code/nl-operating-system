@@ -1,581 +1,506 @@
 import { useEffect, useState } from "react";
 
-const today = new Date().toISOString().slice(0, 10);
+const MEETINGS_KEY = "os-meetings";
+const LEGACY_KEYS = [
+  "meetings",
+  "meeting-data",
+  "meetingItems",
+  "daily-meetings",
+  "weekly-meetings",
+  "os-meeting-data",
+];
 
-const blankMeeting = { name: "", location: "", time: "" };
-const blankTask = { title: "", urgency: "Medium", details: "", showDetails: false };
-const blankDecision = { title: "", details: "", showDetails: false };
+const DEFAULT_MEETINGS = {
+  daily: {
+    title: "Daily Meeting",
+    sections: {
+      calendar: [],
+      tasks: [],
+      decisions: [],
+    },
+  },
+  weekly: {
+    title: "Weekly Meeting",
+    sections: {
+      calendar: [],
+      tasks: [],
+      decisions: [],
+    },
+  },
+};
 
 export default function MeetingsPage() {
-  const [mode, setMode] = useState("weekly");
-  const [dailyPerson, setDailyPerson] = useState("Mark");
-  const [selectedDate, setSelectedDate] = useState(today);
+  const [loaded, setLoaded] = useState(false);
+  const [mode, setMode] = useState("daily");
+  const [meetings, setMeetings] = useState(DEFAULT_MEETINGS);
 
-  const [weeklyPriorities, setWeeklyPriorities] = useState(["", ""]);
-  const [weeklyCalendar, setWeeklyCalendar] = useState([{ ...blankMeeting }]);
-  const [weeklyTasks, setWeeklyTasks] = useState([{ ...blankTask }]);
-  const [weeklyDecisions, setWeeklyDecisions] = useState([{ ...blankDecision }]);
-
-  const [markDailyCalendar, setMarkDailyCalendar] = useState([{ ...blankMeeting }]);
-  const [daneDailyCalendar, setDaneDailyCalendar] = useState([{ ...blankMeeting }]);
-  const [markDailyTasks, setMarkDailyTasks] = useState([{ ...blankTask }]);
-  const [daneDailyTasks, setDaneDailyTasks] = useState([{ ...blankTask }]);
-  const [markDailyDecisions, setMarkDailyDecisions] = useState([{ ...blankDecision }]);
-  const [daneDailyDecisions, setDaneDailyDecisions] = useState([{ ...blankDecision }]);
+  const current = meetings[mode];
 
   useEffect(() => {
-    const savedPriorities = localStorage.getItem("weeklyPriorities");
-    const savedWeeklyCalendar = localStorage.getItem("meetingWeeklyCalendar");
-    const savedWeeklyTasks = localStorage.getItem("meetingWeeklyTasks");
-    const savedWeeklyDecisions = localStorage.getItem("meetingWeeklyDecisions");
+    const saved = localStorage.getItem(MEETINGS_KEY);
 
-    if (savedPriorities) setWeeklyPriorities(JSON.parse(savedPriorities));
-    if (savedWeeklyCalendar) setWeeklyCalendar(JSON.parse(savedWeeklyCalendar));
-    if (savedWeeklyTasks) setWeeklyTasks(JSON.parse(savedWeeklyTasks));
-    if (savedWeeklyDecisions) setWeeklyDecisions(JSON.parse(savedWeeklyDecisions));
+    if (saved) {
+      setMeetings(safeMerge(JSON.parse(saved)));
+      setLoaded(true);
+      return;
+    }
+
+    for (const key of LEGACY_KEYS) {
+      const oldData = localStorage.getItem(key);
+
+      if (oldData) {
+        const parsed = JSON.parse(oldData);
+        const restored = safeMerge(parsed);
+
+        localStorage.setItem(MEETINGS_KEY, JSON.stringify(restored));
+        setMeetings(restored);
+        setLoaded(true);
+        return;
+      }
+    }
+
+    setMeetings(DEFAULT_MEETINGS);
+    setLoaded(true);
   }, []);
 
   useEffect(() => {
-    const savedMarkCalendar = localStorage.getItem(`meetingMarkDailyCalendar-${selectedDate}`);
-    const savedDaneCalendar = localStorage.getItem(`meetingDaneDailyCalendar-${selectedDate}`);
-    const savedMarkTasks = localStorage.getItem(`meetingMarkDailyTasks-${selectedDate}`);
-    const savedDaneTasks = localStorage.getItem(`meetingDaneDailyTasks-${selectedDate}`);
-    const savedMarkDecisions = localStorage.getItem(`meetingMarkDailyDecisions-${selectedDate}`);
-    const savedDaneDecisions = localStorage.getItem(`meetingDaneDailyDecisions-${selectedDate}`);
+    if (!loaded) return;
+    localStorage.setItem(MEETINGS_KEY, JSON.stringify(meetings));
+  }, [meetings, loaded]);
 
-    setMarkDailyCalendar(savedMarkCalendar ? JSON.parse(savedMarkCalendar) : [{ ...blankMeeting }]);
-    setDaneDailyCalendar(savedDaneCalendar ? JSON.parse(savedDaneCalendar) : [{ ...blankMeeting }]);
-    setMarkDailyTasks(savedMarkTasks ? JSON.parse(savedMarkTasks) : [{ ...blankTask }]);
-    setDaneDailyTasks(savedDaneTasks ? JSON.parse(savedDaneTasks) : [{ ...blankTask }]);
-    setMarkDailyDecisions(savedMarkDecisions ? JSON.parse(savedMarkDecisions) : [{ ...blankDecision }]);
-    setDaneDailyDecisions(savedDaneDecisions ? JSON.parse(savedDaneDecisions) : [{ ...blankDecision }]);
-  }, [selectedDate]);
-
-  useEffect(() => localStorage.setItem("weeklyPriorities", JSON.stringify(weeklyPriorities)), [weeklyPriorities]);
-  useEffect(() => localStorage.setItem("meetingWeeklyCalendar", JSON.stringify(weeklyCalendar)), [weeklyCalendar]);
-  useEffect(() => localStorage.setItem("meetingWeeklyTasks", JSON.stringify(weeklyTasks)), [weeklyTasks]);
-  useEffect(() => localStorage.setItem("meetingWeeklyDecisions", JSON.stringify(weeklyDecisions)), [weeklyDecisions]);
-
-  useEffect(() => localStorage.setItem(`meetingMarkDailyCalendar-${selectedDate}`, JSON.stringify(markDailyCalendar)), [markDailyCalendar, selectedDate]);
-  useEffect(() => localStorage.setItem(`meetingDaneDailyCalendar-${selectedDate}`, JSON.stringify(daneDailyCalendar)), [daneDailyCalendar, selectedDate]);
-  useEffect(() => localStorage.setItem(`meetingMarkDailyTasks-${selectedDate}`, JSON.stringify(markDailyTasks)), [markDailyTasks, selectedDate]);
-  useEffect(() => localStorage.setItem(`meetingDaneDailyTasks-${selectedDate}`, JSON.stringify(daneDailyTasks)), [daneDailyTasks, selectedDate]);
-  useEffect(() => localStorage.setItem(`meetingMarkDailyDecisions-${selectedDate}`, JSON.stringify(markDailyDecisions)), [markDailyDecisions, selectedDate]);
-  useEffect(() => localStorage.setItem(`meetingDaneDailyDecisions-${selectedDate}`, JSON.stringify(daneDailyDecisions)), [daneDailyDecisions, selectedDate]);
-
-  function changeDay(amount) {
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() + amount);
-    setSelectedDate(d.toISOString().slice(0, 10));
+  function safeMerge(data) {
+    return {
+      daily: {
+        ...DEFAULT_MEETINGS.daily,
+        ...(data.daily || {}),
+        sections: {
+          ...DEFAULT_MEETINGS.daily.sections,
+          ...(data.daily?.sections || data.sections || {}),
+        },
+      },
+      weekly: {
+        ...DEFAULT_MEETINGS.weekly,
+        ...(data.weekly || {}),
+        sections: {
+          ...DEFAULT_MEETINGS.weekly.sections,
+          ...(data.weekly?.sections || {}),
+        },
+      },
+    };
   }
 
-  function updateRow(array, setArray, index, field, value) {
-    const updated = [...array];
-    updated[index] = { ...updated[index], [field]: value };
-    setArray(updated);
-  }
-
-  function addRow(array, setArray, blankItem) {
-    setArray([...array, { ...blankItem }]);
-  }
-
-  function deleteRow(array, setArray, index) {
-    setArray(array.filter((_, i) => i !== index));
-  }
-
-  function sendMeetingTaskToTasks(task, assignedFrom) {
-    if (!task.title.trim()) return;
-
-    const existingTasks = JSON.parse(localStorage.getItem("tasks") || "[]");
-
-    const newTask = {
+  function addItem(section) {
+    const item = {
       id: Date.now(),
-      title: task.title,
-      assignedFrom,
-      urgency: task.urgency,
-      dueDate: mode === "daily" ? selectedDate : "",
-      details: task.details || "",
-      complete: false,
-      source: "Meetings",
+      text: "",
+      owner: "Nikita",
+      status: "Open",
     };
 
-    localStorage.setItem("tasks", JSON.stringify([newTask, ...existingTasks]));
+    setMeetings((prev) => ({
+      ...prev,
+      [mode]: {
+        ...prev[mode],
+        sections: {
+          ...prev[mode].sections,
+          [section]: [...(prev[mode].sections[section] || []), item],
+        },
+      },
+    }));
   }
 
-  const activeDailyCalendar = dailyPerson === "Mark" ? markDailyCalendar : daneDailyCalendar;
-  const setActiveDailyCalendar = dailyPerson === "Mark" ? setMarkDailyCalendar : setDaneDailyCalendar;
-  const activeDailyTasks = dailyPerson === "Mark" ? markDailyTasks : daneDailyTasks;
-  const setActiveDailyTasks = dailyPerson === "Mark" ? setMarkDailyTasks : setDaneDailyTasks;
-  const activeDailyDecisions = dailyPerson === "Mark" ? markDailyDecisions : daneDailyDecisions;
-  const setActiveDailyDecisions = dailyPerson === "Mark" ? setMarkDailyDecisions : setDaneDailyDecisions;
+  function updateItem(section, id, field, value) {
+    setMeetings((prev) => ({
+      ...prev,
+      [mode]: {
+        ...prev[mode],
+        sections: {
+          ...prev[mode].sections,
+          [section]: prev[mode].sections[section].map((item) =>
+            item.id === id ? { ...item, [field]: value } : item
+          ),
+        },
+      },
+    }));
+  }
+
+  function deleteItem(section, id) {
+    setMeetings((prev) => ({
+      ...prev,
+      [mode]: {
+        ...prev[mode],
+        sections: {
+          ...prev[mode].sections,
+          [section]: prev[mode].sections[section].filter((item) => item.id !== id),
+        },
+      },
+    }));
+  }
+
+  function exportAgenda() {
+    const allItems = [
+      ...current.sections.calendar.map((item) => ({
+        section: "Calendar Review",
+        ...item,
+      })),
+      ...current.sections.tasks.map((item) => ({
+        section: "Tasks",
+        ...item,
+      })),
+      ...current.sections.decisions.map((item) => ({
+        section: "Decisions Needed",
+        ...item,
+      })),
+    ].filter((item) => item.text?.trim());
+
+    const rows = allItems
+      .map(
+        (item, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${item.section}</td>
+            <td>${item.text || ""}</td>
+            <td>${item.owner || ""}</td>
+            <td>${item.status || ""}</td>
+          </tr>
+        `
+      )
+      .join("");
+
+    const win = window.open("", "_blank");
+
+    win.document.write(`
+      <html>
+        <head>
+          <title>${current.title} Agenda</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              padding: 36px;
+              color: #111;
+            }
+
+            .header {
+              border-bottom: 4px solid #111;
+              padding-bottom: 14px;
+              margin-bottom: 24px;
+            }
+
+            .brand {
+              font-size: 12px;
+              letter-spacing: 0.15em;
+              font-weight: 700;
+              text-transform: uppercase;
+            }
+
+            h1 {
+              margin: 8px 0 4px;
+              font-size: 28px;
+            }
+
+            .meta {
+              font-size: 13px;
+              color: #555;
+            }
+
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 20px;
+            }
+
+            th {
+              background: #111;
+              color: white;
+              text-align: left;
+              padding: 10px;
+              font-size: 12px;
+              text-transform: uppercase;
+            }
+
+            td {
+              border: 1px solid #ddd;
+              padding: 10px;
+              font-size: 13px;
+              vertical-align: top;
+            }
+
+            tr:nth-child(even) td {
+              background: #f7f7f7;
+            }
+
+            .footer {
+              margin-top: 28px;
+              font-size: 11px;
+              color: #777;
+            }
+          </style>
+        </head>
+
+        <body>
+          <div class="header">
+            <div class="brand">Arrowquip</div>
+            <h1>${current.title} Agenda</h1>
+            <div class="meta">Exported ${new Date().toLocaleDateString()}</div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Section</th>
+                <th>Agenda Item</th>
+                <th>Owner</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+
+          <div class="footer">Arrowquip Internal Meeting Agenda</div>
+
+          <script>window.print();</script>
+        </body>
+      </html>
+    `);
+
+    win.document.close();
+  }
 
   return (
-    <div className="meetingsPage">
-      <div className="meetingsHeader">
-        <div>
-          <h1>Meetings</h1>
-          <p>Calendar first, then tasks, then decisions.</p>
+    <main className="page">
+      <div className="shell">
+        <div className="top">
+          <div>
+            <p className="eyebrow">MEETING CENTER</p>
+            <h1>Meetings</h1>
+            <p className="subtitle">
+              Daily and weekly agendas with clean Arrowquip agenda export.
+            </p>
+          </div>
+
+          <button onClick={exportAgenda}>Export Agenda</button>
         </div>
 
-        <div className="topToggle">
-          <button className={mode === "weekly" ? "active" : ""} onClick={() => setMode("weekly")}>Weekly</button>
-          <button className={mode === "daily" ? "active" : ""} onClick={() => setMode("daily")}>Daily</button>
+        <div className="mode-row">
+          <button
+            className={mode === "daily" ? "active" : ""}
+            onClick={() => setMode("daily")}
+          >
+            Daily
+          </button>
+          <button
+            className={mode === "weekly" ? "active" : ""}
+            onClick={() => setMode("weekly")}
+          >
+            Weekly
+          </button>
         </div>
+
+        <SectionCard
+          title="Calendar Review"
+          section="calendar"
+          items={current.sections.calendar}
+          addItem={addItem}
+          updateItem={updateItem}
+          deleteItem={deleteItem}
+        />
+
+        <SectionCard
+          title="Tasks"
+          section="tasks"
+          items={current.sections.tasks}
+          addItem={addItem}
+          updateItem={updateItem}
+          deleteItem={deleteItem}
+        />
+
+        <SectionCard
+          title="Decisions Needed"
+          section="decisions"
+          items={current.sections.decisions}
+          addItem={addItem}
+          updateItem={updateItem}
+          deleteItem={deleteItem}
+        />
       </div>
 
-      {mode === "weekly" && (
-        <div className="meetingGrid">
-          <aside className="prioritySide">
-            <div className="meetingCard">
-              <div className="sectionHeader">
-                <div>
-                  <h2>Weekly Priorities</h2>
-                  <p>Top focus items</p>
-                </div>
-                <button className="smallBtn" onClick={() => setWeeklyPriorities([...weeklyPriorities, ""])}>+</button>
-              </div>
-
-              <div className="priorityList">
-                {weeklyPriorities.map((priority, index) => (
-                  <div className="priorityItem" key={index}>
-                    <span>{index + 1}</span>
-                    <input
-                      value={priority}
-                      onChange={(e) => {
-                        const updated = [...weeklyPriorities];
-                        updated[index] = e.target.value;
-                        setWeeklyPriorities(updated);
-                      }}
-                      placeholder="Add priority..."
-                    />
-                    <button onClick={() => setWeeklyPriorities(weeklyPriorities.filter((_, i) => i !== index))}>×</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </aside>
-
-          <main className="mainColumn">
-            <CalendarSection title="Calendar Review" rows={weeklyCalendar} setRows={setWeeklyCalendar} updateRow={updateRow} addRow={addRow} deleteRow={deleteRow} />
-            <TasksSection title="Weekly Tasks" rows={weeklyTasks} setRows={setWeeklyTasks} assignedFrom="Weekly Meeting" updateRow={updateRow} addRow={addRow} deleteRow={deleteRow} sendMeetingTaskToTasks={sendMeetingTaskToTasks} />
-            <DecisionsSection title="Decisions Needed" rows={weeklyDecisions} setRows={setWeeklyDecisions} updateRow={updateRow} addRow={addRow} deleteRow={deleteRow} />
-          </main>
-        </div>
-      )}
-
-      {mode === "daily" && (
-        <>
-          <div className="dateBar">
-            <button onClick={() => changeDay(-1)}>← Previous Day</button>
-            <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
-            <button onClick={() => changeDay(1)}>Next Day →</button>
-          </div>
-
-          <div className="personToggle">
-            <button className={dailyPerson === "Mark" ? "active" : ""} onClick={() => setDailyPerson("Mark")}>Mark</button>
-            <button className={dailyPerson === "Dane" ? "active" : ""} onClick={() => setDailyPerson("Dane")}>Dane</button>
-          </div>
-
-          <CalendarSection title={`${dailyPerson} Daily Calendar`} rows={activeDailyCalendar} setRows={setActiveDailyCalendar} updateRow={updateRow} addRow={addRow} deleteRow={deleteRow} />
-          <TasksSection title={`${dailyPerson} Daily Tasks`} rows={activeDailyTasks} setRows={setActiveDailyTasks} assignedFrom={dailyPerson} updateRow={updateRow} addRow={addRow} deleteRow={deleteRow} sendMeetingTaskToTasks={sendMeetingTaskToTasks} />
-          <DecisionsSection title={`${dailyPerson} Decisions Needed`} rows={activeDailyDecisions} setRows={setActiveDailyDecisions} updateRow={updateRow} addRow={addRow} deleteRow={deleteRow} />
-        </>
-      )}
-
       <style jsx global>{`
-        .meetingsPage {
-          padding: 32px;
-          max-width: 1280px;
-          margin: 0 auto;
-          color: #111;
+        body {
+          margin: 0;
+          background: #f5f6f8;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          color: #020617;
         }
 
-        .meetingsHeader {
+        .page {
+          min-height: 100vh;
+          padding: 32px 24px 80px;
+        }
+
+        .shell {
+          max-width: 1220px;
+          margin: 0 auto;
+        }
+
+        .top {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          gap: 20px;
-          margin-bottom: 24px;
+          margin-bottom: 20px;
         }
 
-        .meetingsPage h1 {
-          margin: 0;
-          font-size: 34px;
-          letter-spacing: -0.04em;
-          font-weight: 800;
-        }
-
-        .meetingsPage h2 {
-          margin: 0;
-          font-size: 15px;
-          letter-spacing: -0.02em;
+        .eyebrow {
+          margin: 0 0 10px;
+          font-size: 10px;
+          letter-spacing: 0.18em;
           font-weight: 700;
+          color: #64748b;
         }
 
-        .meetingsPage p {
-          margin: 4px 0 0;
-          color: #6b7280;
+        h1 {
+          margin: 0;
+          font-size: 30px;
+          font-weight: 800;
+          letter-spacing: -0.04em;
+        }
+
+        .subtitle {
+          margin: 8px 0 0;
           font-size: 12px;
+          color: #64748b;
         }
 
-        .meetingGrid {
-          display: grid;
-          grid-template-columns: 280px 1fr;
-          gap: 18px;
-          align-items: start;
+        button {
+          border: none;
+          border-radius: 999px;
+          background: #020617;
+          color: #ffffff;
+          font-size: 12px;
+          font-weight: 800;
+          padding: 8px 14px;
+          cursor: pointer;
         }
 
-        .prioritySide {
-          position: sticky;
-          top: 24px;
-        }
-
-        .mainColumn {
+        .mode-row {
           display: flex;
-          flex-direction: column;
-          gap: 18px;
-        }
-
-        .meetingCard {
-          background: #ffffff;
-          border: 1px solid #e5e7eb;
-          border-radius: 14px;
-          padding: 14px;
-          box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035);
+          gap: 8px;
           margin-bottom: 18px;
         }
 
-        .sectionHeader {
+        .mode-row button {
+          background: #ffffff;
+          color: #020617;
+          border: 1px solid #dfe3ea;
+        }
+
+        .mode-row button.active {
+          background: #020617;
+          color: #ffffff;
+        }
+
+        .card {
+          background: #ffffff;
+          border: 1px solid #dfe3ea;
+          border-radius: 20px;
+          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
+          padding: 18px;
+          margin-bottom: 16px;
+        }
+
+        .card-head {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 10px;
           margin-bottom: 12px;
         }
 
-        .topToggle,
-        .personToggle,
-        .dateBar {
-          display: flex;
-          gap: 6px;
-          background: #ffffff;
-          border: 1px solid #e5e7eb;
-          border-radius: 14px;
-          padding: 5px;
+        .card-head h2 {
+          margin: 0;
+          font-size: 15px;
+          font-weight: 800;
         }
 
-        .personToggle,
-        .dateBar {
-          width: fit-content;
-          margin-bottom: 18px;
-        }
-
-        .dateBar {
+        .agenda-row {
+          display: grid;
+          grid-template-columns: 1fr 120px 120px 34px;
+          gap: 8px;
+          margin-bottom: 8px;
           align-items: center;
         }
 
-        .dateBar input {
-          width: 160px;
-        }
-
-        .meetingsPage button {
-          border: none;
-          background: #111;
-          color: #fff;
-          border-radius: 9px;
-          padding: 8px 12px;
-          font-size: 13px;
-          cursor: pointer;
-          transition: all 0.18s ease;
-        }
-
-        .meetingsPage button:hover {
-          opacity: 0.9;
-          transform: translateY(-1px);
-        }
-
-        .smallBtn {
-          width: 28px;
-          height: 28px;
-          padding: 0 !important;
-        }
-
-        .topToggle button,
-        .personToggle button {
-          background: transparent;
-          color: #444;
-        }
-
-        .topToggle button.active,
-        .personToggle button.active {
-          background: #111;
-          color: #fff;
-        }
-
-        .meetingsPage input,
-        .meetingsPage select,
-        .meetingsPage textarea {
-          border: 1px solid #e5e7eb;
-          background: #f9fafb;
+        input,
+        select {
+          height: 34px;
           border-radius: 10px;
-          padding: 10px 11px;
-          font-size: 13px;
+          border: 1px solid #d1d5db;
+          background: #f8fafc;
+          padding: 0 10px;
+          font-size: 12px;
           outline: none;
-          color: #111;
-          font-family: inherit;
-          width: 100%;
-          box-sizing: border-box;
         }
 
-        .meetingsPage input:focus,
-        .meetingsPage select:focus,
-        .meetingsPage textarea:focus {
-          border-color: #111;
-          background: #fff;
+        .delete-btn {
+          background: transparent;
+          color: #9ca3af;
+          padding: 5px 8px;
+          font-size: 14px;
         }
 
-        .calendarList,
-        .taskFlowList,
-        .decisionList,
-        .priorityList {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .calendarRow {
-          display: grid;
-          grid-template-columns: 1.5fr 1fr 130px 32px;
-          gap: 8px;
-          align-items: center;
-        }
-
-        .taskBlock,
-        .decisionBlock {
-          border: 1px solid #eeeeee;
-          background: #ffffff;
-          border-radius: 12px;
-          padding: 8px;
-        }
-
-        .taskFlowRow {
-          display: grid;
-          grid-template-columns: 1fr 110px 82px 70px 32px;
-          gap: 8px;
-          align-items: center;
-        }
-
-        .decisionRow {
-          display: grid;
-          grid-template-columns: 1fr 82px 32px;
-          gap: 8px;
-          align-items: center;
-        }
-
-        .detailsBox {
-          width: 100%;
-          min-height: 70px;
-          margin-top: 8px;
-          resize: vertical;
-        }
-
-        .detailBtn {
-          background: #f3f4f6 !important;
-          color: #111 !important;
-        }
-
-        .deleteBtn {
-          background: #f3f4f6 !important;
-          color: #111 !important;
-          width: 32px;
-          height: 32px;
-          padding: 0 !important;
-        }
-
-        .priorityList {
-          gap: 3px;
-        }
-
-        .priorityItem {
-          display: grid;
-          grid-template-columns: 16px 1fr 18px;
-          gap: 5px;
-          align-items: center;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          padding: 4px 6px;
-          height: 32px;
-        }
-
-        .priorityItem span {
-          width: 14px;
-          height: 14px;
-          border-radius: 4px;
-          background: #111;
-          color: #fff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 9px;
-          font-weight: 700;
-        }
-
-        .priorityItem input {
-          border: none !important;
-          background: transparent !important;
-          padding: 0 !important;
-          font-size: 12px !important;
-          height: 100%;
-          min-width: 0;
-        }
-
-        .priorityItem button {
-          background: #f3f4f6 !important;
-          color: #111 !important;
-          width: 16px;
-          height: 16px;
-          border-radius: 5px;
-          font-size: 10px;
-          padding: 0 !important;
-        }
-
-        @media (max-width: 1000px) {
-          .meetingGrid {
-            grid-template-columns: 1fr;
-          }
-
-          .prioritySide {
-            position: static;
-          }
-
-          .calendarRow,
-          .taskFlowRow,
-          .decisionRow {
-            grid-template-columns: 1fr;
-          }
-
-          .dateBar {
-            flex-direction: column;
-            align-items: stretch;
-            width: 100%;
-          }
-
-          .dateBar input {
-            width: 100%;
-          }
+        .empty {
+          margin: 0;
+          padding: 8px 0;
+          font-size: 12px;
+          color: #64748b;
         }
       `}</style>
-    </div>
+    </main>
   );
 }
 
-function CalendarSection({ title, rows, setRows, updateRow, addRow, deleteRow }) {
+function SectionCard({ title, section, items, addItem, updateItem, deleteItem }) {
   return (
-    <section className="meetingCard">
-      <div className="sectionHeader">
-        <div>
-          <h2>{title}</h2>
-          <p>Add meeting name, location, and time.</p>
-        </div>
-        <button className="smallBtn" onClick={() => addRow(rows, setRows, blankMeeting)}>+</button>
+    <section className="card">
+      <div className="card-head">
+        <h2>{title}</h2>
+        <button onClick={() => addItem(section)}>Add</button>
       </div>
 
-      <div className="calendarList">
-        {rows.map((meeting, index) => (
-          <div className="calendarRow" key={index}>
-            <input value={meeting.name} onChange={(e) => updateRow(rows, setRows, index, "name", e.target.value)} placeholder="Meeting name" />
-            <input value={meeting.location} onChange={(e) => updateRow(rows, setRows, index, "location", e.target.value)} placeholder="Location" />
-            <input type="time" value={meeting.time} onChange={(e) => updateRow(rows, setRows, index, "time", e.target.value)} />
-            <button className="deleteBtn" onClick={() => deleteRow(rows, setRows, index)}>×</button>
+      {items.length === 0 ? (
+        <p className="empty">No items yet.</p>
+      ) : (
+        items.map((item) => (
+          <div className="agenda-row" key={item.id}>
+            <input
+              value={item.text || ""}
+              onChange={(e) => updateItem(section, item.id, "text", e.target.value)}
+              placeholder="Agenda item..."
+            />
+
+            <select
+              value={item.owner || "Nikita"}
+              onChange={(e) => updateItem(section, item.id, "owner", e.target.value)}
+            >
+              <option>Nikita</option>
+              <option>Mark</option>
+              <option>Dane</option>
+            </select>
+
+            <select
+              value={item.status || "Open"}
+              onChange={(e) => updateItem(section, item.id, "status", e.target.value)}
+            >
+              <option>Open</option>
+              <option>Pending</option>
+              <option>Complete</option>
+            </select>
+
+            <button className="delete-btn" onClick={() => deleteItem(section, item.id)}>
+              ×
+            </button>
           </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function TasksSection({ title, rows, setRows, assignedFrom, updateRow, addRow, deleteRow, sendMeetingTaskToTasks }) {
-  return (
-    <section className="meetingCard">
-      <div className="sectionHeader">
-        <div>
-          <h2>{title}</h2>
-          <p>Add task name, priority, and optional hidden details.</p>
-        </div>
-        <button className="smallBtn" onClick={() => addRow(rows, setRows, blankTask)}>+</button>
-      </div>
-
-      <div className="taskFlowList">
-        {rows.map((task, index) => (
-          <div className="taskBlock" key={index}>
-            <div className="taskFlowRow">
-              <input value={task.title} onChange={(e) => updateRow(rows, setRows, index, "title", e.target.value)} placeholder="Task name" />
-
-              <select value={task.urgency} onChange={(e) => updateRow(rows, setRows, index, "urgency", e.target.value)}>
-                <option>High</option>
-                <option>Medium</option>
-                <option>Low</option>
-              </select>
-
-              <button className="detailBtn" onClick={() => updateRow(rows, setRows, index, "showDetails", !task.showDetails)}>
-                Details
-              </button>
-
-              <button onClick={() => sendMeetingTaskToTasks(task, assignedFrom)}>Send</button>
-
-              <button className="deleteBtn" onClick={() => deleteRow(rows, setRows, index)}>×</button>
-            </div>
-
-            {task.showDetails && (
-              <textarea
-                className="detailsBox"
-                value={task.details}
-                onChange={(e) => updateRow(rows, setRows, index, "details", e.target.value)}
-                placeholder="Add more details here..."
-              />
-            )}
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function DecisionsSection({ title, rows, setRows, updateRow, addRow, deleteRow }) {
-  return (
-    <section className="meetingCard">
-      <div className="sectionHeader">
-        <div>
-          <h2>{title}</h2>
-          <p>Add each decision as its own item.</p>
-        </div>
-        <button className="smallBtn" onClick={() => addRow(rows, setRows, blankDecision)}>+</button>
-      </div>
-
-      <div className="decisionList">
-        {rows.map((decision, index) => (
-          <div className="decisionBlock" key={index}>
-            <div className="decisionRow">
-              <input value={decision.title} onChange={(e) => updateRow(rows, setRows, index, "title", e.target.value)} placeholder="Decision needed" />
-
-              <button className="detailBtn" onClick={() => updateRow(rows, setRows, index, "showDetails", !decision.showDetails)}>
-                Details
-              </button>
-
-              <button className="deleteBtn" onClick={() => deleteRow(rows, setRows, index)}>×</button>
-            </div>
-
-            {decision.showDetails && (
-              <textarea
-                className="detailsBox"
-                value={decision.details}
-                onChange={(e) => updateRow(rows, setRows, index, "details", e.target.value)}
-                placeholder="Notes / context..."
-              />
-            )}
-          </div>
-        ))}
-      </div>
+        ))
+      )}
     </section>
   );
 }
