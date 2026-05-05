@@ -3,22 +3,6 @@ import { useEffect, useState } from "react";
 const TASKS_KEY = "os-tasks";
 const FOLLOWUPS_KEY = "dashboard-follow-ups";
 
-function getTaskText(task) {
-  return task.text || task.task || task.title || task.content || task.name || "";
-}
-
-function getTaskFrom(task) {
-  return task.assignedFrom || task.from || task.owner || task.source || "N/A";
-}
-
-function getTaskDueDate(task) {
-  return task.dueDate || task.due_date || task.date || "";
-}
-
-function getTaskUrgency(task) {
-  return task.urgency || task.priority || "Medium";
-}
-
 export default function TasksPage() {
   const [tasks, setTasks] = useState([]);
   const [taskText, setTaskText] = useState("");
@@ -71,18 +55,12 @@ export default function TasksPage() {
 
     const followUp = {
       id: Date.now(),
-      text: getTaskText(task),
-      sourceTask: {
-        from: getTaskFrom(task),
-        dueDate: getTaskDueDate(task),
-        urgency: getTaskUrgency(task),
-      },
+      text: task.text,
       completed: false,
       createdAt: new Date().toLocaleDateString(),
     };
 
     localStorage.setItem(FOLLOWUPS_KEY, JSON.stringify([followUp, ...existing]));
-    alert("Added to Follow-Ups");
   }
 
   const visibleTasks = hideCompleted
@@ -94,11 +72,8 @@ export default function TasksPage() {
       <div className="shell">
         <div className="top">
           <div>
-            <p className="eyebrow">OPERATING SYSTEM</p>
             <h1>Tasks</h1>
-            <p className="subtitle">
-              One clean place for priorities, delegated items, and follow-ups.
-            </p>
+            <p>One clean place for priorities, delegated items, and follow-ups.</p>
           </div>
 
           <label className="hide-toggle">
@@ -111,19 +86,15 @@ export default function TasksPage() {
           </label>
         </div>
 
-        <section className="add-card">
-          <div className="card-header">
-            <h2>Add Task</h2>
-          </div>
+        <section className="card">
+          <h2>Add Task</h2>
 
           <div className="add-row">
             <input
               value={taskText}
               onChange={(e) => setTaskText(e.target.value)}
               placeholder="Add a new task..."
-              onKeyDown={(e) => {
-                if (e.key === "Enter") addTask();
-              }}
+              onKeyDown={(e) => e.key === "Enter" && addTask()}
             />
 
             <select
@@ -151,67 +122,49 @@ export default function TasksPage() {
           </div>
         </section>
 
-        <section className="task-card">
-          <div className="card-title-row">
-            <div>
-              <h2>Task List</h2>
-              <p>
-                {visibleTasks.length} showing ·{" "}
-                {tasks.filter((task) => task.completed).length} completed
-              </p>
-            </div>
+        <section className="card">
+          <div className="card-head">
+            <h2>Task List</h2>
+            <span>{visibleTasks.length} items</span>
           </div>
 
           <div className="task-list">
-            {visibleTasks.length === 0 ? (
+            {visibleTasks.map((task) => (
+              <div className={`task-row ${task.completed ? "done" : ""}`} key={task.id}>
+                <input
+                  className="task-check"
+                  type="checkbox"
+                  checked={task.completed}
+                  onChange={() => toggleTask(task.id)}
+                />
+
+                <div className="task-main">
+                  <h3>{task.text}</h3>
+                  <p>
+                    From: {task.assignedFrom}
+                    {task.dueDate ? ` · Due: ${task.dueDate}` : ""}
+                  </p>
+                </div>
+
+                <span className={`badge ${task.urgency.toLowerCase()}`}>
+                  {task.urgency}
+                </span>
+
+                <button
+                  className="followup-btn"
+                  onClick={() => addTaskToFollowUps(task)}
+                >
+                  Follow-Up
+                </button>
+
+                <button className="delete-btn" onClick={() => deleteTask(task.id)}>
+                  ×
+                </button>
+              </div>
+            ))}
+
+            {visibleTasks.length === 0 && (
               <p className="empty">No tasks showing.</p>
-            ) : (
-              visibleTasks.map((task) => {
-                const taskName = getTaskText(task);
-                const from = getTaskFrom(task);
-                const due = getTaskDueDate(task);
-                const level = getTaskUrgency(task);
-
-                return (
-                  <div
-                    className={`task-row ${task.completed ? "done" : ""}`}
-                    key={task.id}
-                  >
-                    <input
-                      className="task-check"
-                      type="checkbox"
-                      checked={!!task.completed}
-                      onChange={() => toggleTask(task.id)}
-                    />
-
-                    <div className="task-main">
-                      <h3>{taskName || "Untitled task"}</h3>
-                      <p>
-                        From: {from}
-                        {due ? ` · Due: ${due}` : ""}
-                      </p>
-                    </div>
-
-                    <span className={`badge ${level.toLowerCase()}`}>
-                      {level}
-                    </span>
-
-                    <button
-                      className="followup-btn"
-                      onClick={() => addTaskToFollowUps(task)}
-                    >
-                      Add to Follow-Ups
-                    </button>
-
-                    <button
-                      className="delete-btn"
-                      onClick={() => deleteTask(task.id)}
-                    >
-                      ×
-                    </button>
-                  </div>
-                );
-              })
             )}
           </div>
         </section>
@@ -222,253 +175,152 @@ export default function TasksPage() {
           margin: 0;
           background: #f5f6f8;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-          color: #020617;
         }
 
         .page {
-          min-height: 100vh;
-          padding: 38px 24px 80px;
+          padding: 32px 24px;
         }
 
         .shell {
-          width: 100%;
-          max-width: 1220px;
+          max-width: 1200px;
           margin: 0 auto;
         }
 
         .top {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 22px;
-        }
-
-        .eyebrow {
-          margin: 0 0 10px;
-          font-size: 10px;
-          letter-spacing: 0.18em;
-          font-weight: 700;
-          color: #64748b;
+          margin-bottom: 20px;
         }
 
         h1 {
           margin: 0;
-          font-size: 32px;
-          line-height: 1;
-          font-weight: 800;
-          letter-spacing: -0.04em;
-        }
-
-        .subtitle {
-          margin: 10px 0 0;
-          font-size: 12px;
-          color: #475569;
-        }
-
-        .hide-toggle {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 12px;
-          color: #334155;
-        }
-
-        .add-card,
-        .task-card {
-          background: #ffffff;
-          border: 1px solid #dfe3ea;
-          border-radius: 20px;
-          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
-          margin-bottom: 18px;
-        }
-
-        .add-card {
-          padding: 18px;
-        }
-
-        .task-card {
-          padding: 18px;
-        }
-
-        .card-header h2,
-        .card-title-row h2 {
-          margin: 0 0 6px;
-          font-size: 16px;
+          font-size: 28px;
           font-weight: 800;
         }
 
-        .card-title-row {
-          margin-bottom: 14px;
-        }
-
-        .card-title-row p {
-          margin: 0;
+        .top p {
+          margin: 6px 0 0;
           font-size: 12px;
           color: #64748b;
         }
 
+        .hide-toggle {
+          font-size: 12px;
+        }
+
+        .card {
+          background: #fff;
+          border: 1px solid #e5e7eb;
+          border-radius: 16px;
+          padding: 16px;
+          margin-bottom: 16px;
+        }
+
+        h2 {
+          font-size: 14px;
+          margin-bottom: 10px;
+        }
+
         .add-row {
           display: grid;
-          grid-template-columns: 1fr 130px 130px 150px 90px;
-          gap: 10px;
+          grid-template-columns: 1fr 110px 110px 140px 80px;
+          gap: 8px;
         }
 
         input,
         select {
-          height: 38px;
-          border-radius: 12px;
-          border: 1px solid #cfd6df;
-          background: #f8fafc;
-          padding: 0 12px;
+          height: 34px;
+          border-radius: 8px;
+          border: 1px solid #d1d5db;
           font-size: 12px;
-          color: #020617;
-          outline: none;
+          padding: 0 10px;
         }
 
         button {
           border: none;
           border-radius: 999px;
           background: #020617;
-          color: #ffffff;
-          font-size: 11px;
-          font-weight: 800;
-          padding: 8px 13px;
+          color: white;
+          font-size: 10px;
+          padding: 6px 10px;
           cursor: pointer;
         }
 
         .task-list {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 6px;
         }
 
         .task-row {
           display: grid;
-          grid-template-columns: 22px minmax(0, 1fr) auto auto 28px;
+          grid-template-columns: 18px 1fr auto auto 24px;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
           border: 1px solid #e5e7eb;
-          background: #ffffff;
-          border-radius: 14px;
-          padding: 10px 12px;
-          min-height: 56px;
-        }
-
-        .task-row:hover {
-          background: #fbfcfe;
-          border-color: #d7dde6;
+          border-radius: 10px;
+          padding: 7px 10px;
+          min-height: 44px;
         }
 
         .task-row.done {
-          opacity: 0.52;
-        }
-
-        .task-row.done h3 {
-          text-decoration: line-through;
-        }
-
-        .task-check {
-          width: 14px;
-          height: 14px;
-          padding: 0;
-        }
-
-        .task-main {
-          min-width: 0;
+          opacity: 0.5;
         }
 
         .task-main h3 {
-          margin: 0 0 4px;
-          font-size: 13px;
-          line-height: 1.25;
-          font-weight: 650;
-          color: #020617;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          margin: 0 0 2px;
+          font-size: 12px;
+          font-weight: 600;
         }
 
         .task-main p {
           margin: 0;
-          font-size: 11px;
-          line-height: 1.25;
+          font-size: 10px;
           color: #64748b;
         }
 
         .badge {
+          padding: 3px 7px;
           border-radius: 999px;
-          padding: 5px 9px;
-          font-size: 10.5px;
-          font-weight: 800;
-          white-space: nowrap;
+          font-size: 9.5px;
+          font-weight: 700;
         }
 
         .badge.low {
           background: #dcfce7;
-          color: #166534;
         }
 
         .badge.medium {
           background: #fef3c7;
-          color: #b45309;
         }
 
         .badge.high {
           background: #fee2e2;
-          color: #b91c1c;
         }
 
         .followup-btn {
-          background: #f8fafc;
+          background: #f1f5f9;
           color: #020617;
-          border: 1px solid #cfd6df;
-          padding: 6px 10px;
-          font-size: 10.5px;
-          font-weight: 800;
-          white-space: nowrap;
+          border: 1px solid #d1d5db;
+          font-size: 9.5px;
+          padding: 4px 8px;
         }
 
         .delete-btn {
-          background: #f8fafc;
-          color: #64748b;
-          border: 1px solid transparent;
-          padding: 5px 9px;
-          font-size: 12px;
+          background: transparent;
+          color: #9ca3af;
+          font-size: 10px;
         }
 
-        .delete-btn:hover {
-          color: #991b1b;
-          border-color: #fecaca;
-          background: #fff;
+        .task-check {
+          width: 12px;
+          height: 12px;
         }
 
         .empty {
-          margin: 0;
-          padding: 14px;
           font-size: 12px;
           color: #64748b;
-        }
-
-        @media (max-width: 900px) {
-          .top {
-            flex-direction: column;
-            gap: 12px;
-          }
-
-          .add-row {
-            grid-template-columns: 1fr;
-          }
-
-          .task-row {
-            grid-template-columns: 22px 1fr;
-          }
-
-          .badge,
-          .followup-btn,
-          .delete-btn {
-            grid-column: 2;
-            justify-self: flex-start;
-          }
+          padding: 10px;
         }
       `}</style>
     </main>
