@@ -109,6 +109,214 @@ export default function MeetingsPage() {
   const activeDailyDecisions = dailyPerson === "Mark" ? markDailyDecisions : daneDailyDecisions;
   const setActiveDailyDecisions = dailyPerson === "Mark" ? setMarkDailyDecisions : setDaneDailyDecisions;
 
+  function exportArrowquipAgenda() {
+    const agendaTitle =
+      mode === "weekly"
+        ? "Weekly Meeting Agenda"
+        : `${dailyPerson} Daily Meeting Agenda`;
+
+    const agendaDate =
+      mode === "daily"
+        ? selectedDate
+        : new Date().toISOString().slice(0, 10);
+
+    const calendarRows =
+      mode === "weekly" ? weeklyCalendar : activeDailyCalendar;
+
+    const taskRows =
+      mode === "weekly" ? weeklyTasks : activeDailyTasks;
+
+    const decisionRows =
+      mode === "weekly" ? weeklyDecisions : activeDailyDecisions;
+
+    const agendaItems = [
+      ...calendarRows
+        .filter((item) => item.name || item.location || item.time)
+        .map((item) => ({
+          section: "Calendar Review",
+          item: item.name || "",
+          details: [item.location, item.time].filter(Boolean).join(" · "),
+          owner: "",
+        })),
+
+      ...taskRows
+        .filter((item) => item.title || item.details)
+        .map((item) => ({
+          section: mode === "weekly" ? "Weekly Tasks" : `${dailyPerson} Daily Tasks`,
+          item: item.title || "",
+          details: item.details || "",
+          owner: mode === "weekly" ? "Weekly Meeting" : dailyPerson,
+          priority: item.urgency || "",
+        })),
+
+      ...decisionRows
+        .filter((item) => item.title || item.details)
+        .map((item) => ({
+          section: "Decisions Needed",
+          item: item.title || "",
+          details: item.details || "",
+          owner: "",
+        })),
+    ];
+
+    const rows = agendaItems
+      .map(
+        (item, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${item.section || ""}</td>
+            <td>
+              <strong>${item.item || ""}</strong>
+              ${item.details ? `<div class="details">${item.details}</div>` : ""}
+            </td>
+            <td>${item.owner || ""}</td>
+            <td>${item.priority || ""}</td>
+          </tr>
+        `
+      )
+      .join("");
+
+    const printWindow = window.open("", "_blank");
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${agendaTitle}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              color: #111;
+              padding: 36px;
+              background: #ffffff;
+            }
+
+            .header {
+              border-bottom: 5px solid #111;
+              padding-bottom: 18px;
+              margin-bottom: 26px;
+            }
+
+            .brand {
+              font-size: 15px;
+              font-weight: 900;
+              letter-spacing: 0.2em;
+              text-transform: uppercase;
+            }
+
+            .subbrand {
+              margin-top: 5px;
+              font-size: 11px;
+              letter-spacing: 0.16em;
+              text-transform: uppercase;
+              color: #666;
+            }
+
+            h1 {
+              margin: 18px 0 4px;
+              font-size: 30px;
+              line-height: 1.1;
+            }
+
+            .meta {
+              font-size: 12px;
+              color: #666;
+            }
+
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 18px;
+            }
+
+            th {
+              background: #111;
+              color: #fff;
+              text-align: left;
+              padding: 11px;
+              font-size: 11px;
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+            }
+
+            td {
+              border: 1px solid #d8dee6;
+              padding: 11px;
+              font-size: 13px;
+              vertical-align: top;
+            }
+
+            tr:nth-child(even) td {
+              background: #f7f7f4;
+            }
+
+            .details {
+              margin-top: 5px;
+              font-size: 12px;
+              color: #555;
+              line-height: 1.4;
+            }
+
+            .footer {
+              margin-top: 32px;
+              padding-top: 14px;
+              border-top: 3px solid #111;
+              display: flex;
+              justify-content: space-between;
+              font-size: 10px;
+              letter-spacing: 0.12em;
+              text-transform: uppercase;
+              color: #555;
+            }
+
+            @media print {
+              body {
+                padding: 24px;
+              }
+            }
+          </style>
+        </head>
+
+        <body>
+          <div class="header">
+            <div class="brand">Arrowquip</div>
+            <div class="subbrand">Ranch | Outdoor</div>
+            <h1>${agendaTitle}</h1>
+            <div class="meta">Agenda Export · ${agendaDate}</div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Section</th>
+                <th>Agenda Item</th>
+                <th>Owner</th>
+                <th>Priority</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${
+                rows ||
+                `<tr><td colspan="5">No agenda items entered.</td></tr>`
+              }
+            </tbody>
+          </table>
+
+          <div class="footer">
+            <span>Arrowquip Internal Agenda</span>
+            <span>Ranch | Outdoor</span>
+          </div>
+
+          <script>
+            window.print();
+          </script>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+  }
+
   return (
     <div className="meetingsPage">
       <div className="meetingsHeader">
@@ -117,9 +325,13 @@ export default function MeetingsPage() {
           <p>Calendar first, then tasks, then decisions.</p>
         </div>
 
-        <div className="topToggle">
-          <button className={mode === "weekly" ? "active" : ""} onClick={() => setMode("weekly")}>Weekly</button>
-          <button className={mode === "daily" ? "active" : ""} onClick={() => setMode("daily")}>Daily</button>
+        <div className="headerActions">
+          <button onClick={exportArrowquipAgenda}>Export Agenda</button>
+
+          <div className="topToggle">
+            <button className={mode === "weekly" ? "active" : ""} onClick={() => setMode("weekly")}>Weekly</button>
+            <button className={mode === "daily" ? "active" : ""} onClick={() => setMode("daily")}>Daily</button>
+          </div>
         </div>
       </div>
 
@@ -196,6 +408,12 @@ export default function MeetingsPage() {
           align-items: flex-start;
           gap: 20px;
           margin-bottom: 24px;
+        }
+
+        .headerActions {
+          display: flex;
+          align-items: center;
+          gap: 10px;
         }
 
         .meetingsPage h1 {
