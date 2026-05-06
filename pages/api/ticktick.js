@@ -8,8 +8,10 @@ const supabase = createClient(
 
 function cleanDate(value) {
   if (!value || String(value).includes('choose TickTick')) return null
+
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return null
+
   return date.toISOString().split('T')[0]
 }
 
@@ -20,8 +22,10 @@ function cleanPerson(value) {
 
 function cleanPriority(value) {
   const v = String(value || '').toLowerCase()
+
   if (v.includes('high')) return 'High'
   if (v.includes('low')) return 'Low'
+
   return 'Medium'
 }
 
@@ -33,8 +37,17 @@ export default async function handler(req, res) {
   try {
     const body = req.body || {}
 
-    const externalId = body.id || body.task_id || body.ticktick_id || null
-    const taskName = body.title || body.task || body.name || 'Untitled TickTick Task'
+    const externalId =
+      body.id ||
+      body.task_id ||
+      body.ticktick_id ||
+      null
+
+    const taskName =
+      body.title ||
+      body.task ||
+      body.name ||
+      'Untitled TickTick Task'
 
     const row = {
       task: taskName,
@@ -47,20 +60,48 @@ export default async function handler(req, res) {
       due_date: cleanDate(body.due_date),
     }
 
-    const { data, error } = await supabase
+    if (externalId) {
+      const { data: existingTask, error: findError } = await supabase
+        .from('Task List')
+        .select('id')
+        .eq('external_id', externalId)
+        .limit(1)
+        .maybeSingle()
+
+      if (findError) throw findError
+
+      if (existingTask) {
+        const { data: updatedTask, error: updateError } = await supabase
+          .from('Task List')
+          .update(row)
+          .eq('id', existingTask.id)
+          .select()
+
+        if (updateError) throw updateError
+
+        return res.status(200).json({
+          success: true,
+          action: 'updated_existing',
+          task: updatedTask,
+        })
+      }
+    }
+
+    const { data: newTask, error: insertError } = await supabase
       .from('Task List')
-      .upsert(row, {
-        onConflict: 'external_id',
-      })
+      .insert([row])
       .select()
 
-    if (error) throw error
+    if (insertError) throw insertError
 
     return res.status(200).json({
       success: true,
-      task: data,
+      action: 'created_new',
+      task: newTask,
     })
   } catch (err) {
+    console.error('TickTick webhook error:', err)
+
     return res.status(500).json({
       success: false,
       error: err.message,
