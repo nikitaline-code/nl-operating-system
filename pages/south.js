@@ -1,10 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 
 const TASK_SHEET_URL = "PASTE_YOUR_TASK_GOOGLE_SHEET_LINK_HERE";
-const TRADESHOW_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTxLHqcPcoYXmoe40mw9SDVR_bzwowBdwR96IQww0DmH_pmVXEw97t9H559AO1AuFtLYyG2KD9G1AxG/pubhtml?gid=1501568534&single=true";
-const COOP_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTxLHqcPcoYXmoe40mw9SDVR_bzwowBdwR96IQww0DmH_pmVXEw97t9H559AO1AuFtLYyG2KD9G1AxG/pubhtml?gid=263884969&single=true";
-const DEALER_DIRECTORY_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTxLHqcPcoYXmoe40mw9SDVR_bzwowBdwR96IQww0DmH_pmVXEw97t9H559AO1AuFtLYyG2KD9G1AxG/pubhtml?gid=348786358&single=true";
+const TRADESHOW_EMBED_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTxLHqcPcoYXmoe40mw9SDVR_bzwowBdwR96IQww0DmH_pmVXEw97t9H559AO1AuFtLYyG2KD9G1AxG/pubhtml?gid=1501568534&single=true";
+const COOP_EMBED_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTxLHqcPcoYXmoe40mw9SDVR_bzwowBdwR96IQww0DmH_pmVXEw97t9H559AO1AuFtLYyG2KD9G1AxG/pubhtml?gid=263884969&single=true";
+const DEALER_DIRECTORY_EMBED_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTxLHqcPcoYXmoe40mw9SDVR_bzwowBdwR96IQww0DmH_pmVXEw97t9H559AO1AuFtLYyG2KD9G1AxG/pubhtml?gid=348786358&single=true";
 const SMALL_SALES_ORDERS_EMBED_URL = "PASTE_SMALL_SALES_ORDERS_EMBED_LINK_HERE";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 function sheetToCsvUrl(url) {
   if (!url) return "";
@@ -114,8 +123,12 @@ async function fetchTasks(url) {
 
 export default function SouthCommandCenter() {
   const [tasks, setTasks] = useState([]);
+  const [southTasks, setSouthTasks] = useState([]);
+  const [southTasksLoading, setSouthTasksLoading] = useState(false);
+
   const [search, setSearch] = useState("");
   const [responsibleFilter, setResponsibleFilter] = useState("All");
+  const [showCompletedSouthTasks, setShowCompletedSouthTasks] = useState(false);
 
   const [tasksOpen, setTasksOpen] = useState(true);
   const [tradeshowsOpen, setTradeshowsOpen] = useState(false);
@@ -130,13 +143,51 @@ export default function SouthCommandCenter() {
     }
 
     loadTasks();
+    fetchSouthTasks();
   }, []);
+
+  async function fetchSouthTasks() {
+    setSouthTasksLoading(true);
+
+    const { data, error } = await supabase
+      .from("Task List")
+      .select("*")
+      .eq("territory", "South")
+      .order("completed", { ascending: true })
+      .order("due_date", { ascending: true });
+
+    if (error) {
+      console.error("Error loading South tasks:", error);
+      setSouthTasks([]);
+    } else {
+      setSouthTasks(data || []);
+    }
+
+    setSouthTasksLoading(false);
+  }
+
+  async function toggleSouthTaskComplete(task) {
+    const { error } = await supabase
+      .from("Task List")
+      .update({ completed: !task.completed })
+      .eq("id", task.id);
+
+    if (error) {
+      console.error("Error updating South task:", error);
+      return;
+    }
+
+    fetchSouthTasks();
+  }
 
   const completedTasks = tasks.filter(isCompleted);
   const openTasks = tasks.filter((task) => !isCompleted(task));
 
+  const openSouthTasks = southTasks.filter((task) => !task.completed);
+  const completedSouthTasks = southTasks.filter((task) => task.completed);
+
   const responsibleOptions = useMemo(() => {
-    const names = openTasks
+    const sheetNames = openTasks
       .map(
         (task) =>
           task.Responsible ||
@@ -147,30 +198,41 @@ export default function SouthCommandCenter() {
       )
       .filter(Boolean);
 
-    return ["All", ...Array.from(new Set(names))];
-  }, [openTasks]);
+    const ticktickNames = openSouthTasks
+      .map((task) => task.assigned_to || "")
+      .filter(Boolean);
 
-  const filteredTasks = useMemo(() => {
-    return openTasks.filter((task) => {
-      const text = Object.values(task).join(" ").toLowerCase();
+    return ["All", ...Array.from(new Set([...sheetNames, ...ticktickNames]))];
+  }, [openTasks, openSouthTasks]);
 
-      const responsible =
-        task.Responsible ||
-        task.Owner ||
-        task.Assigned ||
-        task["Assigned To"] ||
-        "";
+  const filteredSouthTasks = useMemo(() => {
+    return southTasks.filter((task) => {
+      if (!showCompletedSouthTasks && task.completed) return false;
+
+      const text = [
+        task.task,
+        task.assigned_to,
+        task.priority,
+        task.source,
+        task.due_date,
+      ]
+        .join(" ")
+        .toLowerCase();
 
       return (
         text.includes(search.toLowerCase()) &&
-        (responsibleFilter === "All" || responsible === responsibleFilter)
+        (responsibleFilter === "All" || task.assigned_to === responsibleFilter)
       );
     });
-  }, [openTasks, search, responsibleFilter]);
+  }, [southTasks, search, responsibleFilter, showCompletedSouthTasks]);
+
+  const totalTaskCount = tasks.length + southTasks.length;
+  const totalCompletedCount = completedTasks.length + completedSouthTasks.length;
+  const totalOpenCount = openTasks.length + openSouthTasks.length;
 
   const progress =
-    tasks.length > 0
-      ? Math.round((completedTasks.length / tasks.length) * 100)
+    totalTaskCount > 0
+      ? Math.round((totalCompletedCount / totalTaskCount) * 100)
       : 0;
 
   return (
@@ -181,7 +243,7 @@ export default function SouthCommandCenter() {
             <p className="eyebrow">GOOGLE SHEET SYNC</p>
             <h1>South Command Center</h1>
             <p className="subtitle">
-              South territory operations, tracking, and execution pulled from Google Sheets.
+              South territory operations, tracking, and execution pulled from Google Sheets and TickTick.
             </p>
           </div>
 
@@ -192,16 +254,18 @@ export default function SouthCommandCenter() {
         </div>
 
         <div className="stats-grid">
-          <StatCard label="Total Tasks" value={tasks.length} />
-          <StatCard label="Open Tasks" value={openTasks.length} />
-          <StatCard label="Completed" value={completedTasks.length} />
-          <StatCard label="Showing" value={filteredTasks.length} />
+          <StatCard label="Total Tasks" value={totalTaskCount} />
+          <StatCard label="Open Tasks" value={totalOpenCount} />
+          <StatCard label="Completed" value={totalCompletedCount} />
+          <StatCard label="Showing" value={filteredSouthTasks.length} />
         </div>
 
         <section className="filters-card">
           <div>
             <h3>Filters</h3>
-            <p>Only open tasks are shown. Completed tasks are hidden automatically.</p>
+            <p>
+              South tasks sync from TickTick. Completed tasks are hidden unless turned on.
+            </p>
           </div>
 
           <div className="filters-right">
@@ -256,11 +320,28 @@ export default function SouthCommandCenter() {
 
         <CollapsibleCard
           title="South Task List"
-          subtitle={`${filteredTasks.length} open tasks showing · ${completedTasks.length} completed hidden`}
+          subtitle={`${openSouthTasks.length} open TickTick tasks · ${completedSouthTasks.length} completed hidden`}
           open={tasksOpen}
           setOpen={setTasksOpen}
         >
-          <TaskTable rows={filteredTasks} />
+          <div className="task-actions">
+            <button
+              className="secondary-pill"
+              onClick={() => setShowCompletedSouthTasks(!showCompletedSouthTasks)}
+            >
+              {showCompletedSouthTasks ? "Hide Completed" : "Show Completed"}
+            </button>
+
+            <button className="secondary-pill" onClick={fetchSouthTasks}>
+              Refresh
+            </button>
+          </div>
+
+          <SouthTaskList
+            rows={filteredSouthTasks}
+            loading={southTasksLoading}
+            toggleComplete={toggleSouthTaskComplete}
+          />
         </CollapsibleCard>
       </div>
 
@@ -464,44 +545,129 @@ export default function SouthCommandCenter() {
           background: #ffffff;
         }
 
-        .table-wrap {
-          overflow-x: auto;
-          border: 1px solid #e5e7eb;
-          border-radius: 14px;
+        .task-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 8px;
+          margin-bottom: 12px;
         }
 
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          background: #ffffff;
-          font-size: 12px;
-        }
-
-        th {
+        .secondary-pill {
+          border: 1px solid #d8dee8;
           background: #f8fafc;
-          color: #64748b;
-          text-align: left;
-          font-size: 10px;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          padding: 11px 12px;
-          border-bottom: 1px solid #e5e7eb;
-          white-space: nowrap;
+          color: #020617;
+          border-radius: 999px;
+          padding: 7px 12px;
+          font-size: 11px;
+          font-weight: 700;
+          cursor: pointer;
         }
 
-        td {
+        .south-task-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .south-task-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
           padding: 12px;
-          border-bottom: 1px solid #eef2f7;
-          color: #0f172a;
+          border: 1px solid #e5e9ef;
+          border-radius: 14px;
+          background: #f8fafc;
+        }
+
+        .south-task-item:hover {
+          background: #ffffff;
+        }
+
+        .south-task-item.done {
+          opacity: 0.55;
+        }
+
+        .tiny-check {
+          width: 21px;
+          height: 21px;
+          border-radius: 999px;
+          border: 1px solid #ccd3dd;
+          background: #ffffff;
+          font-size: 11px;
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+
+        .south-task-main {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .south-task-top {
+          display: flex;
+          justify-content: space-between;
+          gap: 14px;
+        }
+
+        .south-task-name {
+          font-size: 13px;
+          line-height: 1.4;
+          font-weight: 550;
+          color: #061229;
+        }
+
+        .south-task-item.done .south-task-name {
+          text-decoration: line-through;
+          color: #7a8494;
+        }
+
+        .south-task-badges {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+
+        .person-badge,
+        .source-badge,
+        .priority-badge {
+          font-size: 10px;
+          padding: 3px 8px;
+          border-radius: 999px;
+          border: 1px solid #dce2ea;
+          background: #ffffff;
+          color: #3f4754;
+          font-weight: 600;
           white-space: nowrap;
         }
 
-        tr:last-child td {
-          border-bottom: none;
+        .source-badge {
+          background: #eef2f7;
         }
 
-        tr:hover td {
-          background: #fafafa;
+        .priority-badge.high {
+          background: #fff1f0;
+          color: #9f1d1d;
+          border-color: #ffd4d4;
+        }
+
+        .priority-badge.medium {
+          background: #fff8e6;
+          color: #8a6500;
+          border-color: #f3df9b;
+        }
+
+        .priority-badge.low {
+          background: #edf8ef;
+          color: #2f6b3b;
+          border-color: #cde8d2;
+        }
+
+        .south-task-meta {
+          margin-top: 7px;
+          font-size: 11px;
+          color: #7a8494;
         }
 
         .empty {
@@ -509,6 +675,34 @@ export default function SouthCommandCenter() {
           padding: 14px;
           font-size: 12px;
           color: #64748b;
+        }
+
+        @media (max-width: 850px) {
+          .south-top,
+          .filters-card {
+            flex-direction: column;
+          }
+
+          .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+
+          .filters-right {
+            width: 100%;
+            grid-template-columns: 1fr;
+          }
+
+          .progress-card {
+            width: 100%;
+          }
+
+          .south-task-top {
+            flex-direction: column;
+          }
+
+          .south-task-badges {
+            justify-content: flex-start;
+          }
         }
       `}</style>
     </main>
@@ -552,36 +746,59 @@ function SheetEmbedCard({ title, subtitle, open, setOpen, url }) {
   );
 }
 
-function TaskTable({ rows }) {
+function SouthTaskList({ rows, loading, toggleComplete }) {
+  if (loading) {
+    return <p className="empty">Loading South tasks...</p>;
+  }
+
   if (!rows || rows.length === 0) {
     return <p className="empty">No open tasks showing.</p>;
   }
 
-  const headers = Object.keys(rows[0]).filter((header) =>
-    ["Task", "Dealer", "Responsible", "Due Date"].includes(header)
-  );
-
   return (
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            {headers.map((header) => (
-              <th key={header}>{header}</th>
-            ))}
-          </tr>
-        </thead>
+    <div className="south-task-list">
+      {rows.map((task) => (
+        <div
+          key={task.id}
+          className={`south-task-item ${task.completed ? "done" : ""}`}
+        >
+          <button className="tiny-check" onClick={() => toggleComplete(task)}>
+            {task.completed ? "✓" : ""}
+          </button>
 
-        <tbody>
-          {rows.map((row, index) => (
-            <tr key={index}>
-              {headers.map((header) => (
-                <td key={header}>{row[header]}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          <div className="south-task-main">
+            <div className="south-task-top">
+              <span className="south-task-name">
+                {task.task || "Untitled Task"}
+              </span>
+
+              <div className="south-task-badges">
+                {task.assigned_to && (
+                  <span className="person-badge">{task.assigned_to}</span>
+                )}
+
+                {task.source === "ticktick" && (
+                  <span className="source-badge">TickTick</span>
+                )}
+
+                {task.priority && (
+                  <span
+                    className={`priority-badge ${String(
+                      task.priority
+                    ).toLowerCase()}`}
+                  >
+                    {task.priority}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="south-task-meta">
+              {task.due_date ? `Due: ${task.due_date}` : "No due date"}
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
