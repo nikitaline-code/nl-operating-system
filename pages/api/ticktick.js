@@ -10,6 +10,7 @@ function cleanDate(value) {
   if (!value || String(value).includes('choose TickTick')) return null
 
   const date = new Date(value)
+
   if (Number.isNaN(date.getTime())) return null
 
   return date.toISOString().split('T')[0]
@@ -17,6 +18,7 @@ function cleanDate(value) {
 
 function cleanPerson(value) {
   const allowed = ['Dawson', 'Zach', 'Dane', 'Nikita']
+
   return allowed.includes(value) ? value : 'Nikita'
 }
 
@@ -31,7 +33,9 @@ function cleanPriority(value) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return res.status(405).json({
+      error: 'Method not allowed',
+    })
   }
 
   try {
@@ -47,6 +51,7 @@ export default async function handler(req, res) {
       body.title ||
       body.task ||
       body.name ||
+      body.TaskName ||
       'Untitled TickTick Task'
 
     const row = {
@@ -57,7 +62,8 @@ export default async function handler(req, res) {
       external_id: externalId,
       assigned_to: cleanPerson(body.assigned_to),
       territory: 'South',
-      due_date: cleanDate(body.due_date),
+      due_date: cleanDate(body.due_date || body.EndDate),
+      status: body.status || body.List || 'South Dealer Requests',
     }
 
     if (externalId) {
