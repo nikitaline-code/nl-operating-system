@@ -1,65 +1,66 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { persistSession: false } }
+)
 
-const supabase = createClient(supabaseUrl, serviceRoleKey, {
-  auth: {
-    persistSession: false,
-  },
-})
+function cleanDate(value) {
+  if (!value || String(value).includes('choose TickTick')) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toISOString().split('T')[0]
+}
+
+function cleanPerson(value) {
+  const allowed = ['Dawson', 'Zach', 'Dane', 'Nikita']
+  return allowed.includes(value) ? value : 'Nikita'
+}
+
+function cleanPriority(value) {
+  const v = String(value || '').toLowerCase()
+  if (v.includes('high')) return 'High'
+  if (v.includes('low')) return 'Low'
+  return 'Medium'
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({
-      error: 'Method not allowed',
-    })
+    return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
     const body = req.body || {}
 
-    const taskName =
-      body.title ||
-      body.task ||
-      body.name ||
-      'Untitled TickTick Task'
+    const externalId = body.id || body.task_id || body.ticktick_id || null
+    const taskName = body.title || body.task || body.name || 'Untitled TickTick Task'
 
-    const dueDate =
-      body.due_date && body.due_date !== 'choose TickTick due date'
-        ? body.due_date
-        : null
+    const row = {
+      task: taskName,
+      completed: false,
+      priority: cleanPriority(body.priority),
+      source: 'ticktick',
+      external_id: externalId,
+      assigned_to: cleanPerson(body.assigned_to),
+      territory: 'South',
+      due_date: cleanDate(body.due_date),
+    }
 
     const { data, error } = await supabase
       .from('Task List')
-      .insert([
-        {
-          task: taskName,
-          completed: false,
-          priority: body.priority || 'Medium',
-          source: 'ticktick',
-          external_id: body.id || null,
-          assigned_to: body.assigned_to || 'Mark',
-          due_date: dueDate,
-        },
-      ])
+      .upsert(row, {
+        onConflict: 'external_id',
+      })
       .select()
 
-    if (error) {
-      console.error('Supabase insert error:', error)
-      return res.status(500).json({
-        success: false,
-        error: error.message,
-      })
-    }
+    if (error) throw error
 
     return res.status(200).json({
       success: true,
       task: data,
     })
   } catch (err) {
-    console.error('TickTick webhook error:', err)
-
     return res.status(500).json({
       success: false,
       error: err.message,
