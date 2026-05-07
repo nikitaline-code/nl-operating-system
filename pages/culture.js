@@ -19,18 +19,27 @@ export default function CulturePage() {
 
   useEffect(() => {
     const saved = localStorage.getItem(CULTURE_EVENTS_KEY);
+
     if (saved) {
       const parsed = JSON.parse(saved);
       setEvents(parsed);
-      if (parsed.length > 0) setActiveEventId(parsed[0].id);
+
+      if (parsed.length > 0) {
+        setActiveEventId(parsed[0].id);
+      }
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(CULTURE_EVENTS_KEY, JSON.stringify(events));
+    localStorage.setItem(
+      CULTURE_EVENTS_KEY,
+      JSON.stringify(events)
+    );
   }, [events]);
 
-  const activeEvent = events.find((event) => event.id === activeEventId);
+  const activeEvent = events.find(
+    (event) => event.id === activeEventId
+  );
 
   function addEvent() {
     if (!newEvent.name.trim()) return;
@@ -51,11 +60,20 @@ export default function CulturePage() {
 
     setEvents([event, ...events]);
     setActiveEventId(event.id);
-    setNewEvent({ name: "", date: "", location: "", headcount: "" });
+
+    setNewEvent({
+      name: "",
+      date: "",
+      location: "",
+      headcount: "",
+    });
   }
 
   function deleteEvent(id) {
-    const updated = events.filter((event) => event.id !== id);
+    const updated = events.filter(
+      (event) => event.id !== id
+    );
+
     setEvents(updated);
     setActiveEventId(updated[0]?.id || null);
   }
@@ -63,7 +81,9 @@ export default function CulturePage() {
   function updateActiveEvent(field, value) {
     setEvents(
       events.map((event) =>
-        event.id === activeEventId ? { ...event, [field]: value } : event
+        event.id === activeEventId
+          ? { ...event, [field]: value }
+          : event
       )
     );
   }
@@ -77,7 +97,11 @@ export default function CulturePage() {
       completed: false,
     };
 
-    updateActiveEvent("checklist", [...activeEvent.checklist, item]);
+    updateActiveEvent("checklist", [
+      ...activeEvent.checklist,
+      item,
+    ]);
+
     setNewChecklistText("");
   }
 
@@ -85,7 +109,9 @@ export default function CulturePage() {
     updateActiveEvent(
       "checklist",
       activeEvent.checklist.map((item) =>
-        item.id === id ? { ...item, text: value } : item
+        item.id === id
+          ? { ...item, text: value }
+          : item
       )
     );
   }
@@ -94,7 +120,12 @@ export default function CulturePage() {
     updateActiveEvent(
       "checklist",
       activeEvent.checklist.map((item) =>
-        item.id === id ? { ...item, completed: !item.completed } : item
+        item.id === id
+          ? {
+              ...item,
+              completed: !item.completed,
+            }
+          : item
       )
     );
   }
@@ -102,7 +133,9 @@ export default function CulturePage() {
   function deleteChecklistItem(id) {
     updateActiveEvent(
       "checklist",
-      activeEvent.checklist.filter((item) => item.id !== id)
+      activeEvent.checklist.filter(
+        (item) => item.id !== id
+      )
     );
   }
 
@@ -110,10 +143,19 @@ export default function CulturePage() {
     <main className="page">
       <div className="shell">
         <div className="top">
-          <p className="eyebrow">AQ CULTURE</p>
-          <h1>Culture & Event Center</h1>
+          <p className="eyebrow">
+            AQ CULTURE
+          </p>
+
+          <h1>
+            Culture & Event Center
+          </h1>
+
           <p className="subtitle">
-            Plan team events, launches, food counts, supplies, checklists, and follow-ups.
+            Plan team events,
+            launches, food counts,
+            supplies, checklists,
+            and follow-ups.
           </p>
         </div>
 
@@ -121,14 +163,27 @@ export default function CulturePage() {
           <div className="sectionToggle">
             <div>
               <h2>Create Event</h2>
-              <p>Add lunches, launches, snack stations, dealer events, or culture projects.</p>
+
+              <p>
+                Add lunches,
+                launches, snack
+                stations, dealer
+                events, or culture
+                projects.
+              </p>
             </div>
 
             <button
               className="toggleBtn"
-              onClick={() => setShowCreateEvent(!showCreateEvent)}
+              onClick={() =>
+                setShowCreateEvent(
+                  !showCreateEvent
+                )
+              }
             >
-              {showCreateEvent ? "Minimize" : "Expand"}
+              {showCreateEvent
+                ? "Minimize"
+                : "Expand"}
             </button>
           </div>
 
@@ -137,28 +192,54 @@ export default function CulturePage() {
               <input
                 placeholder="Event name"
                 value={newEvent.name}
-                onChange={(e) => setNewEvent({ ...newEvent, name: e.target.value })}
+                onChange={(e) =>
+                  setNewEvent({
+                    ...newEvent,
+                    name: e.target.value,
+                  })
+                }
               />
 
               <input
                 type="date"
                 value={newEvent.date}
-                onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
+                onChange={(e) =>
+                  setNewEvent({
+                    ...newEvent,
+                    date: e.target.value,
+                  })
+                }
               />
 
               <input
                 placeholder="Location"
                 value={newEvent.location}
-                onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+                onChange={(e) =>
+                  setNewEvent({
+                    ...newEvent,
+                    location:
+                      e.target.value,
+                  })
+                }
               />
 
               <input
                 placeholder="Headcount"
                 value={newEvent.headcount}
-                onChange={(e) => setNewEvent({ ...newEvent, headcount: e.target.value })}
+                onChange={(e) =>
+                  setNewEvent({
+                    ...newEvent,
+                    headcount:
+                      e.target.value,
+                  })
+                }
               />
 
-              <button onClick={addEvent}>Add Event</button>
+              <button
+                onClick={addEvent}
+              >
+                Add Event
+              </button>
             </div>
           )}
         </section>
@@ -166,29 +247,50 @@ export default function CulturePage() {
         <section className="card">
           <div className="sectionToggle">
             <div>
-              <h2>Culture Calendar</h2>
-              <p>Embedded Google Sheets culture calendar.</p>
+              <h2>
+                Culture Calendar
+              </h2>
+
+              <p>
+                Embedded Google
+                Sheets culture
+                calendar.
+              </p>
             </div>
 
             <button
               className="toggleBtn"
-              onClick={() => setShowCultureCalendar(!showCultureCalendar)}
+              onClick={() =>
+                setShowCultureCalendar(
+                  !showCultureCalendar
+                )
+              }
             >
-              {showCultureCalendar ? "Minimize" : "Expand"}
+              {showCultureCalendar
+                ? "Minimize"
+                : "Expand"}
             </button>
           </div>
 
           {showCultureCalendar && (
             <div className="calendarBox">
-              <iframe src={CULTURE_CALENDAR_LINK} className="calendarFrame" />
+              <iframe
+                src={
+                  CULTURE_CALENDAR_LINK
+                }
+                className="calendarFrame"
+              />
 
               <a
-                href={CULTURE_CALENDAR_LINK}
+                href={
+                  CULTURE_CALENDAR_LINK
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className="calendarLink"
               >
-                Open Full Culture Calendar
+                Open Full Culture
+                Calendar
               </a>
             </div>
           )}
@@ -197,61 +299,112 @@ export default function CulturePage() {
         <div className="layout">
           <section className="card">
             <div className="cardHeader">
-              <h2>Upcoming Events</h2>
-              <p>Select an event to plan.</p>
+              <h2>
+                Upcoming Events
+              </h2>
+
+              <p>
+                Select an event to
+                plan.
+              </p>
             </div>
 
             <div className="eventList">
-              {events.length === 0 ? (
-                <p className="empty">No events added yet.</p>
+              {events.length ===
+              0 ? (
+                <p className="empty">
+                  No events added
+                  yet.
+                </p>
               ) : (
-                events.map((event) => (
-                  <button
-                    key={event.id}
-                    className={
-                      activeEventId === event.id
-                        ? "eventButton active"
-                        : "eventButton"
-                    }
-                    onClick={() => setActiveEventId(event.id)}
-                  >
-                    <div className="eventTopLine">
-                      <strong>{event.name || "Untitled Event"}</strong>
-                    </div>
+                events.map(
+                  (event) => (
+                    <button
+                      key={event.id}
+                      className={
+                        activeEventId ===
+                        event.id
+                          ? "eventButton active"
+                          : "eventButton"
+                      }
+                      onClick={() =>
+                        setActiveEventId(
+                          event.id
+                        )
+                      }
+                    >
+                      <div className="eventTopLine">
+                        <strong>
+                          {event.name ||
+                            "Untitled Event"}
+                        </strong>
+                      </div>
 
-                    <div className="eventMeta">
-                      <span>{event.date || "No date"}</span>
-                      <span>{event.location || "No location"}</span>
-                    </div>
+                      <div className="eventMeta">
+                        <span>
+                          {event.date ||
+                            "No date"}
+                        </span>
 
-                    <div className="eventPeople">
-                      {event.headcount ? `${event.headcount} people` : "No headcount"}
-                    </div>
-                  </button>
-                ))
+                        <span>
+                          {event.location ||
+                            "No location"}
+                        </span>
+                      </div>
+
+                      <div className="eventPeople">
+                        {event.headcount
+                          ? `${event.headcount} people`
+                          : "No headcount"}
+                      </div>
+                    </button>
+                  )
+                )
               )}
             </div>
           </section>
 
           <section className="card">
             {!activeEvent ? (
-              <p className="empty">Select or create an event to start planning.</p>
+              <p className="empty">
+                Select or create an
+                event to start
+                planning.
+              </p>
             ) : (
               <>
                 <div className="plannerHeader">
                   <div>
-                    <p className="eyebrow">EVENT PLAN</p>
-                    <h2>{activeEvent.name}</h2>
+                    <p className="eyebrow">
+                      EVENT PLAN
+                    </p>
+
+                    <h2>
+                      {
+                        activeEvent.name
+                      }
+                    </h2>
+
                     <p>
-                      {activeEvent.date || "No date"} ·{" "}
-                      {activeEvent.location || "No location"} ·{" "}
-                      {activeEvent.headcount || "No headcount"} people
+                      {activeEvent.date ||
+                        "No date"}{" "}
+                      ·{" "}
+                      {activeEvent.location ||
+                        "No location"}{" "}
+                      ·{" "}
+                      {activeEvent.headcount ||
+                        "No headcount"}{" "}
+                      people
                     </p>
                   </div>
 
                   <button
                     className="deleteEvent"
-                    onClick={() => deleteEvent(activeEvent.id)}
+                    onClick={() =>
+                      deleteEvent(
+                        activeEvent.id
+                      )
+                    }
                   >
                     Delete Event
                   </button>
@@ -260,114 +413,234 @@ export default function CulturePage() {
                 <div className="detailGrid">
                   <Field
                     label="Event Name"
-                    value={activeEvent.name}
-                    onChange={(v) => updateActiveEvent("name", v)}
+                    value={
+                      activeEvent.name
+                    }
+                    onChange={(v) =>
+                      updateActiveEvent(
+                        "name",
+                        v
+                      )
+                    }
                   />
 
                   <Field
                     label="Date"
                     type="date"
-                    value={activeEvent.date}
-                    onChange={(v) => updateActiveEvent("date", v)}
+                    value={
+                      activeEvent.date
+                    }
+                    onChange={(v) =>
+                      updateActiveEvent(
+                        "date",
+                        v
+                      )
+                    }
                   />
 
                   <Field
                     label="Location"
-                    value={activeEvent.location}
-                    onChange={(v) => updateActiveEvent("location", v)}
+                    value={
+                      activeEvent.location
+                    }
+                    onChange={(v) =>
+                      updateActiveEvent(
+                        "location",
+                        v
+                      )
+                    }
                   />
 
                   <Field
                     label="Headcount"
-                    value={activeEvent.headcount}
-                    onChange={(v) => updateActiveEvent("headcount", v)}
+                    value={
+                      activeEvent.headcount
+                    }
+                    onChange={(v) =>
+                      updateActiveEvent(
+                        "headcount",
+                        v
+                      )
+                    }
                   />
                 </div>
 
                 <PlanningBox
                   title="Food Plan"
-                  value={activeEvent.food}
+                  value={
+                    activeEvent.food
+                  }
                   placeholder="Meals, snacks, serving amounts, special dietary notes..."
-                  onChange={(v) => updateActiveEvent("food", v)}
+                  onChange={(v) =>
+                    updateActiveEvent(
+                      "food",
+                      v
+                    )
+                  }
                 />
 
                 <PlanningBox
                   title="Drinks"
-                  value={activeEvent.drinks}
+                  value={
+                    activeEvent.drinks
+                  }
                   placeholder="Water, coffee, pop, juice, coolers, quantities..."
-                  onChange={(v) => updateActiveEvent("drinks", v)}
+                  onChange={(v) =>
+                    updateActiveEvent(
+                      "drinks",
+                      v
+                    )
+                  }
                 />
 
                 <PlanningBox
                   title="Supplies / Shopping List"
-                  value={activeEvent.supplies}
+                  value={
+                    activeEvent.supplies
+                  }
                   placeholder="Plates, napkins, cutlery, signage, baskets, decorations..."
-                  onChange={(v) => updateActiveEvent("supplies", v)}
+                  onChange={(v) =>
+                    updateActiveEvent(
+                      "supplies",
+                      v
+                    )
+                  }
                 />
 
                 <PlanningBox
                   title="Agenda / Run of Show"
-                  value={activeEvent.agenda}
+                  value={
+                    activeEvent.agenda
+                  }
                   placeholder="Timing, setup, event flow, speakers, breaks..."
-                  onChange={(v) => updateActiveEvent("agenda", v)}
+                  onChange={(v) =>
+                    updateActiveEvent(
+                      "agenda",
+                      v
+                    )
+                  }
                 />
 
                 <div className="checklistHeader">
                   <div>
-                    <h3>Checklist</h3>
-                    <p>Tasks for planning, setup, ordering, and follow-up.</p>
+                    <h3>
+                      Checklist
+                    </h3>
+
+                    <p>
+                      Tasks for
+                      planning,
+                      setup,
+                      ordering,
+                      and
+                      follow-up.
+                    </p>
                   </div>
                 </div>
 
                 <div className="checklistAdd">
                   <input
-                    value={newChecklistText}
+                    value={
+                      newChecklistText
+                    }
                     placeholder="Add checklist item..."
-                    onChange={(e) => setNewChecklistText(e.target.value)}
+                    onChange={(e) =>
+                      setNewChecklistText(
+                        e.target.value
+                      )
+                    }
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") addChecklistItem();
+                      if (
+                        e.key ===
+                        "Enter"
+                      ) {
+                        addChecklistItem();
+                      }
                     }}
                   />
 
-                  <button onClick={addChecklistItem}>Add</button>
+                  <button
+                    onClick={
+                      addChecklistItem
+                    }
+                  >
+                    Add
+                  </button>
                 </div>
 
                 <div className="checklist">
-                  {activeEvent.checklist.length === 0 ? (
-                    <p className="empty">No checklist items yet.</p>
+                  {activeEvent
+                    .checklist
+                    .length ===
+                  0 ? (
+                    <p className="empty">
+                      No checklist
+                      items yet.
+                    </p>
                   ) : (
-                    activeEvent.checklist.map((item) => (
-                      <div className="checkItem" key={item.id}>
-                        <input
-                          type="checkbox"
-                          checked={item.completed}
-                          onChange={() => toggleChecklistItem(item.id)}
-                        />
-
-                        <input
-                          type="text"
-                          value={item.text}
-                          onChange={(e) =>
-                            updateChecklistItem(item.id, e.target.value)
-                          }
-                        />
-
-                        <button
-                          className="smallDelete"
-                          onClick={() => deleteChecklistItem(item.id)}
+                    activeEvent.checklist.map(
+                      (item) => (
+                        <div
+                          className="checkItem"
+                          key={item.id}
                         >
-                          Delete
-                        </button>
-                      </div>
-                    ))
+                          <input
+                            type="checkbox"
+                            checked={
+                              item.completed
+                            }
+                            onChange={() =>
+                              toggleChecklistItem(
+                                item.id
+                              )
+                            }
+                          />
+
+                          <input
+                            type="text"
+                            value={
+                              item.text
+                            }
+                            onChange={(
+                              e
+                            ) =>
+                              updateChecklistItem(
+                                item.id,
+                                e
+                                  .target
+                                  .value
+                              )
+                            }
+                          />
+
+                          <button
+                            className="smallDelete"
+                            onClick={() =>
+                              deleteChecklistItem(
+                                item.id
+                              )
+                            }
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )
+                    )
                   )}
                 </div>
 
                 <PlanningBox
                   title="Notes / Follow-Ups"
-                  value={activeEvent.notes}
+                  value={
+                    activeEvent.notes
+                  }
                   placeholder="Post-event notes, feedback, who to follow up with..."
-                  onChange={(v) => updateActiveEvent("notes", v)}
+                  onChange={(v) =>
+                    updateActiveEvent(
+                      "notes",
+                      v
+                    )
+                  }
                 />
               </>
             )}
@@ -381,7 +654,10 @@ export default function CulturePage() {
           background: #f5f6f8;
           padding: 40px 24px;
           color: #020617;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          font-family: -apple-system,
+            BlinkMacSystemFont,
+            "Segoe UI",
+            sans-serif;
         }
 
         .shell {
@@ -424,7 +700,13 @@ export default function CulturePage() {
           border: 1px solid #dfe3ea;
           border-radius: 20px;
           padding: 18px;
-          box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
+          box-shadow: 0 18px 45px
+            rgba(
+              15,
+              23,
+              42,
+              0.045
+            );
           margin-bottom: 18px;
         }
 
@@ -482,14 +764,21 @@ export default function CulturePage() {
 
         .eventGrid {
           display: grid;
-          grid-template-columns: 1.5fr 1fr 1fr 0.8fr 110px;
+          grid-template-columns:
+            1.5fr
+            1fr
+            1fr
+            0.8fr
+            110px;
           gap: 10px;
           margin-top: 16px;
         }
 
         .layout {
           display: grid;
-          grid-template-columns: 300px 1fr;
+          grid-template-columns:
+            300px
+            1fr;
           gap: 18px;
         }
 
@@ -513,14 +802,16 @@ export default function CulturePage() {
         }
 
         .eventButton:hover {
-          border-color: #cbd5e1;
-          background: #f8fafc;
+          border-color: #d6dde6;
+          background: #eef1f4;
+          color: #020617;
+          transform: translateY(-1px);
         }
 
         .eventButton.active {
-          background: #020617;
-          border-color: #020617;
-          color: #ffffff;
+          background: #eef1f4;
+          border-color: #d6dde6;
+          color: #020617;
         }
 
         .eventTopLine strong {
@@ -554,12 +845,12 @@ export default function CulturePage() {
         }
 
         .eventButton.active .eventMeta {
-          color: #cbd5e1;
+          color: #475569;
         }
 
         .eventButton.active .eventPeople {
-          background: rgba(255, 255, 255, 0.13);
-          color: #ffffff;
+          background: white;
+          color: #020617;
         }
 
         .plannerHeader {
@@ -577,7 +868,8 @@ export default function CulturePage() {
 
         .detailGrid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
+          grid-template-columns:
+            repeat(4, 1fr);
           gap: 14px;
           margin-bottom: 22px;
         }
@@ -661,7 +953,9 @@ export default function CulturePage() {
 
         .checklistAdd {
           display: grid;
-          grid-template-columns: 1fr 90px;
+          grid-template-columns:
+            1fr
+            90px;
           gap: 10px;
           margin-bottom: 14px;
         }
@@ -675,7 +969,10 @@ export default function CulturePage() {
 
         .checkItem {
           display: grid;
-          grid-template-columns: 18px 1fr 68px;
+          grid-template-columns:
+            18px
+            1fr
+            68px;
           gap: 8px;
           align-items: center;
           padding: 8px 10px;
@@ -732,7 +1029,8 @@ export default function CulturePage() {
           .eventGrid,
           .layout,
           .detailGrid {
-            grid-template-columns: 1fr;
+            grid-template-columns:
+              1fr;
           }
 
           .sectionToggle,
@@ -747,23 +1045,43 @@ export default function CulturePage() {
   );
 }
 
-function Field({ label, value, onChange, type = "text" }) {
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+}) {
   return (
     <div className="field">
       <label>{label}</label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} />
+
+      <input
+        type={type}
+        value={value}
+        onChange={(e) =>
+          onChange(e.target.value)
+        }
+      />
     </div>
   );
 }
 
-function PlanningBox({ title, value, placeholder, onChange }) {
+function PlanningBox({
+  title,
+  value,
+  placeholder,
+  onChange,
+}) {
   return (
     <div className="planningBox">
       <label>{title}</label>
+
       <textarea
         value={value}
         placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) =>
+          onChange(e.target.value)
+        }
       />
     </div>
   );
