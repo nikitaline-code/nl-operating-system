@@ -8,6 +8,7 @@ const navItems = [
   { label: "Meetings", href: "/meetings" },
   { label: "Communication", href: "/communications" },
   { label: "Travel", href: "/travel" },
+  { label: "Dealer Offboarding", href: "/dealer-offboarding" },
   { label: "East", href: "/east" },
   { label: "South", href: "/south" },
   { label: "AQ Culture", href: "/culture" },
@@ -134,6 +135,10 @@ export default function AppShell({ children }) {
         }
 
         @media (max-width: 900px) {
+          .appShell {
+            flex-direction: column;
+          }
+
           .sideNav {
             position: relative;
             width: 100%;
