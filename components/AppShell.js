@@ -2,6 +2,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 
 const navItems = [
+  { label: "Daily Page", href: "/daily" },
   { label: "Dashboard", href: "/dashboard" },
   { label: "Tasks", href: "/tasks" },
   { label: "Meetings", href: "/meetings" },
@@ -9,6 +10,7 @@ const navItems = [
   { label: "Travel", href: "/travel" },
   { label: "East", href: "/east" },
   { label: "South", href: "/south" },
+  { label: "AQ Culture", href: "/culture" },
 ];
 
 export default function AppShell({ children }) {
