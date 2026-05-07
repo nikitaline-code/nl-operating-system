@@ -220,7 +220,7 @@ export default function CulturePage() {
         </section>
 
         <div className="layout">
-          <section className="card">
+          <section className="card upcomingCard">
             <div className="cardHeader">
               <h2>Upcoming Events</h2>
               <p>Drag event tiles to reorder them.</p>
@@ -410,6 +410,10 @@ export default function CulturePage() {
       </div>
 
       <style jsx global>{`
+        * {
+          box-sizing: border-box;
+        }
+
         .page {
           min-height: 100vh;
           background: #f5f6f8;
@@ -460,6 +464,12 @@ export default function CulturePage() {
           padding: 18px;
           box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
           margin-bottom: 18px;
+          min-width: 0;
+          overflow: hidden;
+        }
+
+        .upcomingCard {
+          padding: 16px;
         }
 
         .sectionToggle {
@@ -523,28 +533,35 @@ export default function CulturePage() {
 
         .layout {
           display: grid;
-          grid-template-columns: 300px 1fr;
+          grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
           gap: 18px;
+          align-items: start;
         }
 
         .eventList {
+          width: 100%;
+          max-width: 100%;
           display: flex;
           flex-direction: column;
           gap: 8px;
+          overflow: hidden;
         }
 
         .eventButton {
           width: 100%;
+          max-width: 100%;
+          min-width: 0;
           text-align: left;
           border: 1px solid #e6eaf0;
           background: #ffffff;
           border-radius: 12px;
-          padding: 10px 11px;
+          padding: 10px;
           cursor: grab;
           transition: all 0.15s ease;
           color: #020617;
           box-shadow: none;
           user-select: none;
+          overflow: hidden;
         }
 
         .eventButton:active {
@@ -555,7 +572,6 @@ export default function CulturePage() {
           border-color: #d6dde6;
           background: #eef1f4;
           color: #020617;
-          transform: translateY(-1px);
         }
 
         .eventButton.active {
@@ -566,10 +582,13 @@ export default function CulturePage() {
 
         .eventTopLine strong {
           display: block;
+          max-width: 100%;
           font-size: 11.5px;
           font-weight: 750;
           line-height: 1.3;
           letter-spacing: -0.01em;
+          overflow-wrap: anywhere;
+          word-break: break-word;
         }
 
         .eventMeta {
@@ -580,6 +599,8 @@ export default function CulturePage() {
           font-size: 10.5px;
           color: #64748b;
           line-height: 1.35;
+          max-width: 100%;
+          overflow-wrap: anywhere;
         }
 
         .eventBottom {
@@ -588,21 +609,25 @@ export default function CulturePage() {
           justify-content: space-between;
           gap: 8px;
           margin-top: 7px;
+          min-width: 0;
         }
 
         .eventPeople {
           display: inline-flex;
           width: fit-content;
+          max-width: 100%;
           border-radius: 999px;
           background: #f1f5f9;
           color: #475569;
           padding: 3px 7px;
           font-size: 9.5px;
           font-weight: 650;
+          white-space: nowrap;
         }
 
         .dragHint {
-          font-size: 9.5px;
+          flex-shrink: 0;
+          font-size: 9px;
           color: #94a3b8;
           font-weight: 700;
           letter-spacing: 0.04em;
@@ -633,7 +658,7 @@ export default function CulturePage() {
 
         .detailGrid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 14px;
           margin-bottom: 22px;
         }
@@ -642,6 +667,7 @@ export default function CulturePage() {
         .planningBox {
           display: flex;
           flex-direction: column;
+          min-width: 0;
         }
 
         .field label,
@@ -697,6 +723,7 @@ export default function CulturePage() {
           background: white;
           color: #991b1b;
           border: 1px solid #fecaca;
+          flex-shrink: 0;
         }
 
         .planningBox {
@@ -717,7 +744,7 @@ export default function CulturePage() {
 
         .checklistAdd {
           display: grid;
-          grid-template-columns: 1fr 90px;
+          grid-template-columns: minmax(0, 1fr) 90px;
           gap: 10px;
           margin-bottom: 14px;
         }
@@ -731,7 +758,7 @@ export default function CulturePage() {
 
         .checkItem {
           display: grid;
-          grid-template-columns: 18px 1fr 68px;
+          grid-template-columns: 18px minmax(0, 1fr) 68px;
           gap: 8px;
           align-items: center;
           padding: 8px 10px;
