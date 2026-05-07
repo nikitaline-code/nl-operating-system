@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 const CULTURE_EVENTS_KEY = "aq-culture-events";
 const CULTURE_CALENDAR_LINK =
-  "PASTE_YOUR_GOOGLE_SHEETS_LINK_HERE";
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTN2oKkZ7hTRcmN22q6649bOJxJ300-KppLvg3R0LEdnS5J5t-bWW8V5DRJyz4pAe3SfgArIPFHcWzh/pubhtml?gid=609870041&single=true";
 
 export default function CulturePage() {
   const [events, setEvents] = useState([]);
