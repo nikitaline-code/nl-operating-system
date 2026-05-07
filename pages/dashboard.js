@@ -20,7 +20,6 @@ export default function Dashboard() {
     localStorage.setItem(FOLLOWUPS_KEY, JSON.stringify(followUps));
   }, [followUps]);
 
-  const openTasks = tasks.filter((task) => !task.completed);
   const completedTasks = tasks.filter((task) => task.completed);
 
   const openFollowUps = followUps.filter((item) => !item.completed);
@@ -66,7 +65,6 @@ export default function Dashboard() {
         </div>
 
         <div className="stats-grid">
-          <StatCard label="Open Tasks" value={openTasks.length} />
           <StatCard label="Completed Tasks" value={completedTasks.length} />
           <StatCard label="Open Follow-Ups" value={openFollowUps.length} />
           <StatCard label="Completed Follow-Ups" value={completedFollowUps.length} />
@@ -103,36 +101,6 @@ export default function Dashboard() {
                   toggleFollowUp={toggleFollowUp}
                   deleteFollowUp={deleteFollowUp}
                 />
-              ))
-            )}
-          </div>
-        </section>
-
-        <section className="card">
-          <div className="card-header">
-            <div>
-              <h2>Open Tasks</h2>
-              <p>These are pulled from your Tasks page.</p>
-            </div>
-          </div>
-
-          <div className="task-list">
-            {openTasks.length === 0 ? (
-              <p className="empty">No open tasks.</p>
-            ) : (
-              openTasks.map((task) => (
-                <div className="task-row" key={task.id}>
-                  <div>
-                    <h3>{task.text}</h3>
-                    <p>
-                      From: {task.assignedFrom || "N/A"}
-                      {task.dueDate ? ` · Due: ${task.dueDate}` : ""}
-                    </p>
-                  </div>
-                  <span className={`badge ${task.urgency?.toLowerCase()}`}>
-                    {task.urgency}
-                  </span>
-                </div>
               ))
             )}
           </div>
@@ -183,7 +151,7 @@ export default function Dashboard() {
 
         .stats-grid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
+          grid-template-columns: repeat(3, 1fr);
           gap: 14px;
           margin-bottom: 18px;
         }
@@ -257,15 +225,13 @@ export default function Dashboard() {
           cursor: pointer;
         }
 
-        .follow-list,
-        .task-list {
+        .follow-list {
           display: flex;
           flex-direction: column;
           gap: 10px;
         }
 
-        .follow-item,
-        .task-row {
+        .follow-item {
           border: 1px solid #e5e7eb;
           border-radius: 14px;
           padding: 13px 14px;
@@ -282,15 +248,13 @@ export default function Dashboard() {
           align-items: flex-start;
         }
 
-        .follow-main h3,
-        .task-row h3 {
+        .follow-main h3 {
           margin: 0 0 5px;
           font-size: 13px;
           font-weight: 800;
         }
 
-        .follow-main p,
-        .task-row p {
+        .follow-main p {
           margin: 0;
           font-size: 12px;
           color: #64748b;
@@ -300,15 +264,6 @@ export default function Dashboard() {
           background: white;
           color: #991b1b;
           border: 1px solid #fecaca;
-        }
-
-        .badge {
-          border-radius: 999px;
-          padding: 7px 11px;
-          font-size: 12px;
-          font-weight: 800;
-          background: #fef3c7;
-          color: #b45309;
         }
 
         .empty {
