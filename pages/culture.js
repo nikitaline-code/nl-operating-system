@@ -6,6 +6,7 @@ const CULTURE_CALENDAR_LINK = "https://docs.google.com/spreadsheets/d/e/2PACX-1v
 export default function CulturePage() {
   const [events, setEvents] = useState([]);
   const [activeEventId, setActiveEventId] = useState(null);
+  const [draggedEventId, setDraggedEventId] = useState(null);
   const [showCreateEvent, setShowCreateEvent] = useState(true);
   const [showCultureCalendar, setShowCultureCalendar] = useState(true);
   const [newChecklistText, setNewChecklistText] = useState("");
@@ -60,22 +61,28 @@ export default function CulturePage() {
     setActiveEventId(updated[0]?.id || null);
   }
 
-  function moveEventUp(id) {
-    const index = events.findIndex((event) => event.id === id);
-    if (index <= 0) return;
-
-    const updated = [...events];
-    [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
-    setEvents(updated);
+  function handleDragStart(id) {
+    setDraggedEventId(id);
   }
 
-  function moveEventDown(id) {
-    const index = events.findIndex((event) => event.id === id);
-    if (index === -1 || index === events.length - 1) return;
+  function handleDragOver(e) {
+    e.preventDefault();
+  }
+
+  function handleDrop(targetId) {
+    if (!draggedEventId || draggedEventId === targetId) return;
+
+    const draggedIndex = events.findIndex((event) => event.id === draggedEventId);
+    const targetIndex = events.findIndex((event) => event.id === targetId);
+
+    if (draggedIndex === -1 || targetIndex === -1) return;
 
     const updated = [...events];
-    [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
+    const [draggedItem] = updated.splice(draggedIndex, 1);
+    updated.splice(targetIndex, 0, draggedItem);
+
     setEvents(updated);
+    setDraggedEventId(null);
   }
 
   function updateActiveEvent(field, value) {
@@ -216,7 +223,7 @@ export default function CulturePage() {
           <section className="card">
             <div className="cardHeader">
               <h2>Upcoming Events</h2>
-              <p>Select an event to plan or reorder the list.</p>
+              <p>Drag event tiles to reorder them.</p>
             </div>
 
             <div className="eventList">
@@ -226,6 +233,11 @@ export default function CulturePage() {
                 events.map((event) => (
                   <div
                     key={event.id}
+                    draggable
+                    onDragStart={() => handleDragStart(event.id)}
+                    onDragOver={handleDragOver}
+                    onDrop={() => handleDrop(event.id)}
+                    onDragEnd={() => setDraggedEventId(null)}
                     className={
                       activeEventId === event.id
                         ? "eventButton active"
@@ -247,27 +259,7 @@ export default function CulturePage() {
                         {event.headcount ? `${event.headcount} people` : "No headcount"}
                       </div>
 
-                      <div className="eventMoveBtns">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            moveEventUp(event.id);
-                          }}
-                        >
-                          ↑
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            moveEventDown(event.id);
-                          }}
-                        >
-                          ↓
-                        </button>
-                      </div>
+                      <span className="dragHint">Drag</span>
                     </div>
                   </div>
                 ))
@@ -548,10 +540,15 @@ export default function CulturePage() {
           background: #ffffff;
           border-radius: 12px;
           padding: 10px 11px;
-          cursor: pointer;
+          cursor: grab;
           transition: all 0.15s ease;
           color: #020617;
           box-shadow: none;
+          user-select: none;
+        }
+
+        .eventButton:active {
+          cursor: grabbing;
         }
 
         .eventButton:hover {
@@ -604,6 +601,14 @@ export default function CulturePage() {
           font-weight: 650;
         }
 
+        .dragHint {
+          font-size: 9.5px;
+          color: #94a3b8;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
         .eventButton.active .eventMeta {
           color: #475569;
         }
@@ -611,27 +616,6 @@ export default function CulturePage() {
         .eventButton.active .eventPeople {
           background: white;
           color: #020617;
-        }
-
-        .eventMoveBtns {
-          display: flex;
-          gap: 4px;
-        }
-
-        .eventMoveBtns button {
-          width: 24px;
-          height: 24px;
-          padding: 0;
-          border-radius: 999px;
-          background: #ffffff;
-          color: #020617;
-          border: 1px solid #dbe2ea;
-          font-size: 12px;
-          font-weight: 800;
-        }
-
-        .eventMoveBtns button:hover {
-          background: #e5e7eb;
         }
 
         .plannerHeader {
