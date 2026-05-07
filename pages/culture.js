@@ -5,6 +5,8 @@ const CULTURE_EVENTS_KEY = "aq-culture-events";
 export default function CulturePage() {
   const [events, setEvents] = useState([]);
   const [activeEventId, setActiveEventId] = useState(null);
+  const [showCreateEvent, setShowCreateEvent] = useState(true);
+  const [showCultureCalendar, setShowCultureCalendar] = useState(true);
 
   const [newEvent, setNewEvent] = useState({
     name: "",
@@ -121,44 +123,88 @@ export default function CulturePage() {
         </div>
 
         <section className="card">
-          <div className="cardHeader">
+          <div className="sectionToggle">
             <div>
               <h2>Create Event</h2>
               <p>Add lunches, launches, snack stations, dealer events, or culture projects.</p>
             </div>
+
+            <button
+              className="toggleBtn"
+              onClick={() => setShowCreateEvent(!showCreateEvent)}
+            >
+              {showCreateEvent ? "Minimize" : "Expand"}
+            </button>
           </div>
 
-          <div className="eventGrid">
-            <input
-              placeholder="Event name"
-              value={newEvent.name}
-              onChange={(e) => setNewEvent({ ...newEvent, name: e.target.value })}
-            />
+          {showCreateEvent && (
+            <div className="eventGrid">
+              <input
+                placeholder="Event name"
+                value={newEvent.name}
+                onChange={(e) => setNewEvent({ ...newEvent, name: e.target.value })}
+              />
 
-            <input
-              type="date"
-              value={newEvent.date}
-              onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
-            />
+              <input
+                type="date"
+                value={newEvent.date}
+                onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
+              />
 
-            <input
-              placeholder="Location"
-              value={newEvent.location}
-              onChange={(e) =>
-                setNewEvent({ ...newEvent, location: e.target.value })
-              }
-            />
+              <input
+                placeholder="Location"
+                value={newEvent.location}
+                onChange={(e) =>
+                  setNewEvent({ ...newEvent, location: e.target.value })
+                }
+              />
 
-            <input
-              placeholder="Headcount"
-              value={newEvent.headcount}
-              onChange={(e) =>
-                setNewEvent({ ...newEvent, headcount: e.target.value })
-              }
-            />
+              <input
+                placeholder="Headcount"
+                value={newEvent.headcount}
+                onChange={(e) =>
+                  setNewEvent({ ...newEvent, headcount: e.target.value })
+                }
+              />
 
-            <button onClick={addEvent}>Add Event</button>
+              <button onClick={addEvent}>Add Event</button>
+            </div>
+          )}
+        </section>
+
+        <section className="card">
+          <div className="sectionToggle">
+            <div>
+              <h2>Culture Calendar</h2>
+              <p>Quick access to the shared AQ Culture planning calendar.</p>
+            </div>
+
+            <button
+              className="toggleBtn"
+              onClick={() => setShowCultureCalendar(!showCultureCalendar)}
+            >
+              {showCultureCalendar ? "Minimize" : "Expand"}
+            </button>
           </div>
+
+          {showCultureCalendar && (
+            <div className="calendarBox">
+              <a
+                href="https://calendar.google.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="calendarLink"
+              >
+                Open AQ Culture Google Calendar
+              </a>
+
+              <p className="calendarNote">
+                Use this for launches, birthdays, team lunches, dealer events,
+                internal culture activities, planning reminders, setup timelines,
+                and food ordering deadlines.
+              </p>
+            </div>
+          )}
         </section>
 
         <div className="layout">
@@ -353,6 +399,12 @@ export default function CulturePage() {
           letter-spacing: -0.04em;
         }
 
+        h2 {
+          margin: 0 0 6px;
+          font-size: 16px;
+          font-weight: 800;
+        }
+
         .subtitle {
           margin: 8px 0 0;
           font-size: 13px;
@@ -368,19 +420,54 @@ export default function CulturePage() {
           margin-bottom: 18px;
         }
 
-        .cardHeader h2,
-        .plannerHeader h2 {
-          margin: 0 0 6px;
-          font-size: 16px;
-          font-weight: 800;
+        .sectionToggle {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          margin-bottom: 16px;
         }
 
+        .sectionToggle p,
         .cardHeader p,
         .plannerHeader p,
         .checklistHeader p {
           margin: 0;
           font-size: 12px;
           color: #64748b;
+        }
+
+        .toggleBtn {
+          background: white;
+          color: #020617;
+          border: 1px solid #dbe2ea;
+        }
+
+        .calendarBox {
+          border: 1px solid #e5e7eb;
+          border-radius: 16px;
+          padding: 18px;
+          background: #f8fafc;
+        }
+
+        .calendarLink {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 11px 16px;
+          border-radius: 999px;
+          background: #020617;
+          color: white;
+          text-decoration: none;
+          font-size: 12px;
+          font-weight: 800;
+        }
+
+        .calendarNote {
+          margin: 14px 0 0;
+          font-size: 12px;
+          color: #64748b;
+          line-height: 1.6;
         }
 
         .eventGrid {
@@ -436,6 +523,12 @@ export default function CulturePage() {
           justify-content: space-between;
           gap: 14px;
           margin-bottom: 18px;
+        }
+
+        .plannerHeader h2 {
+          margin: 0 0 6px;
+          font-size: 16px;
+          font-weight: 800;
         }
 
         .detailGrid {
@@ -543,6 +636,13 @@ export default function CulturePage() {
           .layout,
           .detailGrid {
             grid-template-columns: 1fr;
+          }
+
+          .sectionToggle,
+          .plannerHeader,
+          .checklistHeader {
+            align-items: flex-start;
+            flex-direction: column;
           }
         }
       `}</style>
