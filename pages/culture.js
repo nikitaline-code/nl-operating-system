@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 
 const CULTURE_EVENTS_KEY = "aq-culture-events";
 
+const CULTURE_CALENDAR_LINK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTN2oKkZ7hTRcmN22q6649bOJxJ300-KppLvg3R0LEdnS5J5t-bWW8V5DRJyz4pAe3SfgArIPFHcWzh/pubhtml?gid=609870041&single=true";
+
 export default function CulturePage() {
   const [events, setEvents] = useState([]);
   const [activeEventId, setActiveEventId] = useState(null);
@@ -176,7 +178,7 @@ export default function CulturePage() {
           <div className="sectionToggle">
             <div>
               <h2>Culture Calendar</h2>
-              <p>Quick access to the shared AQ Culture planning calendar.</p>
+              <p>Embedded Google Sheets culture calendar.</p>
             </div>
 
             <button
@@ -189,13 +191,18 @@ export default function CulturePage() {
 
           {showCultureCalendar && (
             <div className="calendarBox">
+              <iframe
+                src={CULTURE_CALENDAR_LINK}
+                className="calendarFrame"
+              />
+
               <a
-                href="https://calendar.google.com"
+                href={CULTURE_CALENDAR_LINK}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="calendarLink"
               >
-                Open AQ Culture Google Calendar
+                Open Full Culture Calendar
               </a>
 
               <p className="calendarNote">
@@ -448,6 +455,15 @@ export default function CulturePage() {
           border-radius: 16px;
           padding: 18px;
           background: #f8fafc;
+        }
+
+        .calendarFrame {
+          width: 100%;
+          height: 500px;
+          border: none;
+          border-radius: 14px;
+          background: white;
+          margin-bottom: 14px;
         }
 
         .calendarLink {
