@@ -489,33 +489,32 @@ export default function CulturePage() {
 
         .layout {
           display: grid;
-          grid-template-columns: 320px 1fr;
+          grid-template-columns: 300px 1fr;
           gap: 18px;
         }
 
         .eventList {
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 8px;
         }
 
         .eventButton {
           width: 100%;
           text-align: left;
-          border: 1px solid #e5e7eb;
+          border: 1px solid #e6eaf0;
           background: #ffffff;
-          border-radius: 16px;
-          padding: 13px 14px;
+          border-radius: 12px;
+          padding: 10px 11px;
           cursor: pointer;
           transition: all 0.15s ease;
           color: #020617;
-          box-shadow: 0 10px 24px rgba(15, 23, 42, 0.035);
+          box-shadow: none;
         }
 
         .eventButton:hover {
           border-color: #cbd5e1;
           background: #f8fafc;
-          transform: translateY(-1px);
         }
 
         .eventButton.active {
@@ -526,34 +525,32 @@ export default function CulturePage() {
 
         .eventTopLine strong {
           display: block;
-          font-size: 12.5px;
-          font-weight: 800;
-          line-height: 1.35;
-          white-space: normal;
-          overflow: visible;
-          text-overflow: unset;
+          font-size: 11.5px;
+          font-weight: 750;
+          line-height: 1.3;
+          letter-spacing: -0.01em;
         }
 
         .eventMeta {
           display: flex;
           flex-direction: column;
-          gap: 3px;
-          margin-top: 8px;
-          font-size: 11px;
+          gap: 2px;
+          margin-top: 6px;
+          font-size: 10.5px;
           color: #64748b;
           line-height: 1.35;
         }
 
         .eventPeople {
-          margin-top: 8px;
+          margin-top: 7px;
           display: inline-flex;
           width: fit-content;
           border-radius: 999px;
           background: #f1f5f9;
           color: #475569;
-          padding: 5px 8px;
-          font-size: 10.5px;
-          font-weight: 700;
+          padding: 3px 7px;
+          font-size: 9.5px;
+          font-weight: 650;
         }
 
         .eventButton.active .eventMeta {
@@ -561,7 +558,7 @@ export default function CulturePage() {
         }
 
         .eventButton.active .eventPeople {
-          background: rgba(255, 255, 255, 0.14);
+          background: rgba(255, 255, 255, 0.13);
           color: #ffffff;
         }
 
