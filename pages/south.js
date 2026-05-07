@@ -214,6 +214,7 @@ export default function SouthCommandCenter() {
         task.assigned_to,
         task.priority,
         task.source,
+        task.status,
         task.due_date,
       ]
         .join(" ")
@@ -631,7 +632,8 @@ export default function SouthCommandCenter() {
 
         .person-badge,
         .source-badge,
-        .priority-badge {
+        .priority-badge,
+        .status-badge {
           font-size: 10px;
           padding: 3px 8px;
           border-radius: 999px;
@@ -640,6 +642,12 @@ export default function SouthCommandCenter() {
           color: #3f4754;
           font-weight: 600;
           white-space: nowrap;
+        }
+
+        .status-badge {
+          background: #f3f6fa;
+          color: #334155;
+          border-color: #dbe3ef;
         }
 
         .source-badge {
@@ -773,6 +781,10 @@ function SouthTaskList({ rows, loading, toggleComplete }) {
               </span>
 
               <div className="south-task-badges">
+                {task.status && (
+                  <span className="status-badge">{task.status}</span>
+                )}
+
                 {task.assigned_to && (
                   <span className="person-badge">{task.assigned_to}</span>
                 )}
