@@ -18,7 +18,6 @@ function cleanDate(value) {
 
 function cleanPerson(value) {
   const allowed = ['Dawson', 'Zach', 'Dane', 'Nikita']
-
   return allowed.includes(value) ? value : 'Nikita'
 }
 
@@ -29,6 +28,16 @@ function cleanPriority(value) {
   if (v.includes('low')) return 'Low'
 
   return 'Medium'
+}
+
+function cleanCompleted(body) {
+  return (
+    body.completed === true ||
+    body.completed === 'true' ||
+    body.completed === 'Completed' ||
+    body.status === 'Completed' ||
+    body.List === 'Completed'
+  )
 }
 
 export default async function handler(req, res) {
@@ -43,6 +52,7 @@ export default async function handler(req, res) {
 
     const externalId =
       body.id ||
+      body.ID ||
       body.task_id ||
       body.ticktick_id ||
       null
@@ -56,13 +66,13 @@ export default async function handler(req, res) {
 
     const row = {
       task: taskName,
-      completed: false,
-      priority: cleanPriority(body.priority),
+      completed: cleanCompleted(body),
+      priority: cleanPriority(body.priority || body.Priority),
       source: 'ticktick',
       external_id: externalId,
       assigned_to: cleanPerson(body.assigned_to),
       territory: 'South',
-      due_date: cleanDate(body.due_date || body.EndDate),
+      due_date: cleanDate(body.due_date || body.EndDate || body.endDate),
       status: body.status || body.List || 'South Dealer Requests',
     }
 
