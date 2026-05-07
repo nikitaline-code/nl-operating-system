@@ -181,7 +181,7 @@ const blankCase = () => ({
   id: Date.now(),
   dealerName: "",
   accountManager: "",
-  status: "Active",
+  status: "New",
   priority: "Normal",
   deadline: "",
   auctionDate: "",
@@ -201,10 +201,12 @@ export default function DealerOffboardingPage() {
   const [cases, setCases] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [showCompleted, setShowCompleted] = useState(true);
+  const [checklistOpen, setChecklistOpen] = useState(true);
   const [expandedSteps, setExpandedSteps] = useState({});
 
   useEffect(() => {
     const saved = localStorage.getItem("dealerOffboardingCases");
+
     if (saved) {
       const parsed = JSON.parse(saved);
       setCases(parsed);
@@ -257,18 +259,24 @@ export default function DealerOffboardingPage() {
     const next = blankCase();
     setCases((prev) => [next, ...prev]);
     setActiveId(next.id);
+    setChecklistOpen(true);
   };
 
   const deleteCase = () => {
     if (!activeCase) return;
-    const confirmed = confirm(`Delete ${activeCase.dealerName || "this offboarding"}?`);
+
+    const confirmed = confirm(
+      `Delete ${activeCase.dealerName || "this offboarding"}?`
+    );
+
     if (!confirmed) return;
 
     const remaining = cases.filter((item) => item.id !== activeId);
-    setCases(remaining);
-    setActiveId(remaining[0]?.id || null);
 
-    if (!remaining.length) {
+    if (remaining.length) {
+      setCases(remaining);
+      setActiveId(remaining[0].id);
+    } else {
       const fresh = blankCase();
       setCases([fresh]);
       setActiveId(fresh.id);
@@ -277,7 +285,9 @@ export default function DealerOffboardingPage() {
 
   const completedCount = activeCase?.steps.filter((s) => s.checked).length || 0;
   const totalCount = activeCase?.steps.length || 0;
-  const progress = totalCount ? Math.round((completedCount / totalCount) * 100) : 0;
+  const progress = totalCount
+    ? Math.round((completedCount / totalCount) * 100)
+    : 0;
 
   const visibleSteps =
     activeCase?.steps.filter((step) => showCompleted || !step.checked) || [];
@@ -332,8 +342,8 @@ export default function DealerOffboardingPage() {
                   <p className="eyebrow">Active Situation</p>
                   <h2>{activeCase.dealerName || "New Dealer Offboarding"}</h2>
                   <p className="sub">
-                    Track the full offboarding process, commitments, inventory movement,
-                    access removal, and final closeout.
+                    Track the full offboarding process, commitments, inventory
+                    movement, access removal, and final closeout.
                   </p>
                 </div>
 
@@ -354,7 +364,9 @@ export default function DealerOffboardingPage() {
                     Dealer Name
                     <input
                       value={activeCase.dealerName}
-                      onChange={(e) => updateCase({ dealerName: e.target.value })}
+                      onChange={(e) =>
+                        updateCase({ dealerName: e.target.value })
+                      }
                       placeholder="Example: Huntington Dealer"
                     />
                   </label>
@@ -376,11 +388,11 @@ export default function DealerOffboardingPage() {
                       value={activeCase.status}
                       onChange={(e) => updateCase({ status: e.target.value })}
                     >
-                      <option>Active</option>
-                      <option>Waiting on Dealer</option>
-                      <option>Inventory Moving</option>
+                      <option>New</option>
+                      <option>In Progress</option>
+                      <option>Inventory Being Transferred</option>
                       <option>Final Review</option>
-                      <option>Completed</option>
+                      <option>Closed Case</option>
                     </select>
                   </label>
 
@@ -402,7 +414,9 @@ export default function DealerOffboardingPage() {
                     <input
                       type="date"
                       value={activeCase.deadline}
-                      onChange={(e) => updateCase({ deadline: e.target.value })}
+                      onChange={(e) =>
+                        updateCase({ deadline: e.target.value })
+                      }
                     />
                   </label>
 
@@ -411,7 +425,9 @@ export default function DealerOffboardingPage() {
                     <input
                       type="date"
                       value={activeCase.auctionDate}
-                      onChange={(e) => updateCase({ auctionDate: e.target.value })}
+                      onChange={(e) =>
+                        updateCase({ auctionDate: e.target.value })
+                      }
                     />
                   </label>
                 </div>
@@ -429,10 +445,21 @@ export default function DealerOffboardingPage() {
               <section className="toolbar">
                 <div>
                   <h3>Offboarding Checklist</h3>
-                  <p>{visibleSteps.length} steps showing</p>
+                  <p>
+                    {checklistOpen
+                      ? `${visibleSteps.length} steps showing`
+                      : `${completedCount} of ${totalCount} complete`}
+                  </p>
                 </div>
 
                 <div className="toolbarActions">
+                  <button
+                    className="ghost"
+                    onClick={() => setChecklistOpen((prev) => !prev)}
+                  >
+                    {checklistOpen ? "Minimize" : "Open Checklist"}
+                  </button>
+
                   <button
                     className="ghost"
                     onClick={() => setShowCompleted((prev) => !prev)}
@@ -446,87 +473,95 @@ export default function DealerOffboardingPage() {
                 </div>
               </section>
 
-              <section className="steps">
-                {visibleSteps.map((step) => {
-                  const expanded = expandedSteps[step.id];
+              {checklistOpen && (
+                <section className="steps">
+                  {visibleSteps.map((step) => {
+                    const expanded = expandedSteps[step.id];
 
-                  return (
-                    <div
-                      key={step.id}
-                      className={`stepCard ${step.checked ? "checked" : ""}`}
-                    >
-                      <div className="stepHeader">
-                        <button
-                          className={`check ${step.checked ? "on" : ""}`}
-                          onClick={() =>
-                            updateStep(step.id, { checked: !step.checked })
-                          }
-                          aria-label="Check off step"
-                        >
-                          ✓
-                        </button>
+                    return (
+                      <div
+                        key={step.id}
+                        className={`stepCard ${step.checked ? "checked" : ""}`}
+                      >
+                        <div className="stepHeader">
+                          <button
+                            className={`check ${step.checked ? "on" : ""}`}
+                            onClick={() =>
+                              updateStep(step.id, { checked: !step.checked })
+                            }
+                            aria-label="Check off step"
+                          >
+                            ✓
+                          </button>
 
-                        <div className="stepMain">
-                          <div className="stepTitleRow">
-                            <h4>{step.id}. {step.title}</h4>
-                            <span>{step.owner}</span>
+                          <div className="stepMain">
+                            <div className="stepTitleRow">
+                              <h4>
+                                {step.id}. {step.title}
+                              </h4>
+                              <span>{step.owner}</span>
+                            </div>
+
+                            <div className="stepDetailPreview">
+                              {step.details.join(" · ")}
+                            </div>
                           </div>
 
-                          <div className="stepDetailPreview">
-                            {step.details.join(" · ")}
-                          </div>
+                          <button
+                            className="expand"
+                            onClick={() =>
+                              setExpandedSteps((prev) => ({
+                                ...prev,
+                                [step.id]: !prev[step.id],
+                              }))
+                            }
+                          >
+                            {expanded ? "Close" : "Details"}
+                          </button>
                         </div>
 
-                        <button
-                          className="expand"
-                          onClick={() =>
-                            setExpandedSteps((prev) => ({
-                              ...prev,
-                              [step.id]: !prev[step.id],
-                            }))
-                          }
-                        >
-                          {expanded ? "Close" : "Details"}
-                        </button>
+                        {expanded && (
+                          <div className="stepBody">
+                            <ul>
+                              {step.details.map((detail, index) => (
+                                <li key={index}>{detail}</li>
+                              ))}
+                            </ul>
+
+                            <div className="stepInputs">
+                              <label>
+                                Due Date
+                                <input
+                                  type="date"
+                                  value={step.dueDate}
+                                  onChange={(e) =>
+                                    updateStep(step.id, {
+                                      dueDate: e.target.value,
+                                    })
+                                  }
+                                />
+                              </label>
+
+                              <label>
+                                Notes / Details
+                                <textarea
+                                  value={step.notes}
+                                  onChange={(e) =>
+                                    updateStep(step.id, {
+                                      notes: e.target.value,
+                                    })
+                                  }
+                                  placeholder="Add notes, links, contacts, confirmation details, or follow-up reminders..."
+                                />
+                              </label>
+                            </div>
+                          </div>
+                        )}
                       </div>
-
-                      {expanded && (
-                        <div className="stepBody">
-                          <ul>
-                            {step.details.map((detail, index) => (
-                              <li key={index}>{detail}</li>
-                            ))}
-                          </ul>
-
-                          <div className="stepInputs">
-                            <label>
-                              Due Date
-                              <input
-                                type="date"
-                                value={step.dueDate}
-                                onChange={(e) =>
-                                  updateStep(step.id, { dueDate: e.target.value })
-                                }
-                              />
-                            </label>
-
-                            <label>
-                              Notes / Details
-                              <textarea
-                                value={step.notes}
-                                onChange={(e) =>
-                                  updateStep(step.id, { notes: e.target.value })
-                                }
-                                placeholder="Add notes, links, contacts, confirmation details, or follow-up reminders..."
-                              />
-                            </label>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </section>
+                    );
+                  })}
+                </section>
+              )}
             </>
           )}
         </main>
@@ -805,6 +840,7 @@ export default function DealerOffboardingPage() {
           display: flex;
           gap: 10px;
           align-items: center;
+          flex-wrap: wrap;
         }
 
         .steps {
@@ -909,7 +945,8 @@ export default function DealerOffboardingPage() {
             top: auto;
           }
 
-          .hero {
+          .hero,
+          .toolbar {
             flex-direction: column;
             align-items: stretch;
           }
