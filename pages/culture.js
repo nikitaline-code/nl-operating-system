@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
 const CULTURE_EVENTS_KEY = "aq-culture-events";
-
 const CULTURE_CALENDAR_LINK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTN2oKkZ7hTRcmN22q6649bOJxJ300-KppLvg3R0LEdnS5J5t-bWW8V5DRJyz4pAe3SfgArIPFHcWzh/pubhtml?gid=609870041&single=true";
 
 export default function CulturePage() {
@@ -9,6 +8,7 @@ export default function CulturePage() {
   const [activeEventId, setActiveEventId] = useState(null);
   const [showCreateEvent, setShowCreateEvent] = useState(true);
   const [showCultureCalendar, setShowCultureCalendar] = useState(true);
+  const [newChecklistText, setNewChecklistText] = useState("");
 
   const [newEvent, setNewEvent] = useState({
     name: "",
@@ -51,13 +51,7 @@ export default function CulturePage() {
 
     setEvents([event, ...events]);
     setActiveEventId(event.id);
-
-    setNewEvent({
-      name: "",
-      date: "",
-      location: "",
-      headcount: "",
-    });
+    setNewEvent({ name: "", date: "", location: "", headcount: "" });
   }
 
   function deleteEvent(id) {
@@ -75,15 +69,16 @@ export default function CulturePage() {
   }
 
   function addChecklistItem() {
-    if (!activeEvent) return;
+    if (!activeEvent || !newChecklistText.trim()) return;
 
     const item = {
       id: Date.now(),
-      text: "New checklist item",
+      text: newChecklistText,
       completed: false,
     };
 
     updateActiveEvent("checklist", [...activeEvent.checklist, item]);
+    setNewChecklistText("");
   }
 
   function updateChecklistItem(id, value) {
@@ -115,13 +110,11 @@ export default function CulturePage() {
     <main className="page">
       <div className="shell">
         <div className="top">
-          <div>
-            <p className="eyebrow">AQ CULTURE</p>
-            <h1>Culture & Event Center</h1>
-            <p className="subtitle">
-              Plan team events, launches, food counts, supplies, checklists, and follow-ups.
-            </p>
-          </div>
+          <p className="eyebrow">AQ CULTURE</p>
+          <h1>Culture & Event Center</h1>
+          <p className="subtitle">
+            Plan team events, launches, food counts, supplies, checklists, and follow-ups.
+          </p>
         </div>
 
         <section className="card">
@@ -146,29 +139,21 @@ export default function CulturePage() {
                 value={newEvent.name}
                 onChange={(e) => setNewEvent({ ...newEvent, name: e.target.value })}
               />
-
               <input
                 type="date"
                 value={newEvent.date}
                 onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
               />
-
               <input
                 placeholder="Location"
                 value={newEvent.location}
-                onChange={(e) =>
-                  setNewEvent({ ...newEvent, location: e.target.value })
-                }
+                onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
               />
-
               <input
                 placeholder="Headcount"
                 value={newEvent.headcount}
-                onChange={(e) =>
-                  setNewEvent({ ...newEvent, headcount: e.target.value })
-                }
+                onChange={(e) => setNewEvent({ ...newEvent, headcount: e.target.value })}
               />
-
               <button onClick={addEvent}>Add Event</button>
             </div>
           )}
@@ -191,10 +176,7 @@ export default function CulturePage() {
 
           {showCultureCalendar && (
             <div className="calendarBox">
-              <iframe
-                src={CULTURE_CALENDAR_LINK}
-                className="calendarFrame"
-              />
+              <iframe src={CULTURE_CALENDAR_LINK} className="calendarFrame" />
 
               <a
                 href={CULTURE_CALENDAR_LINK}
@@ -204,12 +186,6 @@ export default function CulturePage() {
               >
                 Open Full Culture Calendar
               </a>
-
-              <p className="calendarNote">
-                Use this for launches, birthdays, team lunches, dealer events,
-                internal culture activities, planning reminders, setup timelines,
-                and food ordering deadlines.
-              </p>
             </div>
           )}
         </section>
@@ -217,10 +193,8 @@ export default function CulturePage() {
         <div className="layout">
           <section className="card eventListCard">
             <div className="cardHeader">
-              <div>
-                <h2>Upcoming Events</h2>
-                <p>Select an event to plan.</p>
-              </div>
+              <h2>Upcoming Events</h2>
+              <p>Select an event to plan.</p>
             </div>
 
             <div className="eventList">
@@ -230,9 +204,7 @@ export default function CulturePage() {
                 events.map((event) => (
                   <button
                     key={event.id}
-                    className={
-                      activeEventId === event.id ? "eventButton active" : "eventButton"
-                    }
+                    className={activeEventId === event.id ? "eventButton active" : "eventButton"}
                     onClick={() => setActiveEventId(event.id)}
                   >
                     <strong>{event.name}</strong>
@@ -261,75 +233,40 @@ export default function CulturePage() {
                     </p>
                   </div>
 
-                  <button
-                    className="deleteEvent"
-                    onClick={() => deleteEvent(activeEvent.id)}
-                  >
+                  <button className="deleteEvent" onClick={() => deleteEvent(activeEvent.id)}>
                     Delete Event
                   </button>
                 </div>
 
                 <div className="detailGrid">
-                  <Field
-                    label="Event Name"
-                    value={activeEvent.name}
-                    onChange={(value) => updateActiveEvent("name", value)}
-                  />
-
-                  <Field
-                    label="Date"
-                    type="date"
-                    value={activeEvent.date}
-                    onChange={(value) => updateActiveEvent("date", value)}
-                  />
-
-                  <Field
-                    label="Location"
-                    value={activeEvent.location}
-                    onChange={(value) => updateActiveEvent("location", value)}
-                  />
-
-                  <Field
-                    label="Headcount"
-                    value={activeEvent.headcount}
-                    onChange={(value) => updateActiveEvent("headcount", value)}
-                  />
+                  <Field label="Event Name" value={activeEvent.name} onChange={(v) => updateActiveEvent("name", v)} />
+                  <Field label="Date" type="date" value={activeEvent.date} onChange={(v) => updateActiveEvent("date", v)} />
+                  <Field label="Location" value={activeEvent.location} onChange={(v) => updateActiveEvent("location", v)} />
+                  <Field label="Headcount" value={activeEvent.headcount} onChange={(v) => updateActiveEvent("headcount", v)} />
                 </div>
 
-                <PlanningBox
-                  title="Food Plan"
-                  value={activeEvent.food}
-                  placeholder="Meals, snacks, serving amounts, special dietary notes..."
-                  onChange={(value) => updateActiveEvent("food", value)}
-                />
-
-                <PlanningBox
-                  title="Drinks"
-                  value={activeEvent.drinks}
-                  placeholder="Water, coffee, pop, juice, coolers, quantities..."
-                  onChange={(value) => updateActiveEvent("drinks", value)}
-                />
-
-                <PlanningBox
-                  title="Supplies / Shopping List"
-                  value={activeEvent.supplies}
-                  placeholder="Plates, napkins, cutlery, signage, baskets, decorations..."
-                  onChange={(value) => updateActiveEvent("supplies", value)}
-                />
-
-                <PlanningBox
-                  title="Agenda / Run of Show"
-                  value={activeEvent.agenda}
-                  placeholder="Timing, setup, event flow, speakers, breaks..."
-                  onChange={(value) => updateActiveEvent("agenda", value)}
-                />
+                <PlanningBox title="Food Plan" value={activeEvent.food} placeholder="Meals, snacks, serving amounts, special dietary notes..." onChange={(v) => updateActiveEvent("food", v)} />
+                <PlanningBox title="Drinks" value={activeEvent.drinks} placeholder="Water, coffee, pop, juice, coolers, quantities..." onChange={(v) => updateActiveEvent("drinks", v)} />
+                <PlanningBox title="Supplies / Shopping List" value={activeEvent.supplies} placeholder="Plates, napkins, cutlery, signage, baskets, decorations..." onChange={(v) => updateActiveEvent("supplies", v)} />
+                <PlanningBox title="Agenda / Run of Show" value={activeEvent.agenda} placeholder="Timing, setup, event flow, speakers, breaks..." onChange={(v) => updateActiveEvent("agenda", v)} />
 
                 <div className="checklistHeader">
                   <div>
                     <h3>Checklist</h3>
                     <p>Tasks for planning, setup, ordering, and follow-up.</p>
                   </div>
-                  <button onClick={addChecklistItem}>Add Item</button>
+                </div>
+
+                <div className="checklistAdd">
+                  <input
+                    value={newChecklistText}
+                    placeholder="Add checklist item..."
+                    onChange={(e) => setNewChecklistText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") addChecklistItem();
+                    }}
+                  />
+                  <button onClick={addChecklistItem}>Add</button>
                 </div>
 
                 <div className="checklist">
@@ -345,16 +282,12 @@ export default function CulturePage() {
                         />
 
                         <input
+                          type="text"
                           value={item.text}
-                          onChange={(e) =>
-                            updateChecklistItem(item.id, e.target.value)
-                          }
+                          onChange={(e) => updateChecklistItem(item.id, e.target.value)}
                         />
 
-                        <button
-                          className="smallDelete"
-                          onClick={() => deleteChecklistItem(item.id)}
-                        >
+                        <button className="smallDelete" onClick={() => deleteChecklistItem(item.id)}>
                           Delete
                         </button>
                       </div>
@@ -362,19 +295,14 @@ export default function CulturePage() {
                   )}
                 </div>
 
-                <PlanningBox
-                  title="Notes / Follow-Ups"
-                  value={activeEvent.notes}
-                  placeholder="Post-event notes, feedback, who to follow up with..."
-                  onChange={(value) => updateActiveEvent("notes", value)}
-                />
+                <PlanningBox title="Notes / Follow-Ups" value={activeEvent.notes} placeholder="Post-event notes, feedback, who to follow up with..." onChange={(v) => updateActiveEvent("notes", v)} />
               </>
             )}
           </section>
         </div>
       </div>
 
-      <style jsx>{`
+      <style jsx global>{`
         .page {
           min-height: 100vh;
           background: #f5f6f8;
@@ -479,13 +407,6 @@ export default function CulturePage() {
           font-weight: 800;
         }
 
-        .calendarNote {
-          margin: 14px 0 0;
-          font-size: 12px;
-          color: #64748b;
-          line-height: 1.6;
-        }
-
         .eventGrid {
           display: grid;
           grid-template-columns: 1.5fr 1fr 1fr 0.8fr 110px;
@@ -538,28 +459,34 @@ export default function CulturePage() {
           display: flex;
           justify-content: space-between;
           gap: 14px;
-          margin-bottom: 18px;
+          margin-bottom: 24px;
         }
 
         .plannerHeader h2 {
           margin: 0 0 6px;
-          font-size: 16px;
+          font-size: 20px;
           font-weight: 800;
+          letter-spacing: -0.03em;
         }
 
         .detailGrid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 10px;
-          margin-bottom: 16px;
+          gap: 14px;
+          margin-bottom: 22px;
+        }
+
+        .field,
+        .planningBox {
+          display: flex;
+          flex-direction: column;
         }
 
         .field label,
         .planningBox label {
-          display: block;
           font-size: 11px;
           color: #64748b;
-          margin-bottom: 7px;
+          margin-bottom: 8px;
           font-weight: 700;
         }
 
@@ -567,23 +494,30 @@ export default function CulturePage() {
         textarea {
           width: 100%;
           box-sizing: border-box;
-          border: 1px solid #cfd6df;
+          border: 1px solid #d6dde6;
           background: #f8fafc;
-          border-radius: 12px;
+          border-radius: 14px;
           font-size: 13px;
           outline: none;
+          font-family: inherit;
         }
 
         input {
-          height: 38px;
-          padding: 0 12px;
+          height: 42px;
+          padding: 0 14px;
         }
 
         textarea {
-          min-height: 92px;
-          padding: 12px;
+          min-height: 110px;
+          padding: 14px;
           resize: vertical;
-          font-family: inherit;
+          line-height: 1.5;
+        }
+
+        input:focus,
+        textarea:focus {
+          border-color: #94a3b8;
+          background: white;
         }
 
         button {
@@ -591,7 +525,7 @@ export default function CulturePage() {
           background: #020617;
           color: white;
           border-radius: 999px;
-          padding: 9px 14px;
+          padding: 10px 16px;
           font-size: 12px;
           font-weight: 800;
           cursor: pointer;
@@ -605,15 +539,14 @@ export default function CulturePage() {
         }
 
         .planningBox {
-          margin-bottom: 14px;
+          margin-bottom: 18px;
         }
 
         .checklistHeader {
           display: flex;
-          align-items: center;
           justify-content: space-between;
           gap: 12px;
-          margin: 18px 0 12px;
+          margin: 22px 0 10px;
         }
 
         .checklistHeader h3 {
@@ -621,11 +554,18 @@ export default function CulturePage() {
           font-size: 15px;
         }
 
+        .checklistAdd {
+          display: grid;
+          grid-template-columns: 1fr 90px;
+          gap: 10px;
+          margin-bottom: 14px;
+        }
+
         .checklist {
           display: flex;
           flex-direction: column;
           gap: 10px;
-          margin-bottom: 16px;
+          margin-bottom: 18px;
         }
 
         .checkItem {
@@ -633,11 +573,23 @@ export default function CulturePage() {
           grid-template-columns: 22px 1fr 80px;
           gap: 10px;
           align-items: center;
+          padding: 12px;
+          border: 1px solid #e5e7eb;
+          border-radius: 14px;
+          background: #f8fafc;
         }
 
         .checkItem input[type="checkbox"] {
           width: 16px;
           height: 16px;
+          padding: 0;
+        }
+
+        .checkItem input[type="text"] {
+          border: none;
+          background: transparent;
+          padding: 0;
+          height: auto;
         }
 
         .empty {
