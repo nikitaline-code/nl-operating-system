@@ -500,60 +500,8 @@ export default function ExecutiveFlow() {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
 
-        .header {
-          display: flex;
-          justify-content: space-between;
-          gap: 20px;
-          align-items: flex-start;
-          margin-bottom: 22px;
-        }
-
-        .eyebrow {
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          font-size: 11px;
-          color: #6b7280;
-          margin: 0 0 6px;
-          font-weight: 700;
-        }
-
-        h1 {
-          margin: 0;
-          font-size: 32px;
-          letter-spacing: -0.04em;
-          font-weight: 750;
-        }
-
-        h2 {
-          margin: 0;
-          font-size: 18px;
-          letter-spacing: -0.02em;
-        }
-
-        h3 {
-          margin: 0;
-          font-size: 14px;
-        }
-
-        h4 {
-          margin: 9px 0 6px;
-          font-size: 14px;
-          font-weight: 700;
-          letter-spacing: -0.01em;
-        }
-
-        .subtext {
-          margin: 7px 0 0;
-          color: #6b7280;
-          font-size: 14px;
-        }
-
-        .headerActions,
-        .calendarActions {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          flex-wrap: wrap;
+     
+    
         }
 
         .ownerToggle {
