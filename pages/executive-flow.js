@@ -4,7 +4,7 @@ const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 const starterItems = [
   {
-    id: 1,
+    id: "1",
     owner: "Mark",
     day: "Monday",
     type: "Meeting",
@@ -16,7 +16,7 @@ const starterItems = [
     notes: "Review day plan, priorities, and decisions needed.",
   },
   {
-    id: 2,
+    id: "2",
     owner: "Mark",
     day: "Monday",
     type: "Execution",
@@ -25,10 +25,10 @@ const starterItems = [
     end: "11:30 AM",
     location: "Office",
     interruptions: "Urgent Only",
-    notes: "Protected time to work through dealer items.",
+    notes: "Protected execution time.",
   },
   {
-    id: 3,
+    id: "3",
     owner: "Dane",
     day: "Tuesday",
     type: "Focus",
@@ -37,7 +37,7 @@ const starterItems = [
     end: "10:30 AM",
     location: "Office",
     interruptions: "Open",
-    notes: "Review weekly priorities and key account follow-ups.",
+    notes: "Review weekly priorities and key follow-ups.",
   },
 ];
 
@@ -48,7 +48,6 @@ export default function ExecutiveFlow() {
   const [showAddForm, setShowAddForm] = useState(false);
 
   const [newItem, setNewItem] = useState({
-    owner: "Mark",
     day: "Monday",
     type: "Meeting",
     title: "",
@@ -70,13 +69,12 @@ export default function ExecutiveFlow() {
       ...items,
       {
         ...newItem,
-        id: Date.now(),
+        id: String(Date.now()),
         owner: selectedOwner,
       },
     ]);
 
     setNewItem({
-      owner: selectedOwner,
       day: "Monday",
       type: "Meeting",
       title: "",
@@ -128,7 +126,8 @@ export default function ExecutiveFlow() {
           <p className="eyebrow">Executive Operations</p>
           <h1>Executive Flow</h1>
           <p className="subtext">
-            Plan Mark and Dane&apos;s week, protect execution time, and keep the day clear.
+            Plan Mark and Dane&apos;s week, protect execution time, and keep the
+            day clear.
           </p>
         </div>
 
@@ -265,7 +264,10 @@ export default function ExecutiveFlow() {
             </div>
 
             <div className="modalActions">
-              <button className="secondaryBtn" onClick={() => setShowAddForm(false)}>
+              <button
+                className="secondaryBtn"
+                onClick={() => setShowAddForm(false)}
+              >
                 Cancel
               </button>
               <button className="primaryBtn" onClick={addItem}>
@@ -276,12 +278,15 @@ export default function ExecutiveFlow() {
         </div>
       )}
 
-      <div className="layout">
+      <div className={sidebarOpen ? "layout" : "layout fullWidth"}>
         <main className="calendarWrap">
           <div className="calendarTop">
             <div>
               <h2>{selectedOwner}&apos;s Weekly Plan</h2>
-              <p>Calendar view for meetings, focus time, execution time, and tasks.</p>
+              <p>
+                Move blocks between days using the dropdown. Drag/drop can be
+                added later.
+              </p>
             </div>
 
             <button
@@ -363,10 +368,8 @@ export default function ExecutiveFlow() {
         {sidebarOpen && (
           <aside className="sidebar">
             <div className="sidebarHeader">
-              <div>
-                <p className="eyebrow">Daily List</p>
-                <h2>{selectedOwner}&apos;s Blocks</h2>
-              </div>
+              <p className="eyebrow">Daily List</p>
+              <h2>{selectedOwner}&apos;s Blocks</h2>
             </div>
 
             <div className="list">
@@ -527,6 +530,10 @@ export default function ExecutiveFlow() {
           align-items: start;
         }
 
+        .layout.fullWidth {
+          grid-template-columns: 1fr;
+        }
+
         .calendarWrap,
         .sidebar {
           background: #ffffff;
@@ -556,7 +563,7 @@ export default function ExecutiveFlow() {
 
         .calendarGrid {
           display: grid;
-          grid-template-columns: repeat(5, minmax(180px, 1fr));
+          grid-template-columns: repeat(5, minmax(190px, 1fr));
           gap: 12px;
           overflow-x: auto;
           padding-bottom: 4px;
@@ -598,6 +605,10 @@ export default function ExecutiveFlow() {
           border-radius: 16px;
           padding: 12px;
           box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+        }
+
+        .scheduleCard:hover {
+          box-shadow: 0 12px 24px rgba(15, 23, 42, 0.07);
         }
 
         .cardTop {
