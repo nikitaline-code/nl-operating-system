@@ -1,3 +1,5 @@
+import PageHeader from "../components/PageHeader";
+
 import { useMemo, useState } from "react";
 
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
@@ -144,7 +146,33 @@ export default function ExecutiveFlow() {
 
   return (
     <div className="page">
-      <div className="header">
+     <PageHeader
+  eyebrow="EXECUTIVE OPERATIONS"
+  title="Executive Flow"
+  subtitle="Plan Mark and Dane's week, protect execution time, and keep the day clear."
+  actions={
+    <>
+      <div className="ownerToggle">
+        <button
+          className={selectedOwner === "Mark" ? "active" : ""}
+          onClick={() => setSelectedOwner("Mark")}
+        >
+          Mark
+        </button>
+        <button
+          className={selectedOwner === "Dane" ? "active" : ""}
+          onClick={() => setSelectedOwner("Dane")}
+        >
+          Dane
+        </button>
+      </div>
+
+      <button className="primaryBtn" onClick={() => setShowAddForm(true)}>
+        + Add Block
+      </button>
+    </>
+  }
+/>
         <div>
           <p className="eyebrow">Executive Operations</p>
           <h1>Executive Flow</h1>
