@@ -12,6 +12,7 @@ const navItems = [
   { label: "East", href: "/east" },
   { label: "South", href: "/south" },
   { label: "AQ Culture", href: "/culture" },
+  { label: "Executive Flow", href: "/executive-flow" },
 ];
 
 export default function AppShell({ children }) {
