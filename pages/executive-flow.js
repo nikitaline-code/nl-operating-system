@@ -98,7 +98,11 @@ export default function ExecutiveFlow() {
   }
 
   function moveItem(id, newDay) {
-    setItems(items.map((item) => (item.id === id ? { ...item, day: newDay } : item)));
+    setItems(
+      items.map((item) =>
+        item.id === id ? { ...item, day: newDay } : item
+      )
+    );
   }
 
   function toggleCollapse(id) {
@@ -184,7 +188,9 @@ export default function ExecutiveFlow() {
                 Title
                 <input
                   value={newItem.title}
-                  onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
+                  onChange={(e) =>
+                    setNewItem({ ...newItem, title: e.target.value })
+                  }
                   placeholder="Dealer call, focus time, execution block..."
                 />
               </label>
@@ -193,7 +199,9 @@ export default function ExecutiveFlow() {
                 Day
                 <select
                   value={newItem.day}
-                  onChange={(e) => setNewItem({ ...newItem, day: e.target.value })}
+                  onChange={(e) =>
+                    setNewItem({ ...newItem, day: e.target.value })
+                  }
                 >
                   {days.map((day) => (
                     <option key={day}>{day}</option>
@@ -205,7 +213,9 @@ export default function ExecutiveFlow() {
                 Type
                 <select
                   value={newItem.type}
-                  onChange={(e) => setNewItem({ ...newItem, type: e.target.value })}
+                  onChange={(e) =>
+                    setNewItem({ ...newItem, type: e.target.value })
+                  }
                 >
                   <option>Meeting</option>
                   <option>Focus</option>
@@ -232,7 +242,9 @@ export default function ExecutiveFlow() {
                 Start Time
                 <input
                   value={newItem.start}
-                  onChange={(e) => setNewItem({ ...newItem, start: e.target.value })}
+                  onChange={(e) =>
+                    setNewItem({ ...newItem, start: e.target.value })
+                  }
                   placeholder="8:00 AM"
                 />
               </label>
@@ -241,7 +253,9 @@ export default function ExecutiveFlow() {
                 End Time
                 <input
                   value={newItem.end}
-                  onChange={(e) => setNewItem({ ...newItem, end: e.target.value })}
+                  onChange={(e) =>
+                    setNewItem({ ...newItem, end: e.target.value })
+                  }
                   placeholder="9:00 AM"
                 />
               </label>
@@ -261,14 +275,19 @@ export default function ExecutiveFlow() {
                 Notes
                 <textarea
                   value={newItem.notes}
-                  onChange={(e) => setNewItem({ ...newItem, notes: e.target.value })}
+                  onChange={(e) =>
+                    setNewItem({ ...newItem, notes: e.target.value })
+                  }
                   placeholder="Details, prep notes, meeting purpose..."
                 />
               </label>
             </div>
 
             <div className="modalActions">
-              <button className="secondaryBtn" onClick={() => setShowAddForm(false)}>
+              <button
+                className="secondaryBtn"
+                onClick={() => setShowAddForm(false)}
+              >
                 Cancel
               </button>
               <button className="primaryBtn" onClick={addItem}>
@@ -322,10 +341,14 @@ export default function ExecutiveFlow() {
                     {dayItems.map((item) => (
                       <article
                         key={item.id}
-                        className={`scheduleCard ${item.collapsed ? "collapsed" : ""}`}
+                        className={`scheduleCard ${
+                          item.collapsed ? "collapsed" : ""
+                        }`}
                       >
                         <div className="cardTop">
-                          <span className={`typeBadge ${getTypeClass(item.type)}`}>
+                          <span
+                            className={`typeBadge ${getTypeClass(item.type)}`}
+                          >
                             {item.type}
                           </span>
 
@@ -443,6 +466,11 @@ export default function ExecutiveFlow() {
       </div>
 
       <style jsx>{`
+        .page,
+        .page * {
+          box-sizing: border-box;
+        }
+
         .page {
           min-height: 100vh;
           background: #f5f6f8;
@@ -707,6 +735,9 @@ export default function ExecutiveFlow() {
           font-size: 16px;
           line-height: 1;
           font-weight: 800;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .deleteBtn:hover,
@@ -828,18 +859,20 @@ export default function ExecutiveFlow() {
           position: fixed;
           inset: 0;
           background: rgba(17, 24, 39, 0.42);
-          z-index: 50;
+          z-index: 999;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 20px;
+          padding: 24px;
         }
 
         .modal {
           background: #ffffff;
           border-radius: 24px;
           padding: 20px;
-          width: min(760px, 100%);
+          width: min(720px, calc(100vw - 48px));
+          max-height: calc(100vh - 48px);
+          overflow-y: auto;
           box-shadow: 0 24px 80px rgba(15, 23, 42, 0.25);
         }
 
@@ -859,14 +892,16 @@ export default function ExecutiveFlow() {
 
         .formGrid {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
           gap: 12px;
+          width: 100%;
         }
 
         label {
           display: flex;
           flex-direction: column;
           gap: 6px;
+          min-width: 0;
           font-size: 12px;
           font-weight: 700;
           color: #374151;
@@ -880,6 +915,8 @@ export default function ExecutiveFlow() {
         select,
         textarea {
           width: 100%;
+          max-width: 100%;
+          min-width: 0;
           border: 1px solid #e5e7eb;
           background: #f9fafb;
           border-radius: 12px;
@@ -887,6 +924,7 @@ export default function ExecutiveFlow() {
           font-size: 13px;
           outline: none;
           color: #111827;
+          box-sizing: border-box;
         }
 
         textarea {
@@ -926,6 +964,15 @@ export default function ExecutiveFlow() {
           .calendarTop {
             flex-direction: column;
             align-items: flex-start;
+          }
+
+          .modalBackdrop {
+            padding: 16px;
+          }
+
+          .modal {
+            width: calc(100vw - 32px);
+            padding: 18px;
           }
 
           .formGrid {
