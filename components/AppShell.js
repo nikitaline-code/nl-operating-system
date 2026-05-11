@@ -61,16 +61,16 @@ export default function AppShell({ children }) {
           left: 0;
           top: 0;
           bottom: 0;
-          width: 240px;
+          width: 205px;
           background: #ffffff;
           border-right: 1px solid #e5e7eb;
-          padding: 22px 16px;
+          padding: 18px 10px;
           z-index: 100;
           overflow-y: auto;
         }
 
         .content {
-          margin-left: 240px;
+          margin-left: 205px;
           min-height: 100vh;
           min-width: 0;
         }
@@ -78,51 +78,51 @@ export default function AppShell({ children }) {
         .brand {
           display: flex;
           align-items: center;
-          gap: 10px;
-          margin-bottom: 24px;
-          padding: 0 6px;
+          gap: 8px;
+          margin-bottom: 22px;
+          padding: 0 4px;
         }
 
         .brandMark {
-          width: 34px;
-          height: 34px;
-          border-radius: 12px;
+          width: 30px;
+          height: 30px;
+          border-radius: 10px;
           background: #111827;
           color: #ffffff;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 800;
           flex-shrink: 0;
         }
 
         .brand strong {
           display: block;
-          font-size: 14px;
+          font-size: 13px;
           letter-spacing: -0.02em;
         }
 
         .brand span {
           display: block;
-          margin-top: 2px;
-          font-size: 11px;
+          margin-top: 1px;
+          font-size: 10px;
           color: #6b7280;
         }
 
         nav {
           display: flex;
           flex-direction: column;
-          gap: 5px;
+          gap: 4px;
         }
 
         nav :global(a) {
           text-decoration: none;
           color: #4b5563;
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 650;
-          padding: 10px 12px;
-          border-radius: 12px;
+          padding: 9px 9px;
+          border-radius: 10px;
           transition: 0.15s ease;
         }
 
