@@ -34,7 +34,11 @@ export default function AppShell({ children }) {
             const active = router.pathname === item.href;
 
             return (
-              <Link key={item.href} href={item.href} className={active ? "active" : ""}>
+              <Link
+                key={item.href}
+                href={item.href}
+                className={active ? "active" : ""}
+              >
                 {item.label}
               </Link>
             );
@@ -47,20 +51,28 @@ export default function AppShell({ children }) {
       <style jsx>{`
         .shell {
           min-height: 100vh;
-          display: grid;
-          grid-template-columns: 240px minmax(0, 1fr);
           background: #f5f6f8;
           color: #111827;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
 
         .sidebar {
+          position: fixed;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 240px;
           background: #ffffff;
           border-right: 1px solid #e5e7eb;
           padding: 22px 16px;
-          position: sticky;
-          top: 0;
-          height: 100vh;
+          z-index: 100;
+          overflow-y: auto;
+        }
+
+        .content {
+          margin-left: 240px;
+          min-height: 100vh;
+          min-width: 0;
         }
 
         .brand {
@@ -82,6 +94,7 @@ export default function AppShell({ children }) {
           justify-content: center;
           font-size: 12px;
           font-weight: 800;
+          flex-shrink: 0;
         }
 
         .brand strong {
@@ -123,20 +136,16 @@ export default function AppShell({ children }) {
           color: #ffffff;
         }
 
-        .content {
-          min-width: 0;
-        }
-
         @media (max-width: 900px) {
-          .shell {
-            grid-template-columns: 1fr;
-          }
-
           .sidebar {
             position: static;
-            height: auto;
+            width: auto;
             border-right: 0;
             border-bottom: 1px solid #e5e7eb;
+          }
+
+          .content {
+            margin-left: 0;
           }
 
           nav {
