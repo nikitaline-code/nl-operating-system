@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
