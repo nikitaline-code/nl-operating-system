@@ -1,6 +1,5 @@
-import PageHeader from "../components/PageHeader";
-
 import { useMemo, useState } from "react";
+import PageHeader from "../components/PageHeader";
 
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
@@ -99,11 +98,7 @@ export default function ExecutiveFlow() {
   }
 
   function moveItem(id, newDay) {
-    setItems(
-      items.map((item) =>
-        item.id === id ? { ...item, day: newDay } : item
-      )
-    );
+    setItems(items.map((item) => (item.id === id ? { ...item, day: newDay } : item)));
   }
 
   function toggleCollapse(id) {
@@ -146,62 +141,33 @@ export default function ExecutiveFlow() {
 
   return (
     <div className="page">
-     <PageHeader
-  eyebrow="EXECUTIVE OPERATIONS"
-  title="Executive Flow"
-  subtitle="Plan Mark and Dane's week, protect execution time, and keep the day clear."
-  actions={
-    <>
-      <div className="ownerToggle">
-        <button
-          className={selectedOwner === "Mark" ? "active" : ""}
-          onClick={() => setSelectedOwner("Mark")}
-        >
-          Mark
-        </button>
-        <button
-          className={selectedOwner === "Dane" ? "active" : ""}
-          onClick={() => setSelectedOwner("Dane")}
-        >
-          Dane
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="EXECUTIVE OPERATIONS"
+        title="Executive Flow"
+        subtitle="Plan Mark and Dane's week, protect execution time, and keep the day clear."
+        actions={
+          <>
+            <div className="ownerToggle">
+              <button
+                className={selectedOwner === "Mark" ? "active" : ""}
+                onClick={() => setSelectedOwner("Mark")}
+              >
+                Mark
+              </button>
+              <button
+                className={selectedOwner === "Dane" ? "active" : ""}
+                onClick={() => setSelectedOwner("Dane")}
+              >
+                Dane
+              </button>
+            </div>
 
-      <button className="primaryBtn" onClick={() => setShowAddForm(true)}>
-        + Add Block
-      </button>
-    </>
-  }
-/>
-        <div>
-          <p className="eyebrow">Executive Operations</p>
-          <h1>Executive Flow</h1>
-          <p className="subtext">
-            Plan Mark and Dane&apos;s week, protect execution time, and keep the day clear.
-          </p>
-        </div>
-
-        <div className="headerActions">
-          <div className="ownerToggle">
-            <button
-              className={selectedOwner === "Mark" ? "active" : ""}
-              onClick={() => setSelectedOwner("Mark")}
-            >
-              Mark
+            <button className="primaryBtn" onClick={() => setShowAddForm(true)}>
+              + Add Block
             </button>
-            <button
-              className={selectedOwner === "Dane" ? "active" : ""}
-              onClick={() => setSelectedOwner("Dane")}
-            >
-              Dane
-            </button>
-          </div>
-
-          <button className="primaryBtn" onClick={() => setShowAddForm(true)}>
-            + Add Block
-          </button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {showAddForm && (
         <div className="modalBackdrop">
@@ -218,9 +184,7 @@ export default function ExecutiveFlow() {
                 Title
                 <input
                   value={newItem.title}
-                  onChange={(e) =>
-                    setNewItem({ ...newItem, title: e.target.value })
-                  }
+                  onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
                   placeholder="Dealer call, focus time, execution block..."
                 />
               </label>
@@ -229,9 +193,7 @@ export default function ExecutiveFlow() {
                 Day
                 <select
                   value={newItem.day}
-                  onChange={(e) =>
-                    setNewItem({ ...newItem, day: e.target.value })
-                  }
+                  onChange={(e) => setNewItem({ ...newItem, day: e.target.value })}
                 >
                   {days.map((day) => (
                     <option key={day}>{day}</option>
@@ -243,9 +205,7 @@ export default function ExecutiveFlow() {
                 Type
                 <select
                   value={newItem.type}
-                  onChange={(e) =>
-                    setNewItem({ ...newItem, type: e.target.value })
-                  }
+                  onChange={(e) => setNewItem({ ...newItem, type: e.target.value })}
                 >
                   <option>Meeting</option>
                   <option>Focus</option>
@@ -272,9 +232,7 @@ export default function ExecutiveFlow() {
                 Start Time
                 <input
                   value={newItem.start}
-                  onChange={(e) =>
-                    setNewItem({ ...newItem, start: e.target.value })
-                  }
+                  onChange={(e) => setNewItem({ ...newItem, start: e.target.value })}
                   placeholder="8:00 AM"
                 />
               </label>
@@ -283,9 +241,7 @@ export default function ExecutiveFlow() {
                 End Time
                 <input
                   value={newItem.end}
-                  onChange={(e) =>
-                    setNewItem({ ...newItem, end: e.target.value })
-                  }
+                  onChange={(e) => setNewItem({ ...newItem, end: e.target.value })}
                   placeholder="9:00 AM"
                 />
               </label>
@@ -305,19 +261,14 @@ export default function ExecutiveFlow() {
                 Notes
                 <textarea
                   value={newItem.notes}
-                  onChange={(e) =>
-                    setNewItem({ ...newItem, notes: e.target.value })
-                  }
+                  onChange={(e) => setNewItem({ ...newItem, notes: e.target.value })}
                   placeholder="Details, prep notes, meeting purpose..."
                 />
               </label>
             </div>
 
             <div className="modalActions">
-              <button
-                className="secondaryBtn"
-                onClick={() => setShowAddForm(false)}
-              >
+              <button className="secondaryBtn" onClick={() => setShowAddForm(false)}>
                 Cancel
               </button>
               <button className="primaryBtn" onClick={addItem}>
@@ -449,7 +400,7 @@ export default function ExecutiveFlow() {
         {sidebarOpen && (
           <aside className="sidebar">
             <div className="sidebarHeader">
-              <p className="eyebrow">Daily List</p>
+              <p className="sidebarEyebrow">Daily List</p>
               <h2>{selectedOwner}&apos;s Blocks</h2>
             </div>
 
@@ -498,10 +449,6 @@ export default function ExecutiveFlow() {
           color: #111827;
           padding: 28px;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        }
-
-     
-    
         }
 
         .ownerToggle {
@@ -591,10 +538,26 @@ export default function ExecutiveFlow() {
           margin-bottom: 16px;
         }
 
+        .calendarTop h2,
+        .sidebarHeader h2 {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 700;
+          letter-spacing: -0.02em;
+          color: #111827;
+        }
+
         .calendarTop p {
           margin: 5px 0 0;
           color: #6b7280;
           font-size: 13px;
+        }
+
+        .calendarActions {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
         }
 
         .calendarGrid {
@@ -620,6 +583,15 @@ export default function ExecutiveFlow() {
           display: flex;
           justify-content: space-between;
           align-items: center;
+        }
+
+        .dayHeader h3,
+        .listDay h3 {
+          margin: 0;
+          font-size: 14px;
+          font-weight: 700;
+          letter-spacing: -0.01em;
+          color: #111827;
         }
 
         .dayHeader span {
@@ -662,6 +634,14 @@ export default function ExecutiveFlow() {
         .cardBtns {
           display: flex;
           gap: 6px;
+        }
+
+        .scheduleCard h4 {
+          margin: 9px 0 6px;
+          font-size: 14px;
+          font-weight: 700;
+          letter-spacing: -0.01em;
+          color: #111827;
         }
 
         .typeBadge,
@@ -801,6 +781,15 @@ export default function ExecutiveFlow() {
           margin-bottom: 16px;
         }
 
+        .sidebarEyebrow {
+          margin: 0 0 6px;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #6b7280;
+        }
+
         .list {
           display: flex;
           flex-direction: column;
@@ -826,6 +815,7 @@ export default function ExecutiveFlow() {
 
         .listItem strong {
           font-size: 13px;
+          font-weight: 700;
         }
 
         .listItem p {
@@ -858,6 +848,13 @@ export default function ExecutiveFlow() {
           justify-content: space-between;
           align-items: center;
           margin-bottom: 16px;
+        }
+
+        .modalHeader h2 {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 700;
+          letter-spacing: -0.02em;
         }
 
         .formGrid {
@@ -926,15 +923,9 @@ export default function ExecutiveFlow() {
             padding: 18px;
           }
 
-          .header,
           .calendarTop {
             flex-direction: column;
             align-items: flex-start;
-          }
-
-          .headerActions {
-            width: 100%;
-            justify-content: space-between;
           }
 
           .formGrid {
