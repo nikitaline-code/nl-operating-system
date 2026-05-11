@@ -14,6 +14,7 @@ const starterItems = [
     location: "Office",
     interruptions: "No Interruptions",
     notes: "Review day plan, priorities, and decisions needed.",
+    collapsed: false,
   },
   {
     id: "2",
@@ -26,6 +27,7 @@ const starterItems = [
     location: "Office",
     interruptions: "Urgent Only",
     notes: "Protected execution time.",
+    collapsed: true,
   },
   {
     id: "3",
@@ -38,6 +40,7 @@ const starterItems = [
     location: "Office",
     interruptions: "Open",
     notes: "Review weekly priorities and key follow-ups.",
+    collapsed: true,
   },
 ];
 
@@ -71,6 +74,7 @@ export default function ExecutiveFlow() {
         ...newItem,
         id: String(Date.now()),
         owner: selectedOwner,
+        collapsed: false,
       },
     ]);
 
@@ -95,12 +99,31 @@ export default function ExecutiveFlow() {
   function moveItem(id, newDay) {
     setItems(
       items.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              day: newDay,
-            }
-          : item
+        item.id === id ? { ...item, day: newDay } : item
+      )
+    );
+  }
+
+  function toggleCollapse(id) {
+    setItems(
+      items.map((item) =>
+        item.id === id ? { ...item, collapsed: !item.collapsed } : item
+      )
+    );
+  }
+
+  function expandAll() {
+    setItems(
+      items.map((item) =>
+        item.owner === selectedOwner ? { ...item, collapsed: false } : item
+      )
+    );
+  }
+
+  function collapseAll() {
+    setItems(
+      items.map((item) =>
+        item.owner === selectedOwner ? { ...item, collapsed: true } : item
       )
     );
   }
@@ -126,8 +149,7 @@ export default function ExecutiveFlow() {
           <p className="eyebrow">Executive Operations</p>
           <h1>Executive Flow</h1>
           <p className="subtext">
-            Plan Mark and Dane&apos;s week, protect execution time, and keep the
-            day clear.
+            Plan Mark and Dane&apos;s week, protect execution time, and keep the day clear.
           </p>
         </div>
 
@@ -283,18 +305,23 @@ export default function ExecutiveFlow() {
           <div className="calendarTop">
             <div>
               <h2>{selectedOwner}&apos;s Weekly Plan</h2>
-              <p>
-                Move blocks between days using the dropdown. Drag/drop can be
-                added later.
-              </p>
+              <p>Use compact mode to keep the week clean and easy to scan.</p>
             </div>
 
-            <button
-              className="secondaryBtn"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-            >
-              {sidebarOpen ? "Hide List" : "Show List"}
-            </button>
+            <div className="calendarActions">
+              <button className="secondaryBtn small" onClick={collapseAll}>
+                Collapse All
+              </button>
+              <button className="secondaryBtn small" onClick={expandAll}>
+                Expand All
+              </button>
+              <button
+                className="secondaryBtn small"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+              >
+                {sidebarOpen ? "Hide List" : "Show List"}
+              </button>
+            </div>
           </div>
 
           <div className="calendarGrid">
@@ -314,48 +341,74 @@ export default function ExecutiveFlow() {
                     )}
 
                     {dayItems.map((item) => (
-                      <article key={item.id} className="scheduleCard">
+                      <article
+                        key={item.id}
+                        className={`scheduleCard ${item.collapsed ? "collapsed" : ""}`}
+                      >
                         <div className="cardTop">
                           <span className={`typeBadge ${getTypeClass(item.type)}`}>
                             {item.type}
                           </span>
-                          <button
-                            className="deleteBtn"
-                            onClick={() => deleteItem(item.id)}
-                          >
-                            ×
-                          </button>
+
+                          <div className="cardBtns">
+                            <button
+                              className="miniBtn"
+                              onClick={() => toggleCollapse(item.id)}
+                              title={item.collapsed ? "Expand" : "Collapse"}
+                            >
+                              {item.collapsed ? "+" : "−"}
+                            </button>
+                            <button
+                              className="deleteBtn"
+                              onClick={() => deleteItem(item.id)}
+                            >
+                              ×
+                            </button>
+                          </div>
                         </div>
 
                         <h4>{item.title}</h4>
 
-                        <div className="meta">
-                          <span>
-                            {item.start || "Time TBD"}
-                            {item.end ? ` - ${item.end}` : ""}
-                          </span>
-                          {item.location && <span>{item.location}</span>}
+                        <div className="compactMeta">
+                          <span>{item.start || "Time TBD"}</span>
+                          <span
+                            className={`statusDot ${getInterruptionClass(
+                              item.interruptions
+                            )}`}
+                          />
                         </div>
 
-                        <span
-                          className={`interruptBadge ${getInterruptionClass(
-                            item.interruptions
-                          )}`}
-                        >
-                          {item.interruptions}
-                        </span>
+                        {!item.collapsed && (
+                          <>
+                            <div className="meta">
+                              <span>
+                                {item.start || "Time TBD"}
+                                {item.end ? ` - ${item.end}` : ""}
+                              </span>
+                              {item.location && <span>{item.location}</span>}
+                            </div>
 
-                        {item.notes && <p className="notes">{item.notes}</p>}
+                            <span
+                              className={`interruptBadge ${getInterruptionClass(
+                                item.interruptions
+                              )}`}
+                            >
+                              {item.interruptions}
+                            </span>
 
-                        <select
-                          className="moveSelect"
-                          value={item.day}
-                          onChange={(e) => moveItem(item.id, e.target.value)}
-                        >
-                          {days.map((moveDay) => (
-                            <option key={moveDay}>{moveDay}</option>
-                          ))}
-                        </select>
+                            {item.notes && <p className="notes">{item.notes}</p>}
+
+                            <select
+                              className="moveSelect"
+                              value={item.day}
+                              onChange={(e) => moveItem(item.id, e.target.value)}
+                            >
+                              {days.map((moveDay) => (
+                                <option key={moveDay}>{moveDay}</option>
+                              ))}
+                            </select>
+                          </>
+                        )}
                       </article>
                     ))}
                   </div>
@@ -455,7 +508,7 @@ export default function ExecutiveFlow() {
         }
 
         h4 {
-          margin: 10px 0 8px;
+          margin: 9px 0 6px;
           font-size: 14px;
           font-weight: 700;
           letter-spacing: -0.01em;
@@ -467,10 +520,12 @@ export default function ExecutiveFlow() {
           font-size: 14px;
         }
 
-        .headerActions {
+        .headerActions,
+        .calendarActions {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 10px;
+          flex-wrap: wrap;
         }
 
         .ownerToggle {
@@ -505,6 +560,11 @@ export default function ExecutiveFlow() {
           font-weight: 700;
           cursor: pointer;
           transition: 0.15s ease;
+        }
+
+        .secondaryBtn.small {
+          padding: 9px 11px;
+          font-size: 12px;
         }
 
         .primaryBtn {
@@ -605,6 +665,11 @@ export default function ExecutiveFlow() {
           border-radius: 16px;
           padding: 12px;
           box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+          transition: 0.15s ease;
+        }
+
+        .scheduleCard.collapsed {
+          padding: 10px 11px;
         }
 
         .scheduleCard:hover {
@@ -615,6 +680,12 @@ export default function ExecutiveFlow() {
           display: flex;
           justify-content: space-between;
           align-items: center;
+          gap: 8px;
+        }
+
+        .cardBtns {
+          display: flex;
+          gap: 6px;
         }
 
         .typeBadge,
@@ -668,7 +739,8 @@ export default function ExecutiveFlow() {
         }
 
         .deleteBtn,
-        .iconBtn {
+        .iconBtn,
+        .miniBtn {
           border: 0;
           background: #f3f4f6;
           color: #6b7280;
@@ -676,14 +748,34 @@ export default function ExecutiveFlow() {
           height: 26px;
           border-radius: 9px;
           cursor: pointer;
-          font-size: 18px;
+          font-size: 16px;
           line-height: 1;
+          font-weight: 800;
         }
 
         .deleteBtn:hover,
-        .iconBtn:hover {
+        .iconBtn:hover,
+        .miniBtn:hover {
           background: #e5e7eb;
           color: #111827;
+        }
+
+        .compactMeta {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          color: #6b7280;
+          font-size: 12px;
+        }
+
+        .statusDot,
+        .dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 999px;
+          flex-shrink: 0;
+          padding: 0;
         }
 
         .meta {
@@ -764,14 +856,6 @@ export default function ExecutiveFlow() {
           margin: 3px 0 0;
           color: #6b7280;
           font-size: 12px;
-        }
-
-        .dot {
-          width: 10px;
-          height: 10px;
-          border-radius: 999px;
-          flex-shrink: 0;
-          padding: 0;
         }
 
         .modalBackdrop {
@@ -866,8 +950,10 @@ export default function ExecutiveFlow() {
             padding: 18px;
           }
 
-          .header {
+          .header,
+          .calendarTop {
             flex-direction: column;
+            align-items: flex-start;
           }
 
           .headerActions {
