@@ -12,6 +12,7 @@ const navItems = [
   { label: "South", href: "/south" },
   { label: "Dealer Offboarding", href: "/dealer-offboarding" },
   { label: "AQ Culture", href: "/culture" },
+  { label: "PLAUD Notes", href: "/plaud" },
 ];
 
 export default function AppShell({ children }) {
