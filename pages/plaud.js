@@ -9,10 +9,10 @@ const supabase = createClient(
 export default function PlaudNotesPage() {
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedNote, setSelectedNote] = useState(null);
+  const [expanded, setExpanded] = useState({});
   const [search, setSearch] = useState("");
   const [filterExecutive, setFilterExecutive] = useState("All");
-  const [expanded, setExpanded] = useState({});
+  const [uploadingNoteId, setUploadingNoteId] = useState(null);
 
   useEffect(() => {
     fetchNotes();
@@ -43,30 +43,54 @@ export default function PlaudNotesPage() {
     }));
   }
 
-  const filteredNotes = useMemo(() => {
-    return notes.filter((note) => {
-      const text = `${note.title || ""} ${note.summary || ""} ${
-        note.transcript || ""
-      } ${note.dealer || ""}`.toLowerCase();
+  async function uploadAudio(event, noteId) {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-      const matchesSearch = text.includes(search.toLowerCase());
+    setUploadingNoteId(noteId);
 
-      const matchesExecutive =
-        filterExecutive === "All" ||
-        (note.executive || "").toLowerCase() === filterExecutive.toLowerCase();
+    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "-");
+    const filePath = `${noteId}/${Date.now()}-${safeName}`;
 
-      return matchesSearch && matchesExecutive;
-    });
-  }, [notes, search, filterExecutive]);
+    const { error: uploadError } = await supabase.storage
+      .from("plaud-recordings")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error(uploadError);
+      alert("Upload failed. Check your Supabase Storage bucket permissions.");
+      setUploadingNoteId(null);
+      return;
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("plaud-recordings").getPublicUrl(filePath);
+
+    const { error: updateError } = await supabase
+      .from("plaud_notes")
+      .update({ audio_url: publicUrl })
+      .eq("id", noteId);
+
+    if (updateError) {
+      console.error(updateError);
+      alert("Audio uploaded, but the URL could not save to the note.");
+      setUploadingNoteId(null);
+      return;
+    }
+
+    setUploadingNoteId(null);
+    await fetchNotes();
+    alert("Recording uploaded.");
+  }
 
   async function sendToTasks(note) {
-    const taskTitle = note.title
-      ? `Review PLAUD note: ${note.title}`
-      : "Review PLAUD note";
-
     const { error } = await supabase.from("tasks").insert([
       {
-        task: taskTitle,
+        task: note.title ? `Review PLAUD note: ${note.title}` : "Review PLAUD note",
         details: note.summary || note.transcript || "",
         priority: "Medium",
         completed: false,
@@ -75,8 +99,8 @@ export default function PlaudNotesPage() {
     ]);
 
     if (error) {
-      alert("Could not send to Tasks. Check your tasks table column names.");
       console.error(error);
+      alert("Could not send to Tasks. Check your tasks table column names.");
     } else {
       alert("Sent to Tasks.");
     }
@@ -93,12 +117,34 @@ export default function PlaudNotesPage() {
     ]);
 
     if (error) {
-      alert("Could not send to Decisions. Check your decisions table column names.");
       console.error(error);
+      alert("Could not send to Decisions. Check your decisions table column names.");
     } else {
       alert("Sent to Decisions.");
     }
   }
+
+  const filteredNotes = useMemo(() => {
+    return notes.filter((note) => {
+      const combinedText = `
+        ${note.title || ""}
+        ${note.summary || ""}
+        ${note.transcript || ""}
+        ${note.action_items || ""}
+        ${note.decisions || ""}
+        ${note.follow_ups || ""}
+        ${note.dealer || ""}
+      `.toLowerCase();
+
+      const matchesSearch = combinedText.includes(search.toLowerCase());
+
+      const matchesExecutive =
+        filterExecutive === "All" ||
+        (note.executive || "").toLowerCase() === filterExecutive.toLowerCase();
+
+      return matchesSearch && matchesExecutive;
+    });
+  }, [notes, search, filterExecutive]);
 
   return (
     <div className="page">
@@ -107,7 +153,7 @@ export default function PlaudNotesPage() {
           <p className="eyebrow">Executive Workflow</p>
           <h1>PLAUD Notes</h1>
           <p className="subtitle">
-            Review meeting recordings, summaries, transcripts, decisions, and follow-ups.
+            Meeting recordings, summaries, transcripts, action items, and decisions.
           </p>
         </div>
 
@@ -121,10 +167,12 @@ export default function PlaudNotesPage() {
           <span>Total Notes</span>
           <strong>{notes.length}</strong>
         </div>
+
         <div className="statCard">
           <span>Filtered</span>
           <strong>{filteredNotes.length}</strong>
         </div>
+
         <div className="statCard">
           <span>Latest</span>
           <strong>{notes[0]?.created_at ? formatDate(notes[0].created_at) : "—"}</strong>
@@ -135,13 +183,10 @@ export default function PlaudNotesPage() {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search notes, dealers, summaries, transcripts..."
+          placeholder="Search notes, dealers, transcripts..."
         />
 
-        <select
-          value={filterExecutive}
-          onChange={(e) => setFilterExecutive(e.target.value)}
-        >
+        <select value={filterExecutive} onChange={(e) => setFilterExecutive(e.target.value)}>
           <option>All</option>
           <option>Mark</option>
           <option>Dane</option>
@@ -154,7 +199,7 @@ export default function PlaudNotesPage() {
           <div className="emptyState">Loading PLAUD notes...</div>
         ) : filteredNotes.length === 0 ? (
           <div className="emptyState">
-            No PLAUD notes found yet. Once Zapier sends notes into Supabase, they’ll appear here.
+            No PLAUD notes found. Once Zapier or Supabase has records, they’ll show here.
           </div>
         ) : (
           filteredNotes.map((note) => {
@@ -166,8 +211,10 @@ export default function PlaudNotesPage() {
                   <div>
                     <div className="noteTitleRow">
                       <h2>{note.title || "Untitled PLAUD Note"}</h2>
+
                       {note.executive && <span className="badge">{note.executive}</span>}
                       {note.dealer && <span className="badge muted">{note.dealer}</span>}
+                      {note.audio_url && <span className="badge audioBadge">Recording</span>}
                     </div>
 
                     <p className="dateText">
@@ -190,22 +237,43 @@ export default function PlaudNotesPage() {
                   <p>{note.summary || "No summary came through from PLAUD yet."}</p>
                 </div>
 
+                {note.audio_url && (
+                  <div className="audioWrap">
+                    <audio controls className="audioPlayer">
+                      <source src={note.audio_url} />
+                      Your browser does not support audio.
+                    </audio>
+                  </div>
+                )}
+
                 {isOpen && (
                   <div className="expandedArea">
+                    <div className="actions">
+                      <label className="uploadBtn">
+                        {uploadingNoteId === note.id ? "Uploading..." : "Upload Recording"}
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          hidden
+                          disabled={uploadingNoteId === note.id}
+                          onChange={(e) => uploadAudio(e, note.id)}
+                        />
+                      </label>
+
+                      <button onClick={() => sendToTasks(note)}>Send to Tasks</button>
+                      <button onClick={() => sendToDecisions(note)}>Send to Decisions</button>
+
+                      {note.source_url && (
+                        <a href={note.source_url} target="_blank" rel="noreferrer">
+                          Open PLAUD Source
+                        </a>
+                      )}
+                    </div>
+
                     <Section title="Action Items" content={note.action_items} />
                     <Section title="Decisions" content={note.decisions} />
                     <Section title="Follow-Ups" content={note.follow_ups} />
                     <Section title="Transcript" content={note.transcript} large />
-
-                    <div className="actions">
-                      <button onClick={() => sendToTasks(note)}>Send to Tasks</button>
-                      <button onClick={() => sendToDecisions(note)}>Send to Decisions</button>
-                      {note.source_url && (
-                        <a href={note.source_url} target="_blank" rel="noreferrer">
-                          Open Source
-                        </a>
-                      )}
-                    </div>
                   </div>
                 )}
               </div>
@@ -256,7 +324,8 @@ export default function PlaudNotesPage() {
         .refreshBtn,
         .smallBtn,
         .actions button,
-        .actions a {
+        .actions a,
+        .uploadBtn {
           border: 1px solid #ddd;
           background: white;
           color: #111;
@@ -266,12 +335,16 @@ export default function PlaudNotesPage() {
           cursor: pointer;
           text-decoration: none;
           transition: all 0.18s ease;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .refreshBtn:hover,
         .smallBtn:hover,
         .actions button:hover,
-        .actions a:hover {
+        .actions a:hover,
+        .uploadBtn:hover {
           background: #eeeeee;
           transform: translateY(-1px);
         }
@@ -374,6 +447,11 @@ export default function PlaudNotesPage() {
           color: #333;
         }
 
+        .badge.audioBadge {
+          background: #e9f5ee;
+          color: #1f6b3a;
+        }
+
         .dateText {
           margin: 6px 0 0;
           color: #777;
@@ -394,6 +472,19 @@ export default function PlaudNotesPage() {
           line-height: 1.55;
           color: #333;
           white-space: pre-wrap;
+        }
+
+        .audioWrap {
+          margin-top: 14px;
+          background: #fafafa;
+          border: 1px solid #ededed;
+          border-radius: 14px;
+          padding: 12px;
+        }
+
+        .audioPlayer {
+          width: 100%;
+          display: block;
         }
 
         .expandedArea {
