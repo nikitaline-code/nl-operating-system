@@ -1,22 +1,22 @@
 import { useEffect, useState } from "react";
+import { supabase } from "../utils/supabaseClient";
 
-const TASKS_KEY = "os-tasks";
 const FOLLOWUPS_KEY = "dashboard-follow-ups";
 
 function getTaskText(task) {
-  return task.text || task.task || task.title || task.content || task.name || "";
+  return task.task || task.text || task.title || task.content || task.name || "";
 }
 
 function getTaskFrom(task) {
-  return task.assignedFrom || task.from || task.owner || task.source || "N/A";
+  return task.assigned_from || task.assignedFrom || task.from || task.owner || task.source || "N/A";
 }
 
 function getTaskDueDate(task) {
-  return task.dueDate || task.due_date || task.date || "";
+  return task.due_date || task.dueDate || task.date || "";
 }
 
 function getTaskUrgency(task) {
-  return task.urgency || task.priority || "Medium";
+  return task.priority || task.urgency || "Medium";
 }
 
 export default function TasksPage() {
@@ -26,43 +26,93 @@ export default function TasksPage() {
   const [urgency, setUrgency] = useState("Medium");
   const [dueDate, setDueDate] = useState("");
   const [hideCompleted, setHideCompleted] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const saved = localStorage.getItem(TASKS_KEY);
-    if (saved) setTasks(JSON.parse(saved));
+    fetchTasks();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
-  }, [tasks]);
+  async function fetchTasks() {
+    setLoading(true);
 
-  function addTask() {
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Load tasks error:", error);
+      alert("Could not load tasks. Check Supabase table name/columns.");
+    } else {
+      setTasks(data || []);
+    }
+
+    setLoading(false);
+  }
+
+  async function addTask() {
     if (!taskText.trim()) return;
 
     const newTask = {
-      id: Date.now(),
-      text: taskText,
-      assignedFrom,
-      urgency,
-      dueDate,
+      task: taskText,
+      assigned_from: assignedFrom,
+      priority: urgency,
+      due_date: dueDate || null,
       completed: false,
+      source: "tasks",
     };
 
-    setTasks([newTask, ...tasks]);
+    const { data, error } = await supabase
+      .from("tasks")
+      .insert([newTask])
+      .select();
+
+    if (error) {
+      console.error("Add task error:", error);
+      alert("Task did not save. Check your tasks table columns.");
+      return;
+    }
+
+    setTasks([...(data || []), ...tasks]);
     setTaskText("");
     setDueDate("");
   }
 
-  function toggleTask(id) {
+  async function toggleTask(task) {
+    const updatedCompleted = !task.completed;
+
     setTasks(
-      tasks.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
+      tasks.map((item) =>
+        item.id === task.id ? { ...item, completed: updatedCompleted } : item
       )
     );
+
+    const { error } = await supabase
+      .from("tasks")
+      .update({ completed: updatedCompleted })
+      .eq("id", task.id);
+
+    if (error) {
+      console.error("Update task error:", error);
+      alert("Could not update task.");
+      fetchTasks();
+    }
   }
 
-  function deleteTask(id) {
+  async function deleteTask(id) {
+    const oldTasks = tasks;
     setTasks(tasks.filter((task) => task.id !== id));
+
+    const { error } = await supabase
+      .from("tasks")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("Delete task error:", error);
+      alert("Could not delete task.");
+      setTasks(oldTasks);
+    }
   }
 
   function addTaskToFollowUps(task) {
@@ -126,13 +176,11 @@ export default function TasksPage() {
               }}
             />
 
-            <select
-              value={assignedFrom}
-              onChange={(e) => setAssignedFrom(e.target.value)}
-            >
+            <select value={assignedFrom} onChange={(e) => setAssignedFrom(e.target.value)}>
               <option>Mark</option>
               <option>Dane</option>
               <option>Weekly Meeting</option>
+              <option>Daily Meeting</option>
             </select>
 
             <select value={urgency} onChange={(e) => setUrgency(e.target.value)}>
@@ -141,11 +189,7 @@ export default function TasksPage() {
               <option>High</option>
             </select>
 
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-            />
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
 
             <button onClick={addTask}>Add</button>
           </div>
@@ -156,15 +200,22 @@ export default function TasksPage() {
             <div>
               <h2>Task List</h2>
               <p>
-                {visibleTasks.length} showing ·{" "}
-                {tasks.filter((task) => task.completed).length} completed
+                {loading
+                  ? "Loading..."
+                  : `${visibleTasks.length} showing · ${
+                      tasks.filter((task) => task.completed).length
+                    } completed`}
               </p>
             </div>
+
+            <button className="refresh-btn" onClick={fetchTasks}>
+              Refresh
+            </button>
           </div>
 
           <div className="task-list">
             {visibleTasks.length === 0 ? (
-              <p className="empty">No tasks showing.</p>
+              <p className="empty">{loading ? "Loading tasks..." : "No tasks showing."}</p>
             ) : (
               visibleTasks.map((task) => {
                 const taskName = getTaskText(task);
@@ -173,15 +224,12 @@ export default function TasksPage() {
                 const level = getTaskUrgency(task);
 
                 return (
-                  <div
-                    className={`task-row ${task.completed ? "done" : ""}`}
-                    key={task.id}
-                  >
+                  <div className={`task-row ${task.completed ? "done" : ""}`} key={task.id}>
                     <input
                       className="task-check"
                       type="checkbox"
                       checked={!!task.completed}
-                      onChange={() => toggleTask(task.id)}
+                      onChange={() => toggleTask(task)}
                     />
 
                     <div className="task-main">
@@ -192,21 +240,13 @@ export default function TasksPage() {
                       </p>
                     </div>
 
-                    <span className={`badge ${level.toLowerCase()}`}>
-                      {level}
-                    </span>
+                    <span className={`badge ${String(level).toLowerCase()}`}>{level}</span>
 
-                    <button
-                      className="followup-btn"
-                      onClick={() => addTaskToFollowUps(task)}
-                    >
+                    <button className="followup-btn" onClick={() => addTaskToFollowUps(task)}>
                       Add to Follow-Ups
                     </button>
 
-                    <button
-                      className="delete-btn"
-                      onClick={() => deleteTask(task.id)}
-                    >
+                    <button className="delete-btn" onClick={() => deleteTask(task.id)}>
                       ×
                     </button>
                   </div>
@@ -280,13 +320,6 @@ export default function TasksPage() {
           border-radius: 20px;
           box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
           margin-bottom: 18px;
-        }
-
-        .add-card {
-          padding: 18px;
-        }
-
-        .task-card {
           padding: 18px;
         }
 
@@ -299,6 +332,9 @@ export default function TasksPage() {
 
         .card-title-row {
           margin-bottom: 14px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
         }
 
         .card-title-row p {
@@ -334,6 +370,13 @@ export default function TasksPage() {
           font-weight: 800;
           padding: 8px 13px;
           cursor: pointer;
+        }
+
+        .refresh-btn,
+        .followup-btn {
+          background: #f8fafc;
+          color: #020617;
+          border: 1px solid #cfd6df;
         }
 
         .task-list {
@@ -419,12 +462,8 @@ export default function TasksPage() {
         }
 
         .followup-btn {
-          background: #f8fafc;
-          color: #020617;
-          border: 1px solid #cfd6df;
           padding: 6px 10px;
           font-size: 10.5px;
-          font-weight: 800;
           white-space: nowrap;
         }
 
