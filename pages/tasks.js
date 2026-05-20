@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { supabase } from "../utils/supabaseClient";
 
 const TASK_TABLE = "Task List";
 const FOLLOWUPS_KEY = "dashboard-follow-ups";
