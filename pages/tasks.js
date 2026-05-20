@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const TASK_TABLE = "Task List";
+const TASKS_KEY = "os-tasks";
 const FOLLOWUPS_KEY = "dashboard-follow-ups";
 
 function getTaskText(task) {
@@ -8,7 +8,7 @@ function getTaskText(task) {
 }
 
 function getTaskFrom(task) {
-  return task.assignedFrom || task.assigned_from || task.from || task.owner || task.source || "N/A";
+  return task.assignedFrom || task.from || task.owner || task.source || "N/A";
 }
 
 function getTaskDueDate(task) {
@@ -26,92 +26,43 @@ export default function TasksPage() {
   const [urgency, setUrgency] = useState("Medium");
   const [dueDate, setDueDate] = useState("");
   const [hideCompleted, setHideCompleted] = useState(true);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchTasks();
+    const saved = localStorage.getItem(TASKS_KEY);
+    if (saved) setTasks(JSON.parse(saved));
   }, []);
 
-  async function fetchTasks() {
-    setLoading(true);
+  useEffect(() => {
+    localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+  }, [tasks]);
 
-    const { data, error } = await supabase
-      .from(TASK_TABLE)
-      .select("*");
-
-    if (error) {
-      console.error("Supabase fetch error:", error);
-      alert("Could not load tasks from Supabase. Check console.");
-      setTasks([]);
-    } else {
-      setTasks(data || []);
-    }
-
-    setLoading(false);
-  }
-
-  async function addTask() {
+  function addTask() {
     if (!taskText.trim()) return;
 
     const newTask = {
-      task: taskText,
-      assigned_from: assignedFrom,
-      priority: urgency,
-      due_date: dueDate || null,
+      id: Date.now(),
+      text: taskText,
+      assignedFrom,
+      urgency,
+      dueDate,
       completed: false,
     };
 
-    const { data, error } = await supabase
-      .from(TASK_TABLE)
-      .insert([newTask])
-      .select();
-
-    if (error) {
-      console.error("Supabase add error:", error);
-      alert("Task did not save. Check your column names in Supabase.");
-      return;
-    }
-
-    setTasks([...(data || []), ...tasks]);
+    setTasks([newTask, ...tasks]);
     setTaskText("");
     setDueDate("");
   }
 
-  async function toggleTask(task) {
-    const updatedCompleted = !task.completed;
-
+  function toggleTask(id) {
     setTasks(
-      tasks.map((item) =>
-        item.id === task.id ? { ...item, completed: updatedCompleted } : item
+      tasks.map((task) =>
+        task.id === id ? { ...task, completed: !task.completed } : task
       )
     );
-
-    const { error } = await supabase
-      .from(TASK_TABLE)
-      .update({ completed: updatedCompleted })
-      .eq("id", task.id);
-
-    if (error) {
-      console.error("Supabase update error:", error);
-      alert("Could not update task.");
-      fetchTasks();
-    }
   }
 
-  async function deleteTask(id) {
-    const oldTasks = tasks;
+  function deleteTask(id) {
     setTasks(tasks.filter((task) => task.id !== id));
-
-    const { error } = await supabase
-      .from(TASK_TABLE)
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      console.error("Supabase delete error:", error);
-      alert("Could not delete task.");
-      setTasks(oldTasks);
-    }
   }
 
   function addTaskToFollowUps(task) {
@@ -205,24 +156,15 @@ export default function TasksPage() {
             <div>
               <h2>Task List</h2>
               <p>
-                {loading
-                  ? "Loading from Supabase..."
-                  : `${visibleTasks.length} showing · ${
-                      tasks.filter((task) => task.completed).length
-                    } completed`}
+                {visibleTasks.length} showing ·{" "}
+                {tasks.filter((task) => task.completed).length} completed
               </p>
             </div>
-
-            <button className="refresh-btn" onClick={fetchTasks}>
-              Refresh
-            </button>
           </div>
 
           <div className="task-list">
             {visibleTasks.length === 0 ? (
-              <p className="empty">
-                {loading ? "Loading tasks..." : "No tasks showing."}
-              </p>
+              <p className="empty">No tasks showing.</p>
             ) : (
               visibleTasks.map((task) => {
                 const taskName = getTaskText(task);
@@ -239,7 +181,7 @@ export default function TasksPage() {
                       className="task-check"
                       type="checkbox"
                       checked={!!task.completed}
-                      onChange={() => toggleTask(task)}
+                      onChange={() => toggleTask(task.id)}
                     />
 
                     <div className="task-main">
@@ -250,7 +192,7 @@ export default function TasksPage() {
                       </p>
                     </div>
 
-                    <span className={`badge ${String(level).toLowerCase()}`}>
+                    <span className={`badge ${level.toLowerCase()}`}>
                       {level}
                     </span>
 
@@ -338,6 +280,13 @@ export default function TasksPage() {
           border-radius: 20px;
           box-shadow: 0 18px 45px rgba(15, 23, 42, 0.045);
           margin-bottom: 18px;
+        }
+
+        .add-card {
+          padding: 18px;
+        }
+
+        .task-card {
           padding: 18px;
         }
 
@@ -350,10 +299,6 @@ export default function TasksPage() {
 
         .card-title-row {
           margin-bottom: 14px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 12px;
         }
 
         .card-title-row p {
@@ -389,12 +334,6 @@ export default function TasksPage() {
           font-weight: 800;
           padding: 8px 13px;
           cursor: pointer;
-        }
-
-        .refresh-btn {
-          background: #f8fafc;
-          color: #020617;
-          border: 1px solid #cfd6df;
         }
 
         .task-list {
