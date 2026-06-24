@@ -496,7 +496,7 @@ export default function ExecutiveStatus() {
           min-height: 100vh;
           background: #fbf8f1;
           color: #111827;
-          padding: 28px 32px;
+          padding: 22px 28px;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
           overflow: hidden;
         }
@@ -505,96 +505,119 @@ export default function ExecutiveStatus() {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 26px;
+          margin-bottom: 14px;
         }
 
         h1 {
           font-family: Georgia, serif;
-          font-size: 32px;
+          font-size: 30px;
           font-weight: 400;
-          margin: 0 0 5px;
+          margin: 0 0 4px;
+          letter-spacing: -0.02em;
         }
 
         p {
           margin: 0;
           color: #475569;
           font-size: 13px;
+          line-height: 1.35;
         }
 
         .dateBlock {
           text-align: right;
           font-size: 12px;
           color: #0f172a;
+          line-height: 1.35;
         }
 
         .dateBlock small {
           display: block;
           color: #64748b;
-          margin-top: 6px;
+          margin-top: 5px;
         }
 
         .board {
-          margin-top: 4px;
+          margin-top: 0;
         }
 
         .metrics {
           display: grid;
-          grid-template-columns: repeat(5, 1fr);
-          gap: 14px;
-          margin-bottom: 16px;
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+          gap: 12px;
+          margin-bottom: 12px;
         }
 
         .metric {
-          min-height: 92px;
+          min-height: 88px;
           background: #fffdf8;
           border: 1px solid #e5dccc;
-          border-radius: 14px;
-          padding: 18px 22px;
+          border-radius: 12px;
+          padding: 16px 20px;
           text-align: left;
           cursor: pointer;
         }
 
+        .metric:hover,
+        .priorityRow:hover,
+        .simpleRow:hover,
+        .projectRow:hover,
+        .timelineRow:hover,
+        .decisionRow:hover,
+        .streamRow:hover,
+        .noteRow:hover {
+          background: #faf4e9;
+        }
+
         .metric strong {
           display: block;
-          font-size: 28px;
+          font-size: 26px;
           line-height: 1;
-          margin-bottom: 8px;
+          margin-bottom: 7px;
+          font-weight: 750;
         }
 
         .metric span {
           display: block;
           font-size: 13px;
           font-weight: 750;
+          margin-bottom: 4px;
         }
 
         .metric small {
           display: block;
-          margin-top: 5px;
           color: #64748b;
           font-size: 11px;
+          line-height: 1.25;
         }
 
         .layout {
           display: grid;
-          grid-template-columns: minmax(280px, 23%) minmax(760px, 54%) minmax(280px, 23%);
-          gap: 14px;
-          align-items: start;
+          grid-template-columns: 0.72fr 1.88fr 0.78fr;
+          gap: 12px;
           width: 100%;
+          align-items: start;
         }
 
         .leftStack,
         .rightStack {
           display: flex;
           flex-direction: column;
-          gap: 14px;
+          gap: 12px;
+          min-height: 0;
         }
 
         .panel {
           width: 100%;
           background: #fffdf8;
           border: 1px solid #e5dccc;
-          border-radius: 14px;
-          padding: 15px;
+          border-radius: 12px;
+          padding: 14px;
+          overflow: hidden;
+        }
+
+        .projects {
+          align-self: start;
+          min-height: 520px;
         }
 
         .panelHead {
@@ -602,12 +625,13 @@ export default function ExecutiveStatus() {
           justify-content: space-between;
           align-items: center;
           border-bottom: 1px solid #ebe2d4;
-          padding-bottom: 10px;
+          padding-bottom: 9px;
           margin-bottom: 8px;
         }
 
         .panelHead b {
           font-size: 14px;
+          font-weight: 750;
         }
 
         .headActions {
@@ -622,12 +646,14 @@ export default function ExecutiveStatus() {
         }
 
         .addBtn {
-          width: 23px;
-          height: 23px;
+          width: 22px;
+          height: 22px;
           border-radius: 999px;
           border: 1px solid #e5dccc;
           background: #fbf8f1;
+          color: #111827;
           cursor: pointer;
+          line-height: 1;
         }
 
         button { font: inherit; }
@@ -671,6 +697,7 @@ export default function ExecutiveStatus() {
         .projectTop strong {
           display: block;
           font-size: 13px;
+          line-height: 1.25;
         }
 
         small {
@@ -678,6 +705,7 @@ export default function ExecutiveStatus() {
           color: #64748b;
           font-size: 11px;
           margin-top: 3px;
+          line-height: 1.25;
         }
 
         .simpleRow,
@@ -694,10 +722,6 @@ export default function ExecutiveStatus() {
           font-size: 18px;
         }
 
-        .projects {
-          min-height: calc(100vh - 245px);
-        }
-
         .projectRow {
           padding: 15px 0;
         }
@@ -706,6 +730,7 @@ export default function ExecutiveStatus() {
           display: flex;
           justify-content: space-between;
           gap: 12px;
+          align-items: flex-start;
         }
 
         .pill {
@@ -715,6 +740,7 @@ export default function ExecutiveStatus() {
           padding: 4px 9px;
           font-size: 11px;
           height: fit-content;
+          white-space: nowrap;
         }
 
         .pill.waiting {
@@ -733,6 +759,11 @@ export default function ExecutiveStatus() {
           gap: 10px;
           align-items: center;
           margin: 10px 0;
+        }
+
+        .progressLine b {
+          font-size: 11px;
+          text-align: right;
         }
 
         .bar {
@@ -762,6 +793,7 @@ export default function ExecutiveStatus() {
           font-size: 12px;
           font-weight: 650;
           display: block;
+          line-height: 1.25;
         }
 
         .decisionItem {
@@ -927,6 +959,7 @@ export default function ExecutiveStatus() {
           display: flex;
           justify-content: space-between;
           gap: 12px;
+          cursor: pointer;
         }
 
         @media (max-width: 1200px) {
