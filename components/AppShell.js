@@ -2,7 +2,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 
 const navItems = [
-  { label: "Operations", href: "/executive-status" },
+  { label: "MF Dashboard", href: "/executive-status" },
   { label: "Tasks", href: "/tasks" },
   { label: "Meetings", href: "/meetings" },
   { label: "Communication", href: "/communications" },
