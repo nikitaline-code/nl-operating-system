@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 
 const metrics = [
-  { number: "14", label: "Active Projects", note: "12 On Track · 2 At Risk" },
+  { number: "14", label: "Active Projects", note: "12 On Track  •  2 At Risk" },
   { number: "8", label: "Waiting On", note: "From 5 people" },
   { number: "3", label: "Needs Your Input", note: "Approvals / Decisions" },
   { number: "97%", label: "Operations Health", note: "Everything on track" },
-  { number: "✓", label: "Everything On Track", note: "Next milestone: Dealer Event · Friday" },
+  { number: "✓", label: "Everything On Track", note: "Next milestone: Dealer Event  •  Friday" },
 ];
 
 const priorities = [
@@ -60,12 +60,6 @@ const timeline = [
   { label: "This Week", count: 11 },
 ];
 
-const topTasks = [
-  { task: "Review updated pricing deck", priority: "High" },
-  { task: "Confirm AV setup for dealer event", priority: "Medium" },
-  { task: "Send final agenda to dealer group", priority: "Medium" },
-];
-
 const waitingOn = [
   { label: "Waiting on Mark", count: 2 },
   { label: "Waiting on Dane", count: 1 },
@@ -89,26 +83,20 @@ const communications = [
 ];
 
 export default function ExecutiveStatus() {
+  const [now, setNow] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
-  const [now, setNow] = useState(null);
 
   useEffect(() => {
     setNow(new Date());
-
-    const timer = setInterval(() => {
-      setNow(new Date());
-    }, 60000);
-
+    const timer = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
   const hour = now ? now.getHours() : 9;
 
   const greeting =
-    hour < 12 ? "Good morning" :
-    hour < 17 ? "Good afternoon" :
-    "Good evening";
+    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   const currentDateTime = now
     ? now.toLocaleString("en-CA", {
@@ -133,7 +121,11 @@ export default function ExecutiveStatus() {
           <h1>{greeting}, Mark.</h1>
           <p>Here’s where everything stands.</p>
         </div>
-        <div className="date">{currentDateTime}</div>
+
+        <div className="dateBlock">
+          <div>{currentDateTime}</div>
+          <small>↻ Updated {now ? now.toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit" }) : ""}</small>
+        </div>
       </header>
 
       <section className="metrics">
@@ -147,7 +139,7 @@ export default function ExecutiveStatus() {
       </section>
 
       <section className="layout">
-        <Card title="Today’s Priorities" className="priorities">
+        <Card title="Today’s Priorities" className="left priorities">
           {priorities.map((item, index) => (
             <button className="priorityRow" key={item.title}>
               <span className="number">{index + 1}</span>
@@ -159,10 +151,10 @@ export default function ExecutiveStatus() {
           ))}
         </Card>
 
-        <Card title="Active Projects" className="projects wide">
+        <Card title="Active Projects" className="projects">
           {projects.map((project) => (
             <button className="projectRow" key={project.name} onClick={() => openProject(project)}>
-              <div className="projectMain">
+              <div className="projectTop">
                 <div>
                   <strong>{project.name}</strong>
                   <small>{project.phase}</small>
@@ -170,51 +162,41 @@ export default function ExecutiveStatus() {
                 <span className={`pill ${getStatusClass(project.status)}`}>{project.status}</span>
               </div>
 
-              <div className="progressArea">
+              <div className="progressLine">
                 <div className="bar">
                   <div style={{ width: `${project.progress}%` }} />
                 </div>
-                <span>{project.progress}%</span>
+                <b>{project.progress}%</b>
               </div>
 
-              <div className="projectDetails">
+              <div className="projectInfo">
                 <div>
                   <small>Waiting On</small>
-                  <b>{project.waitingOn}</b>
+                  <span>{project.waitingOn}</span>
                 </div>
                 <div>
                   <small>Next Milestone</small>
-                  <b>{project.milestone}</b>
+                  <span>{project.milestone}</span>
                 </div>
                 <div>
                   <small>Updated</small>
-                  <b>{project.updated}</b>
+                  <span>{project.updated}</span>
                 </div>
               </div>
             </button>
           ))}
         </Card>
 
-        <Card title="Task Timeline" className="tasks">
+        <Card title="Task Timeline" className="right">
           {timeline.map((item) => (
-            <div className="timelineRow" key={item.label}>
+            <button className="timelineRow" key={item.label}>
               <span>{item.label}</span>
-              <strong className={item.label === "Overdue" ? "danger" : ""}>{item.count}</strong>
-            </div>
+              <b className={item.label === "Overdue" ? "danger" : ""}>{item.count}</b>
+            </button>
           ))}
-
-          <div className="topTasks">
-            <h4>Top 3 Tasks</h4>
-            {topTasks.map((item) => (
-              <div className="taskLine" key={item.task}>
-                <span>○ {item.task}</span>
-                <small className={item.priority === "High" ? "danger" : ""}>{item.priority}</small>
-              </div>
-            ))}
-          </div>
         </Card>
 
-        <Card title="Waiting On" className="waiting">
+        <Card title="Waiting On" className="left waiting">
           {waitingOn.map((item) => (
             <button className="simpleRow" key={item.label}>
               <span>{item.label}</span>
@@ -223,7 +205,7 @@ export default function ExecutiveStatus() {
           ))}
         </Card>
 
-        <Card title="Needs Your Decision" className="decisions">
+        <Card title="Needs Your Decision" className="right decisions">
           {decisions.map((item) => (
             <button className="decisionRow" key={item.title}>
               <span>{item.title}</span>
@@ -232,7 +214,7 @@ export default function ExecutiveStatus() {
           ))}
         </Card>
 
-        <Card title="Communication Pipeline" className="communication">
+        <Card title="Communication Pipeline" className="left communication">
           <div className="communicationGrid">
             {communications.map((item) => (
               <button className="commItem" key={item.label}>
@@ -267,9 +249,9 @@ export default function ExecutiveStatus() {
             <>
               <h3>Overview</h3>
               <p>Live project status, current blockers, next milestone, and items needing attention.</p>
-              <div className="drawerBox"><small>Progress</small><strong>{selectedProject.progress}%</strong></div>
-              <div className="drawerBox"><small>Waiting On</small><strong>{selectedProject.waitingOn}</strong></div>
-              <div className="drawerBox"><small>Next Milestone</small><strong>{selectedProject.milestone}</strong></div>
+              <DrawerBox label="Progress" value={`${selectedProject.progress}%`} />
+              <DrawerBox label="Waiting On" value={selectedProject.waitingOn} />
+              <DrawerBox label="Next Milestone" value={selectedProject.milestone} />
             </>
           )}
 
@@ -320,85 +302,109 @@ export default function ExecutiveStatus() {
           min-height: 100vh;
           background: #fbf8f1;
           color: #111827;
-          padding: 28px 34px;
+          padding: 16px 24px;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          overflow: hidden;
         }
 
         .header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 22px;
+          margin-bottom: 12px;
         }
 
         h1 {
           font-family: Georgia, serif;
-          font-size: 34px;
+          font-size: 29px;
           font-weight: 400;
-          margin: 0 0 6px;
+          margin: 0 0 4px;
         }
 
         p {
           margin: 0;
           color: #475569;
-          font-size: 14px;
+          font-size: 13px;
+          line-height: 1.35;
         }
 
-        .date {
-          font-size: 13px;
+        .dateBlock {
+          text-align: right;
+          font-size: 12px;
           color: #0f172a;
+          line-height: 1.4;
+        }
+
+        .dateBlock small {
+          display: block;
+          margin-top: 8px;
+          color: #64748b;
         }
 
         .metrics {
           display: grid;
           grid-template-columns: repeat(5, 1fr);
-          gap: 14px;
-          margin-bottom: 18px;
+          gap: 10px;
+          margin-bottom: 10px;
         }
 
         .metric {
           background: #fffdf8;
           border: 1px solid #e5dccc;
-          border-radius: 12px;
-          padding: 22px 24px;
-          min-height: 118px;
+          border-radius: 10px;
+          padding: 14px 18px;
+          min-height: 82px;
         }
 
         .metric strong {
           display: block;
-          font-size: 28px;
+          font-size: 25px;
           line-height: 1;
-          margin-bottom: 9px;
+          margin-bottom: 7px;
+          font-weight: 750;
         }
 
         .metric span {
           display: block;
-          font-size: 15px;
-          font-weight: 700;
-          margin-bottom: 8px;
+          font-size: 13px;
+          font-weight: 750;
+          margin-bottom: 5px;
         }
 
         .metric small {
           color: #475569;
-          font-size: 13px;
+          font-size: 12px;
+          line-height: 1.25;
         }
 
         .layout {
           display: grid;
-          grid-template-columns: 0.82fr 1.75fr 0.92fr;
-          gap: 14px;
+          grid-template-columns: 0.72fr 1.7fr 0.78fr;
+          grid-template-rows: 1fr auto auto;
+          gap: 10px;
+          height: calc(100vh - 145px);
         }
 
         .card {
           background: #fffdf8;
           border: 1px solid #e5dccc;
-          border-radius: 12px;
-          padding: 18px;
+          border-radius: 10px;
+          padding: 14px;
           min-height: 0;
+          overflow: hidden;
         }
 
-        .wide {
-          grid-row: span 2;
+        .projects {
+          grid-column: 2;
+          grid-row: 1 / 4;
+        }
+
+        .left {
+          grid-column: 1;
+        }
+
+        .right {
+          grid-column: 3;
         }
 
         .cardHead {
@@ -406,16 +412,17 @@ export default function ExecutiveStatus() {
           justify-content: space-between;
           align-items: center;
           border-bottom: 1px solid #ebe2d4;
-          padding-bottom: 12px;
-          margin-bottom: 12px;
+          padding-bottom: 9px;
+          margin-bottom: 8px;
         }
 
         .cardHead b {
-          font-size: 15px;
+          font-size: 14px;
+          font-weight: 750;
         }
 
         .cardHead span {
-          font-size: 12px;
+          font-size: 11px;
           color: #64748b;
         }
 
@@ -427,6 +434,7 @@ export default function ExecutiveStatus() {
         .projectRow,
         .simpleRow,
         .decisionRow,
+        .timelineRow,
         .commItem {
           border: 0;
           background: transparent;
@@ -437,58 +445,69 @@ export default function ExecutiveStatus() {
 
         .priorityRow {
           display: grid;
-          grid-template-columns: 36px 1fr;
-          gap: 16px;
+          grid-template-columns: 28px 1fr;
+          gap: 12px;
           align-items: center;
-          padding: 18px 0;
+          padding: 12px 0;
           border-bottom: 1px solid #ebe2d4;
         }
 
         .number {
-          width: 32px;
-          height: 32px;
+          width: 28px;
+          height: 28px;
           background: #f1ece3;
           border-radius: 999px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-weight: 700;
+          font-weight: 750;
+          font-size: 13px;
+        }
+
+        .priorityRow strong,
+        .projectTop strong {
+          display: block;
+          font-size: 13px;
+          line-height: 1.25;
         }
 
         small {
           display: block;
           color: #64748b;
-          font-size: 12px;
+          font-size: 11px;
           margin-top: 3px;
+          line-height: 1.25;
         }
 
         .projectRow {
-          padding: 18px 0;
+          padding: 12px 0;
           border-bottom: 1px solid #ebe2d4;
         }
 
-        .projectMain,
-        .progressArea,
-        .projectDetails,
-        .timelineRow,
-        .simpleRow,
-        .decisionRow,
-        .taskLine {
+        .projectTop {
           display: flex;
           justify-content: space-between;
-          align-items: center;
-          gap: 16px;
+          gap: 12px;
+          align-items: flex-start;
         }
 
-        .progressArea {
-          margin: 12px 0;
+        .progressLine {
+          display: grid;
+          grid-template-columns: 1fr 38px;
+          gap: 10px;
+          align-items: center;
+          margin: 10px 0;
+        }
+
+        .progressLine b {
+          font-size: 12px;
+          text-align: right;
         }
 
         .bar {
-          height: 6px;
+          height: 5px;
           background: #e4ded4;
           border-radius: 99px;
-          flex: 1;
         }
 
         .bar div {
@@ -497,19 +516,31 @@ export default function ExecutiveStatus() {
           border-radius: 99px;
         }
 
-        .projectDetails {
+        .projectInfo {
           display: grid;
-          grid-template-columns: 1fr 1fr 0.7fr;
+          grid-template-columns: 1fr 1fr 0.68fr;
+          gap: 12px;
+        }
+
+        .projectInfo div {
           border-left: 1px solid #e5dccc;
-          padding-left: 16px;
+          padding-left: 10px;
+        }
+
+        .projectInfo span {
+          display: block;
+          font-size: 12px;
+          font-weight: 650;
+          line-height: 1.25;
         }
 
         .pill {
           background: #e7f3eb;
           color: #0f7a4b;
           border-radius: 999px;
-          padding: 4px 9px;
-          font-size: 12px;
+          padding: 4px 8px;
+          font-size: 11px;
+          line-height: 1;
           white-space: nowrap;
         }
 
@@ -526,48 +557,41 @@ export default function ExecutiveStatus() {
         .timelineRow,
         .simpleRow,
         .decisionRow {
-          padding: 13px 0;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 11px 0;
           border-bottom: 1px solid #ebe2d4;
+          font-size: 13px;
         }
 
-        .timelineRow strong {
-          font-size: 20px;
+        .timelineRow b,
+        .simpleRow b {
+          font-size: 18px;
         }
 
         .danger {
           color: #dc2626 !important;
         }
 
-        .topTasks {
-          border: 1px solid #ebe2d4;
-          border-radius: 10px;
-          margin-top: 14px;
-          padding: 14px;
-        }
-
-        .topTasks h4 {
-          margin: 0 0 10px;
-        }
-
-        .taskLine {
-          padding: 8px 0;
-          font-size: 13px;
+        .decisionRow small {
+          font-size: 12px;
         }
 
         .communication {
-          grid-column: span 1;
+          max-height: 150px;
         }
 
         .communicationGrid {
           display: grid;
           grid-template-columns: repeat(5, 1fr);
-          gap: 0;
+          padding-top: 6px;
         }
 
         .commItem {
           text-align: center;
           border-right: 1px solid #e5dccc;
-          padding: 20px 8px;
+          padding: 8px 4px;
         }
 
         .commItem:last-child {
@@ -575,13 +599,15 @@ export default function ExecutiveStatus() {
         }
 
         .commItem strong {
-          font-size: 25px;
+          font-size: 20px;
           display: block;
-          margin-bottom: 8px;
+          margin-bottom: 4px;
         }
 
         .commItem span {
-          font-size: 13px;
+          font-size: 11px;
+          line-height: 1.2;
+          display: block;
         }
 
         .drawer {
@@ -592,7 +618,7 @@ export default function ExecutiveStatus() {
           width: 420px;
           background: #fffdf8;
           border-left: 1px solid #e5dccc;
-          padding: 28px;
+          padding: 24px;
           box-shadow: -16px 0 40px rgba(0,0,0,.08);
           z-index: 1000;
           overflow-y: auto;
@@ -608,16 +634,16 @@ export default function ExecutiveStatus() {
 
         h2 {
           font-family: Georgia, serif;
-          font-size: 28px;
+          font-size: 27px;
           font-weight: 400;
-          margin: 0 0 10px;
+          margin: 0 0 8px;
         }
 
         .tabs {
           display: flex;
           gap: 14px;
           border-bottom: 1px solid #e5dccc;
-          margin: 22px 0;
+          margin: 20px 0;
         }
 
         .tabs button {
@@ -632,12 +658,13 @@ export default function ExecutiveStatus() {
 
         .tabs button.active {
           color: #111827;
-          font-weight: 700;
+          font-weight: 750;
           border-bottom: 2px solid #111827;
         }
 
         h3 {
-          margin: 18px 0 8px;
+          margin: 16px 0 8px;
+          font-size: 16px;
         }
 
         .drawerBox,
@@ -645,14 +672,15 @@ export default function ExecutiveStatus() {
           border: 1px solid #ebe2d4;
           background: #fbf8f1;
           border-radius: 10px;
-          padding: 13px;
-          margin-bottom: 10px;
+          padding: 12px;
+          margin-bottom: 9px;
         }
 
         .drawerLine {
           display: flex;
           justify-content: space-between;
           gap: 12px;
+          font-size: 13px;
         }
 
         .primary {
@@ -661,20 +689,26 @@ export default function ExecutiveStatus() {
           color: white;
           border: 0;
           border-radius: 10px;
-          padding: 14px;
-          margin-top: 18px;
+          padding: 13px;
+          margin-top: 16px;
           cursor: pointer;
         }
 
         @media (max-width: 1200px) {
+          .page {
+            overflow: auto;
+          }
+
           .metrics,
           .layout {
             grid-template-columns: 1fr;
+            height: auto;
           }
 
-          .wide,
-          .communication {
-            grid-column: span 1;
+          .projects,
+          .left,
+          .right {
+            grid-column: auto;
             grid-row: auto;
           }
 
@@ -701,6 +735,15 @@ function Card({ title, children, className = "" }) {
       </div>
       {children}
     </section>
+  );
+}
+
+function DrawerBox({ label, value }) {
+  return (
+    <div className="drawerBox">
+      <small>{label}</small>
+      <strong>{value}</strong>
+    </div>
   );
 }
 
