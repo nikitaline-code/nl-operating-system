@@ -2,10 +2,9 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 
 const navItems = [
-  { label: "Dashboard", href: "/dashboard" },
+  { label: "Operations", href: "/executive-status" },
   { label: "Tasks", href: "/tasks" },
   { label: "Meetings", href: "/meetings" },
-  { label: "Executive Flow", href: "/executive-flow" },
   { label: "Communication", href: "/communications" },
   { label: "Travel", href: "/travel" },
   { label: "East", href: "/east" },
@@ -13,6 +12,7 @@ const navItems = [
   { label: "Dealer Offboarding", href: "/dealer-offboarding" },
   { label: "AQ Culture", href: "/culture" },
   { label: "PLAUD Notes", href: "/plaud" },
+  
 ];
 
 export default function AppShell({ children }) {
