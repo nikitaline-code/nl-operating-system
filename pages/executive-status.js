@@ -1,11 +1,56 @@
 import { useEffect, useMemo, useState } from "react";
 
 const TASKS_KEY = "os-tasks";
-const DECISIONS_KEY = "executive-status-decisions-v1";
-const NOTES_KEY = "executive-status-notes-v1";
-const COMMUNICATIONS_KEY = "executive-status-communications-v1";
+const PROJECT_META_KEY = "executive-project-meta-clean-v1";
+const DECISIONS_KEY = "executive-decisions-clean-v1";
+const COMMUNICATION_KEY = "executive-communication-clean-v1";
 
 const uid = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+const DEFAULT_DECISIONS = [
+  { id: "d1", title: "Pricing Exception – MBJ Ranch", priority: "High", status: "Pending", note: "Approval needed before sending." },
+  { id: "d2", title: "Dealer Approval – Seminole", priority: "Medium", status: "Pending", note: "Waiting for final review." },
+];
+
+const DEFAULT_COMMUNICATION = {
+  unread: 7,
+  needsReview: 3,
+  waitingReply: 9,
+  dialpad: 6,
+};
+
+function readJSON(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJSON(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    window.dispatchEvent(new Event("storage"));
+  } catch {}
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function addDaysISO(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function toISODate(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+}
 
 function getTaskTitle(task) {
   return task.title || task.text || task.task || task.content || task.name || "Untitled task";
@@ -31,84 +76,36 @@ function isTaskComplete(task) {
   return Boolean(task.completed || task.isComplete || task.is_complete || task.done);
 }
 
-function normalizeDate(value) {
-  if (!value) return "";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toISOString().slice(0, 10);
+function getTaskStatus(task) {
+  return task.status || (isTaskComplete(task) ? "Complete" : "Open");
 }
-
-function todayString() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function addDays(days) {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
-function readJSON(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeJSON(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-    window.dispatchEvent(new Event("storage"));
-  } catch {}
-}
-
-const DEFAULT_DECISIONS = [
-  { id: "d1", title: "Pricing Exception – MBJ Ranch", priority: "High", status: "Pending", note: "Approval needed before sending." },
-  { id: "d2", title: "Dealer Approval – Seminole", priority: "Medium", status: "Pending", note: "Waiting for final review." },
-];
-
-const DEFAULT_NOTES = [
-  { id: "n1", text: "This page is pulling live status from your task list." },
-];
-
-const DEFAULT_COMMUNICATIONS = {
-  unread: 7,
-  needsReview: 3,
-  waitingReply: 9,
-  dialpadMissed: 2,
-  dialpadUnread: 4,
-};
 
 export default function ExecutiveStatus() {
   const [now, setNow] = useState(null);
   const [tasks, setTasks] = useState([]);
+  const [projectMeta, setProjectMeta] = useState({});
   const [decisions, setDecisions] = useState(DEFAULT_DECISIONS);
-  const [notes, setNotes] = useState(DEFAULT_NOTES);
-  const [communications, setCommunications] = useState(DEFAULT_COMMUNICATIONS);
+  const [communication, setCommunication] = useState(DEFAULT_COMMUNICATION);
   const [drawer, setDrawer] = useState(null);
-  const [drawerTab, setDrawerTab] = useState("overview");
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState({});
+  const [tab, setTab] = useState("overview");
 
-  function loadLiveData() {
+  function loadData() {
     setTasks(readJSON(TASKS_KEY, []));
+    setProjectMeta(readJSON(PROJECT_META_KEY, {}));
     setDecisions(readJSON(DECISIONS_KEY, DEFAULT_DECISIONS));
-    setNotes(readJSON(NOTES_KEY, DEFAULT_NOTES));
-    setCommunications(readJSON(COMMUNICATIONS_KEY, DEFAULT_COMMUNICATIONS));
+    setCommunication(readJSON(COMMUNICATION_KEY, DEFAULT_COMMUNICATION));
   }
 
   useEffect(() => {
     setNow(new Date());
-    loadLiveData();
+    loadData();
 
     const timer = setInterval(() => {
       setNow(new Date());
-      loadLiveData();
+      loadData();
     }, 30000);
 
-    const onStorage = () => loadLiveData();
+    const onStorage = () => loadData();
     window.addEventListener("storage", onStorage);
 
     return () => {
@@ -122,94 +119,131 @@ export default function ExecutiveStatus() {
     writeJSON(TASKS_KEY, next);
   }
 
+  function saveProjectMeta(next) {
+    setProjectMeta(next);
+    writeJSON(PROJECT_META_KEY, next);
+  }
+
   function saveDecisions(next) {
     setDecisions(next);
     writeJSON(DECISIONS_KEY, next);
   }
 
-  function saveNotes(next) {
-    setNotes(next);
-    writeJSON(NOTES_KEY, next);
-  }
-
-  function saveCommunications(next) {
-    setCommunications(next);
-    writeJSON(COMMUNICATIONS_KEY, next);
-  }
-
-  const openTasks = tasks.filter((task) => !isTaskComplete(task));
+  const openTasks = useMemo(() => tasks.filter((task) => !isTaskComplete(task)), [tasks]);
 
   const due = useMemo(() => {
-    const today = todayString();
-    const tomorrow = addDays(1);
-    const week = addDays(7);
+    const today = todayISO();
+    const tomorrow = addDaysISO(1);
+    const week = addDaysISO(7);
 
     return {
       overdue: openTasks.filter((task) => {
-        const dueDate = normalizeDate(getTaskDueDate(task));
+        const dueDate = toISODate(getTaskDueDate(task));
         return dueDate && dueDate < today;
       }),
-      today: openTasks.filter((task) => normalizeDate(getTaskDueDate(task)) === today),
-      tomorrow: openTasks.filter((task) => normalizeDate(getTaskDueDate(task)) === tomorrow),
+      today: openTasks.filter((task) => toISODate(getTaskDueDate(task)) === today),
+      tomorrow: openTasks.filter((task) => toISODate(getTaskDueDate(task)) === tomorrow),
       thisWeek: openTasks.filter((task) => {
-        const dueDate = normalizeDate(getTaskDueDate(task));
+        const dueDate = toISODate(getTaskDueDate(task));
         return dueDate && dueDate >= today && dueDate <= week;
       }),
     };
-  }, [tasks]);
+  }, [openTasks]);
 
   const projects = useMemo(() => {
-    const grouped = {};
+    const map = {};
 
     openTasks.forEach((task) => {
-      const projectName = getTaskProject(task);
-      const subProject = getTaskSubProject(task);
+      const name = getTaskProject(task);
+      const sub = getTaskSubProject(task);
 
-      if (!grouped[projectName]) {
-        grouped[projectName] = {
-          id: projectName,
-          name: projectName,
+      if (!map[name]) {
+        map[name] = {
+          id: name,
+          name,
           tasks: [],
-          subProjects: new Set(),
-          open: 0,
-          complete: 0,
-          overdue: 0,
-          waiting: 0,
-          high: 0,
+          subProjects: {},
+          openTasks: 0,
+          overdueTasks: 0,
+          waitingTasks: 0,
+          highTasks: 0,
         };
       }
 
-      grouped[projectName].tasks.push(task);
-      grouped[projectName].subProjects.add(subProject);
-      grouped[projectName].open += 1;
+      if (!map[name].subProjects[sub]) map[name].subProjects[sub] = [];
 
-      if (normalizeDate(getTaskDueDate(task)) && normalizeDate(getTaskDueDate(task)) < todayString()) grouped[projectName].overdue += 1;
-      if ((task.status || "").toLowerCase().includes("wait")) grouped[projectName].waiting += 1;
-      if (getTaskPriority(task).toLowerCase() === "high") grouped[projectName].high += 1;
+      map[name].tasks.push(task);
+      map[name].subProjects[sub].push(task);
+      map[name].openTasks += 1;
+
+      if (toISODate(getTaskDueDate(task)) && toISODate(getTaskDueDate(task)) < todayISO()) map[name].overdueTasks += 1;
+      if (String(getTaskStatus(task)).toLowerCase().includes("wait")) map[name].waitingTasks += 1;
+      if (String(getTaskPriority(task)).toLowerCase() === "high") map[name].highTasks += 1;
     });
 
-    return Object.values(grouped)
-      .sort((a, b) => b.overdue - a.overdue || b.high - a.high || b.open - a.open)
-      .slice(0, 8)
+    Object.keys(projectMeta).forEach((name) => {
+      if (!map[name]) {
+        map[name] = {
+          id: name,
+          name,
+          tasks: [],
+          subProjects: {},
+          openTasks: 0,
+          overdueTasks: 0,
+          waitingTasks: 0,
+          highTasks: 0,
+        };
+      }
+    });
+
+    return Object.values(map)
       .map((project) => {
-        const status = project.overdue > 0 ? "Needs Attention" : project.waiting > 0 ? "Waiting" : "On Track";
+        const meta = projectMeta[project.name] || {};
+        const taskSubs = Object.entries(project.subProjects).map(([name, subTasks]) => ({
+          id: name,
+          name,
+          tasks: subTasks,
+          openTasks: subTasks.length,
+          overdueTasks: subTasks.filter((task) => toISODate(getTaskDueDate(task)) < todayISO()).length,
+        }));
+
+        const manualSubs = meta.subProjects || [];
+        const subProjectList = [
+          ...taskSubs,
+          ...manualSubs.filter((manual) => !taskSubs.some((sub) => sub.name === manual.name)),
+        ];
+
+        const status =
+          meta.status ||
+          (project.overdueTasks > 0
+            ? "Needs Attention"
+            : project.waitingTasks > 0
+            ? "Waiting"
+            : "On Track");
+
         return {
           ...project,
           status,
-          subProjectCount: Array.from(project.subProjects).filter(Boolean).length,
-          subProjectList: Array.from(project.subProjects).filter(Boolean),
+          owner: meta.owner || "Nikita",
+          targetDate: meta.targetDate || "",
+          description: meta.description || "",
+          subProjectList,
+          files: meta.files || [],
+          notes: meta.notes || [],
+          activity: meta.activity || [],
         };
-      });
-  }, [openTasks]);
+      })
+      .sort((a, b) => b.overdueTasks - a.overdueTasks || b.highTasks - a.highTasks || b.openTasks - a.openTasks);
+  }, [openTasks, projectMeta]);
 
   const waitingGroups = useMemo(() => {
-    const waitingTasks = openTasks.filter((task) => (task.status || "").toLowerCase().includes("wait"));
     const map = {};
-
-    waitingTasks.forEach((task) => {
-      const key = task.waitingOn || task.assignedFrom || task.from || "Other";
-      map[key] = (map[key] || 0) + 1;
-    });
+    openTasks
+      .filter((task) => String(getTaskStatus(task)).toLowerCase().includes("wait"))
+      .forEach((task) => {
+        const label = task.waitingOn || task.assignedFrom || task.from || "Other";
+        map[label] = (map[label] || 0) + 1;
+      });
 
     return Object.entries(map).map(([label, count]) => ({ label, count }));
   }, [openTasks]);
@@ -232,106 +266,178 @@ export default function ExecutiveStatus() {
       })
     : "";
 
+  const health = Math.max(70, 100 - due.overdue.length * 4);
   const metrics = [
     { number: projects.length, label: "Active Projects", note: "Grouped from Tasks" },
     { number: waitingGroups.reduce((sum, item) => sum + item.count, 0), label: "Waiting On", note: "From task statuses" },
     { number: decisions.filter((d) => d.status !== "Approved").length, label: "Needs Your Input", note: "Approvals / Decisions" },
-    { number: `${Math.max(70, 100 - due.overdue.length * 4)}%`, label: "Operations Health", note: due.overdue.length ? `${due.overdue.length} overdue` : "Everything on track" },
+    { number: `${health}%`, label: "Operations Health", note: due.overdue.length ? `${due.overdue.length} overdue` : "Everything on track" },
   ];
 
-  function openDrawer(type, item) {
+  function openDrawer(type, item, startingTab = "overview") {
     setDrawer({ type, item });
-    setDrawerTab("overview");
-    setEditing(false);
-    setDraft({});
+    setTab(startingTab);
   }
 
-  function addTask(projectName = "", subProject = "General") {
-    const newTask = {
+  function updateTask(id, patch) {
+    const next = tasks.map((task) => (task.id === id ? { ...task, ...patch } : task));
+    saveTasks(next);
+
+    if (drawer?.type === "task" && drawer.item.id === id) {
+      setDrawer({ type: "task", item: next.find((task) => task.id === id) });
+    }
+  }
+
+  function addTask(project = "General", subProject = "General") {
+    const item = {
       id: uid(),
       title: "New task",
-      project: projectName || "General",
+      project,
       subProject,
-      dueDate: todayString(),
+      dueDate: todayISO(),
       priority: "Medium",
       status: "Open",
       completed: false,
       createdAt: new Date().toISOString(),
     };
 
-    saveTasks([...tasks, newTask]);
-    openDrawer("task", newTask);
-    setEditing(true);
-    setDraft(newTask);
+    saveTasks([...tasks, item]);
+    openDrawer("task", item);
+  }
+
+  function deleteTask(id) {
+    saveTasks(tasks.filter((task) => task.id !== id));
+    setDrawer(null);
+  }
+
+  function updateProject(projectName, patch) {
+    saveProjectMeta({
+      ...projectMeta,
+      [projectName]: {
+        ...(projectMeta[projectName] || {}),
+        ...patch,
+      },
+    });
   }
 
   function renameProject(oldName, newName) {
     const clean = newName.trim();
     if (!clean || clean === oldName) return;
 
-    const next = tasks.map((task) =>
-      getTaskProject(task) === oldName ? { ...task, project: clean } : task
-    );
+    const nextTasks = tasks.map((task) => (getTaskProject(task) === oldName ? { ...task, project: clean } : task));
+    const nextMeta = { ...projectMeta };
+    nextMeta[clean] = { ...(nextMeta[oldName] || {}) };
+    delete nextMeta[oldName];
 
-    saveTasks(next);
+    saveTasks(nextTasks);
+    saveProjectMeta(nextMeta);
+    setDrawer(null);
   }
 
-  function updateTask(id, patch) {
-    const next = tasks.map((task) => (task.id === id ? { ...task, ...patch } : task));
-    saveTasks(next);
-    const updated = next.find((task) => task.id === id);
-    if (updated) setDrawer({ type: "task", item: updated });
+  function addProject() {
+    let name = "New Project";
+    let count = 1;
+
+    while (projects.some((project) => project.name === name) || projectMeta[name]) {
+      count += 1;
+      name = `New Project ${count}`;
+    }
+
+    saveProjectMeta({
+      ...projectMeta,
+      [name]: {
+        status: "On Track",
+        owner: "Nikita",
+        description: "",
+        subProjects: [],
+        files: [],
+        notes: [],
+        activity: [{ id: uid(), text: "Project created", time: "Just now" }],
+      },
+    });
+
+    openDrawer("project", {
+      id: name,
+      name,
+      status: "On Track",
+      owner: "Nikita",
+      description: "",
+      openTasks: 0,
+      overdueTasks: 0,
+      waitingTasks: 0,
+      highTasks: 0,
+      subProjectList: [],
+      tasks: [],
+      files: [],
+      notes: [],
+      activity: [],
+    }, "overview");
+  }
+
+  function addManualSubProject(projectName) {
+    const meta = projectMeta[projectName] || {};
+    updateProject(projectName, {
+      subProjects: [...(meta.subProjects || []), { id: uid(), name: "New Sub Project", tasks: [] }],
+    });
+  }
+
+  function updateManualSubProject(projectName, id, name) {
+    const meta = projectMeta[projectName] || {};
+    updateProject(projectName, {
+      subProjects: (meta.subProjects || []).map((item) => (item.id === id ? { ...item, name } : item)),
+    });
+  }
+
+  function deleteManualSubProject(projectName, id) {
+    const meta = projectMeta[projectName] || {};
+    updateProject(projectName, {
+      subProjects: (meta.subProjects || []).filter((item) => item.id !== id),
+    });
+  }
+
+  function addProjectDetail(projectName, field, item) {
+    const meta = projectMeta[projectName] || {};
+    updateProject(projectName, {
+      [field]: [...(meta[field] || []), item],
+    });
+  }
+
+  function updateProjectDetail(projectName, field, id, patch) {
+    const meta = projectMeta[projectName] || {};
+    updateProject(projectName, {
+      [field]: (meta[field] || []).map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    });
+  }
+
+  function deleteProjectDetail(projectName, field, id) {
+    const meta = projectMeta[projectName] || {};
+    updateProject(projectName, {
+      [field]: (meta[field] || []).filter((item) => item.id !== id),
+    });
   }
 
   function addDecision() {
     const item = { id: uid(), title: "New decision", priority: "Medium", status: "Pending", note: "" };
     saveDecisions([...decisions, item]);
     openDrawer("decision", item);
-    setEditing(true);
-    setDraft(item);
   }
 
   function updateDecision(id, patch) {
-    const next = decisions.map((item) => (item.id === id ? { ...item, ...patch } : item));
+    const next = decisions.map((decision) => (decision.id === id ? { ...decision, ...patch } : decision));
     saveDecisions(next);
-    const updated = next.find((item) => item.id === id);
-    if (updated) setDrawer({ type: "decision", item: updated });
-  }
 
-  function addNote() {
-    const item = { id: uid(), text: "New note" };
-    saveNotes([...notes, item]);
-    openDrawer("note", item);
-    setEditing(true);
-    setDraft(item);
+    if (drawer?.type === "decision" && drawer.item.id === id) {
+      setDrawer({ type: "decision", item: next.find((decision) => decision.id === id) });
+    }
   }
 
   function approveDecision(decision) {
     updateDecision(decision.id, { status: "Approved" });
-    addTask("Approvals");
+    addTask("Approvals", "Approved Decisions");
   }
 
-  function saveDrawerEdit() {
-    if (!drawer) return;
-
-    if (drawer.type === "task") updateTask(drawer.item.id, draft);
-    if (drawer.type === "decision") updateDecision(drawer.item.id, draft);
-    if (drawer.type === "note") {
-      const next = notes.map((item) => (item.id === drawer.item.id ? { ...item, ...draft } : item));
-      saveNotes(next);
-      setDrawer({ type: "note", item: next.find((item) => item.id === drawer.item.id) });
-    }
-
-    setEditing(false);
-  }
-
-  function deleteDrawerItem() {
-    if (!drawer) return;
-
-    if (drawer.type === "task") saveTasks(tasks.filter((task) => task.id !== drawer.item.id));
-    if (drawer.type === "decision") saveDecisions(decisions.filter((item) => item.id !== drawer.item.id));
-    if (drawer.type === "note") saveNotes(notes.filter((item) => item.id !== drawer.item.id));
-
+  function deleteDecision(id) {
+    saveDecisions(decisions.filter((decision) => decision.id !== id));
     setDrawer(null);
   }
 
@@ -344,130 +450,115 @@ export default function ExecutiveStatus() {
         </div>
         <div className="dateBlock">
           <div>{dateTime}</div>
-          <small>Updated live from Tasks</small>
+          <small>Live from Tasks · refreshes every 30 sec</small>
         </div>
       </header>
 
-      <section className="board">
-        <section className="metrics">
-          {metrics.map((metric) => (
-            <button className="metric" key={metric.label} onClick={() => openDrawer("metric", metric)}>
-              <strong>{metric.number}</strong>
-              <span>{metric.label}</span>
-              <small>{metric.note}</small>
-            </button>
-          ))}
-        </section>
+      <section className="metrics">
+        {metrics.map((metric) => (
+          <button className="metric" key={metric.label} onClick={() => openDrawer("metric", metric)}>
+            <strong>{metric.number}</strong>
+            <span>{metric.label}</span>
+            <small>{metric.note}</small>
+          </button>
+        ))}
+      </section>
 
-        <section className="layout">
-          <div className="leftStack">
-            <Panel title="Today’s Tasks" onAdd={() => addTask("Priorities")}>
-              {due.today.slice(0, 4).map((task, index) => (
-                <button className="priorityRow" key={task.id || index} onClick={() => openDrawer("task", task)}>
-                  <span className="number">{index + 1}</span>
-                  <div>
-                    <strong>{getTaskTitle(task)}</strong>
-                    <small>{getTaskProject(task)} · {getTaskPriority(task)}</small>
-                  </div>
-                </button>
-              ))}
-              {due.today.length === 0 && <EmptyLine text="No tasks due today." />}
-              <button className="viewAllText" onClick={() => openDrawer("taskList", { title: "All Tasks", tasks: openTasks })}>
-                View full task list →
+      <section className="layout">
+        <div className="leftStack">
+          <Panel title="Today’s Tasks" onAdd={() => addTask("Priorities")}>
+            {due.today.slice(0, 4).map((task, index) => (
+              <button className="priorityRow" key={task.id || index} onClick={() => openDrawer("task", task)}>
+                <span className="number">{index + 1}</span>
+                <div>
+                  <strong>{getTaskTitle(task)}</strong>
+                  <small>{getTaskProject(task)} · {getTaskPriority(task)}</small>
+                </div>
               </button>
-            </Panel>
+            ))}
+            {due.today.length === 0 && <EmptyLine text="No tasks due today." />}
+            <button className="viewAllText" onClick={() => openDrawer("taskList", { title: "All Tasks", tasks: openTasks })}>
+              View full task list →
+            </button>
+          </Panel>
 
-            <Panel title="Waiting On">
-              {(waitingGroups.length ? waitingGroups : [{ label: "None", count: 0 }]).map((item) => (
-                <button className="simpleRow" key={item.label} onClick={() => openDrawer("waiting", item)}>
-                  <span>{item.label}</span>
-                  <b>{item.count}</b>
-                </button>
-              ))}
-            </Panel>
-
-            <Panel title="Notes" onAdd={addNote}>
-              {notes.slice(0, 3).map((note) => (
-                <button className="noteRow" key={note.id} onClick={() => openDrawer("note", note)}>
-                  {note.text}
-                </button>
-              ))}
-            </Panel>
-          </div>
-
-          <Panel title="Active Projects" className="projects" onAdd={() => addTask("New Project")}>
-            {projects.length === 0 && <EmptyLine text="No projects yet. Add tasks with a project name to populate this section." />}
-
-            {projects.map((project) => (
-              <div className="projectRow bigProject" key={project.name} onClick={() => openDrawer("project", project)}>
-                <div className="projectTop">
-                  <EditableText
-                    value={project.name}
-                    className="bigProjectName"
-                    onSave={(value) => renameProject(project.name, value)}
-                  />
-                  <span className={`pill ${getStatusClass(project.status)}`}>{project.status}</span>
-                </div>
-
-                <div className="projectStats">
-                  <span><b>{project.open}</b> Open Tasks</span>
-                  <span><b>{project.subProjectCount}</b> Sub Projects</span>
-                  <span><b>{project.overdue}</b> Overdue</span>
-                  <span><b>{project.waiting}</b> Waiting</span>
-                </div>
-              </div>
+          <Panel title="Waiting On">
+            {(waitingGroups.length ? waitingGroups : [{ label: "None", count: 0 }]).map((item) => (
+              <button className="simpleRow" key={item.label} onClick={() => openDrawer("waiting", item)}>
+                <span>{item.label}</span>
+                <b>{item.count}</b>
+              </button>
             ))}
           </Panel>
 
-          <div className="rightStack">
-            <Panel title="Task Timeline">
-              <button className="timelineRow" onClick={() => openDrawer("taskList", { title: "Overdue", tasks: due.overdue })}>
-                <span>Overdue</span><b className="danger">{due.overdue.length}</b>
-              </button>
-              <button className="timelineRow" onClick={() => openDrawer("taskList", { title: "Today", tasks: due.today })}>
-                <span>Today</span><b>{due.today.length}</b>
-              </button>
-              <button className="timelineRow" onClick={() => openDrawer("taskList", { title: "Tomorrow", tasks: due.tomorrow })}>
-                <span>Tomorrow</span><b>{due.tomorrow.length}</b>
-              </button>
-              <button className="timelineRow" onClick={() => openDrawer("taskList", { title: "This Week", tasks: due.thisWeek })}>
-                <span>This Week</span><b>{due.thisWeek.length}</b>
-              </button>
-            </Panel>
+          <Panel title="Inbox + Communication">
+            <button className="commStatusRow" onClick={() => openDrawer("communication", { label: "Unread Messages", count: communication.unread })}>
+              <span>Unread messages</span><b>{communication.unread}</b>
+            </button>
+            <button className="commStatusRow" onClick={() => openDrawer("communication", { label: "Needs Review", count: communication.needsReview })}>
+              <span>Needs review</span><b>{communication.needsReview}</b>
+            </button>
+            <button className="commStatusRow" onClick={() => openDrawer("communication", { label: "Waiting Reply", count: communication.waitingReply })}>
+              <span>Waiting reply</span><b>{communication.waitingReply}</b>
+            </button>
+            <button className="commStatusRow" onClick={() => openDrawer("communication", { label: "Dialpad", count: communication.dialpad })}>
+              <span>Dialpad</span><b>{communication.dialpad}</b>
+            </button>
+          </Panel>
+        </div>
 
-            <Panel title="Needs Your Decision" onAdd={addDecision}>
-              {decisions.slice(0, 4).map((decision) => (
-                <div className="decisionItem" key={decision.id}>
-                  <button className="decisionRow" onClick={() => openDrawer("decision", decision)}>
-                    <span>{decision.title}</span>
-                    <small className={decision.priority === "High" ? "danger" : ""}>
-                      {decision.status === "Approved" ? "Approved" : decision.priority}
-                    </small>
-                  </button>
-                  {decision.status !== "Approved" && <button className="approve" onClick={() => approveDecision(decision)}>✓</button>}
+        <Panel title="Active Projects" className="projects" onAdd={addProject}>
+          {projects.length === 0 && <EmptyLine text="No projects yet. Add tasks with a project name to populate this section." />}
+
+          {projects.map((project) => (
+            <button className="projectRow" key={project.name} onClick={() => openDrawer("project", project, "overview")}>
+              <div className="projectTop">
+                <div>
+                  <strong>{project.name}</strong>
+                  <small>{project.subProjectList.slice(0, 3).map((sub) => sub.name).join(" · ") || "No sub projects yet"}</small>
                 </div>
-              ))}
-            </Panel>
+                <span className={`pill ${getStatusClass(project.status)}`}>{project.status}</span>
+              </div>
 
-            <Panel title="Inbox + Communication">
-              <button className="commStatusRow" onClick={() => openDrawer("communication", { label: "Unread Messages", count: communications.unread, details: "Unread inbox messages" })}>
-                <span>Unread messages</span><b>{communications.unread}</b>
-              </button>
-              <button className="commStatusRow" onClick={() => openDrawer("communication", { label: "Needs Review", count: communications.needsReview, details: "Messages ready for Mark review" })}>
-                <span>Needs review</span><b>{communications.needsReview}</b>
-              </button>
-              <button className="commStatusRow" onClick={() => openDrawer("communication", { label: "Waiting Reply", count: communications.waitingReply, details: "Messages waiting on replies" })}>
-                <span>Waiting reply</span><b>{communications.waitingReply}</b>
-              </button>
-              <button className="commStatusRow" onClick={() => openDrawer("communication", { label: "Dialpad", count: communications.dialpadMissed + communications.dialpadUnread, details: "Dialpad missed calls and unread texts" })}>
-                <span>Dialpad</span><b>{communications.dialpadMissed + communications.dialpadUnread}</b>
-              </button>
-              <button className="viewAllText" onClick={() => openDrawer("communication", { label: "Communication Center", count: communications.unread + communications.needsReview + communications.waitingReply, details: "Inbox, review, waiting reply, and Dialpad summary" })}>
-                View communication center →
-              </button>
-            </Panel>
-          </div>
-        </section>
+              <div className="projectBar">
+                <span>{project.openTasks} tasks</span>
+                <span>{project.subProjectList.length} sub projects</span>
+                <span>{project.overdueTasks} overdue</span>
+              </div>
+            </button>
+          ))}
+        </Panel>
+
+        <div className="rightStack">
+          <Panel title="Task Timeline">
+            <button className="timelineRow" onClick={() => openDrawer("taskList", { title: "Overdue", tasks: due.overdue })}>
+              <span>Overdue</span><b className="danger">{due.overdue.length}</b>
+            </button>
+            <button className="timelineRow" onClick={() => openDrawer("taskList", { title: "Today", tasks: due.today })}>
+              <span>Today</span><b>{due.today.length}</b>
+            </button>
+            <button className="timelineRow" onClick={() => openDrawer("taskList", { title: "Tomorrow", tasks: due.tomorrow })}>
+              <span>Tomorrow</span><b>{due.tomorrow.length}</b>
+            </button>
+            <button className="timelineRow" onClick={() => openDrawer("taskList", { title: "This Week", tasks: due.thisWeek })}>
+              <span>This Week</span><b>{due.thisWeek.length}</b>
+            </button>
+          </Panel>
+
+          <Panel title="Needs Your Decision" onAdd={addDecision}>
+            {decisions.slice(0, 4).map((decision) => (
+              <div className="decisionItem" key={decision.id}>
+                <button className="decisionRow" onClick={() => openDrawer("decision", decision)}>
+                  <span>{decision.title}</span>
+                  <small className={decision.priority === "High" ? "danger" : ""}>
+                    {decision.status === "Approved" ? "Approved" : decision.priority}
+                  </small>
+                </button>
+                {decision.status !== "Approved" && <button className="approve" onClick={() => approveDecision(decision)}>✓</button>}
+              </div>
+            ))}
+          </Panel>
+        </div>
       </section>
 
       {drawer && (
@@ -477,38 +568,52 @@ export default function ExecutiveStatus() {
           <h2>{getDrawerTitle(drawer)}</h2>
           <p>{getDrawerSubtitle(drawer)}</p>
 
-          <div className="drawerActions">
-            {["task", "decision", "note"].includes(drawer.type) && !editing && (
-              <button onClick={() => { setDraft(drawer.item); setEditing(true); }}>Edit</button>
-            )}
-            {editing && (
-              <>
-                <button onClick={() => setEditing(false)}>Cancel</button>
-                <button className="darkBtn" onClick={saveDrawerEdit}>Save</button>
-              </>
-            )}
-            {["task", "decision", "note"].includes(drawer.type) && (
-              <button onClick={deleteDrawerItem}>Delete</button>
-            )}
-          </div>
-
           <div className="tabs">
-            {(drawer.type === "project" ? ["overview", "subprojects", "tasks", "files", "notes", "activity"] : ["overview", "tasks", "notes"]).map((tab) => (
-              <button key={tab} className={drawerTab === tab ? "active" : ""} onClick={() => setDrawerTab(tab)}>
-                {tab}
+            {(drawer.type === "project"
+              ? ["overview", "subprojects", "tasks", "files", "notes", "activity"]
+              : ["overview", "tasks", "notes"]
+            ).map((item) => (
+              <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
+                {item}
               </button>
             ))}
           </div>
 
-          {editing ? (
-            <InlineEdit type={drawer.type} draft={draft} setDraft={setDraft} />
-          ) : (
-            <DrawerContent
-              drawer={{ ...drawer, tab: drawerTab }}
+          {drawer.type === "project" && (
+            <ProjectDrawer
+              project={drawer.item}
+              tab={tab}
+              updateProject={updateProject}
               addTask={addTask}
               openTask={(task) => openDrawer("task", task)}
-              updateTask={updateTask}
+              addManualSubProject={addManualSubProject}
+              updateManualSubProject={updateManualSubProject}
+              deleteManualSubProject={deleteManualSubProject}
+              addProjectDetail={addProjectDetail}
+              updateProjectDetail={updateProjectDetail}
+              deleteProjectDetail={deleteProjectDetail}
             />
+          )}
+
+          {drawer.type === "task" && (
+            <TaskDrawer task={drawer.item} updateTask={updateTask} deleteTask={deleteTask} />
+          )}
+
+          {drawer.type === "taskList" && (
+            <TaskListDrawer tasks={drawer.item.tasks || []} openTask={(task) => openDrawer("task", task)} />
+          )}
+
+          {drawer.type === "decision" && (
+            <DecisionDrawer
+              decision={drawer.item}
+              updateDecision={updateDecision}
+              deleteDecision={deleteDecision}
+              approveDecision={approveDecision}
+            />
+          )}
+
+          {!["project", "task", "taskList", "decision"].includes(drawer.type) && (
+            <GeneralDrawer item={drawer.item} type={drawer.type} />
           )}
         </aside>
       )}
@@ -714,7 +819,8 @@ export default function ExecutiveStatus() {
           font-size: 12px;
         }
 
-        .priorityRow strong {
+        .priorityRow strong,
+        .projectTop strong {
           display: block;
           font-size: 13px;
         }
@@ -746,37 +852,15 @@ export default function ExecutiveStatus() {
           font-weight: 750;
         }
 
-        .bigProject {
-          padding: 20px 0;
+        .projectRow {
+          padding: 16px 0;
         }
 
         .projectTop {
           display: flex;
           justify-content: space-between;
-          gap: 14px;
+          gap: 12px;
           align-items: flex-start;
-        }
-
-        .bigProjectName {
-          display: block;
-          width: 100%;
-          border: 0;
-          background: transparent;
-          font-family: Georgia, serif;
-          font-size: 28px;
-          font-weight: 400;
-          line-height: 1.05;
-          letter-spacing: -0.03em;
-          color: #111827;
-          padding: 0;
-          margin: 0;
-        }
-
-        .bigProjectName:focus,
-        .editableInput:focus {
-          outline: 1px solid #e5dccc;
-          background: #fffaf0;
-          border-radius: 6px;
         }
 
         .pill {
@@ -799,25 +883,17 @@ export default function ExecutiveStatus() {
           color: #b91c1c;
         }
 
-        .projectStats {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 10px;
-          margin-top: 14px;
+        .projectBar {
+          display: flex;
+          gap: 16px;
+          color: #64748b;
+          font-size: 12px;
+          margin-top: 10px;
         }
 
-        .projectStats span {
+        .projectBar span {
           border-left: 1px solid #e5dccc;
           padding-left: 10px;
-          color: #475569;
-          font-size: 12px;
-        }
-
-        .projectStats b {
-          display: block;
-          color: #111827;
-          font-size: 17px;
-          margin-bottom: 2px;
         }
 
         .decisionItem {
@@ -1015,6 +1091,244 @@ export default function ExecutiveStatus() {
           flex-wrap: wrap;
         }
 
+
+        /* ---- Cleaner compact polish ---- */
+        .opsPage {
+          padding: 18px 24px;
+          font-size: 12px;
+        }
+
+        h1 {
+          font-size: 24px;
+          margin-bottom: 3px;
+        }
+
+        .hero {
+          margin-bottom: 10px;
+        }
+
+        .dateBlock {
+          font-size: 11px;
+        }
+
+        .dateBlock small {
+          font-size: 10px;
+        }
+
+        .metrics {
+          gap: 10px;
+          margin-bottom: 10px;
+        }
+
+        .metric {
+          min-height: 66px;
+          padding: 11px 14px;
+          border-radius: 10px;
+        }
+
+        .metric strong {
+          font-size: 20px;
+          margin-bottom: 4px;
+        }
+
+        .metric span {
+          font-size: 11px;
+        }
+
+        .metric small {
+          font-size: 10px;
+        }
+
+        .layout {
+          gap: 10px;
+          grid-template-columns: minmax(280px, 23%) minmax(760px, 54%) minmax(280px, 23%);
+        }
+
+        .leftStack,
+        .rightStack {
+          gap: 10px;
+        }
+
+        .panel {
+          padding: 11px;
+          border-radius: 10px;
+        }
+
+        .panelHead {
+          padding-bottom: 7px;
+          margin-bottom: 6px;
+        }
+
+        .panelHead b {
+          font-size: 12px;
+        }
+
+        .headActions span {
+          font-size: 10px;
+        }
+
+        .addBtn {
+          width: 20px;
+          height: 20px;
+        }
+
+        .priorityRow {
+          padding: 9px 0;
+          grid-template-columns: 25px 1fr;
+          gap: 9px;
+        }
+
+        .number {
+          width: 23px;
+          height: 23px;
+          font-size: 10px;
+        }
+
+        .priorityRow strong,
+        .projectTop strong {
+          font-size: 12px;
+        }
+
+        small {
+          font-size: 10px;
+          margin-top: 2px;
+        }
+
+        .simpleRow,
+        .timelineRow,
+        .commStatusRow {
+          padding: 8px 0;
+          font-size: 12px;
+        }
+
+        .simpleRow b,
+        .commStatusRow b,
+        .timelineRow b {
+          font-size: 13px;
+        }
+
+        .projectRow {
+          padding: 11px 0;
+        }
+
+        .projectBar {
+          margin-top: 7px;
+          gap: 12px;
+          font-size: 10px;
+        }
+
+        .pill {
+          font-size: 10px;
+          padding: 3px 7px;
+        }
+
+        .decisionRow {
+          padding: 8px 0;
+          font-size: 11px;
+        }
+
+        .decisionRow small {
+          font-size: 10px;
+        }
+
+        .approve {
+          width: 20px;
+          height: 20px;
+          font-size: 10px;
+        }
+
+        .drawer {
+          width: 480px;
+          padding: 22px;
+        }
+
+        h2 {
+          font-size: 24px;
+          margin-bottom: 6px;
+        }
+
+        .drawer p {
+          font-size: 12px;
+        }
+
+        .tabs {
+          margin: 18px 0 16px;
+          gap: 14px;
+        }
+
+        .tabs button {
+          font-size: 12px;
+          padding: 7px 0;
+        }
+
+        /* Make drawer editing feel like clean inline editing, not a form */
+        .field {
+          border: 0;
+          border-bottom: 1px solid #ebe2d4;
+          background: transparent;
+          border-radius: 0;
+          padding: 9px 0;
+          margin-bottom: 0;
+        }
+
+        .field label {
+          font-size: 10px;
+          color: #64748b;
+          margin-bottom: 4px;
+        }
+
+        .editableInput,
+        .editableTextarea,
+        .editableSelect {
+          border: 0 !important;
+          outline: 0;
+          background: transparent !important;
+          padding: 0;
+          font-size: 13px;
+          line-height: 1.35;
+          color: #111827;
+          width: 100%;
+        }
+
+        .editableInput:focus,
+        .editableTextarea:focus,
+        .editableSelect:focus {
+          outline: 0 !important;
+          background: #fffaf0 !important;
+          border-radius: 4px;
+          box-shadow: inset 0 -1px 0 #111827;
+        }
+
+        .editableTextarea {
+          min-height: 44px;
+          resize: vertical;
+        }
+
+        .drawerActions {
+          margin-top: 14px;
+          gap: 6px;
+        }
+
+        .drawerActions button,
+        .detailHead button,
+        .detailActions button {
+          font-size: 11px;
+          padding: 6px 9px;
+          border-radius: 7px;
+        }
+
+        .drawerActions button {
+          color: #64748b;
+        }
+
+        .detailRow,
+        .drawerBox {
+          border-radius: 8px;
+          padding: 10px;
+          margin-bottom: 7px;
+        }
+
+
         @media (max-width: 1200px) {
           .opsPage {
             overflow: auto;
@@ -1057,51 +1371,21 @@ function EmptyLine({ text }) {
   return <div className="emptyLine">{text}</div>;
 }
 
-function InlineEdit({ type, draft, setDraft }) {
-  const fields = fieldsForType(type);
-
-  return (
-    <div className="inlineForm">
-      {fields.map((field) => (
-        <div className="field" key={field.name}>
-          <label>{field.label}</label>
-          {field.type === "textarea" ? (
-            <textarea rows={3} value={draft[field.name] || ""} onChange={(e) => setDraft({ ...draft, [field.name]: e.target.value })} />
-          ) : field.type === "select" ? (
-            <select value={draft[field.name] || field.options[0]} onChange={(e) => setDraft({ ...draft, [field.name]: e.target.value })}>
-              {field.options.map((option) => <option key={option}>{option}</option>)}
-            </select>
-          ) : (
-            <input
-              type={field.type || "text"}
-              value={draft[field.name] ?? ""}
-              onChange={(e) => setDraft({ ...draft, [field.name]: field.type === "number" ? Number(e.target.value) : e.target.value })}
-            />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function EditableText({ value, onSave, className = "" }) {
+function EditableText({ value, onSave }) {
   const [draft, setDraft] = useState(value || "");
 
   useEffect(() => {
     setDraft(value || "");
   }, [value]);
 
-  function save() {
-    if (draft !== value) onSave(draft);
-  }
-
   return (
     <input
-      className={`editableInput ${className}`}
+      className="editableInput"
       value={draft}
-      onClick={(e) => e.stopPropagation()}
       onChange={(e) => setDraft(e.target.value)}
-      onBlur={save}
+      onBlur={() => {
+        if (draft !== value) onSave(draft);
+      }}
       onKeyDown={(e) => {
         if (e.key === "Enter") e.currentTarget.blur();
       }}
@@ -1109,135 +1393,219 @@ function EditableText({ value, onSave, className = "" }) {
   );
 }
 
-function DrawerContent({ drawer, addTask, openTask, updateTask }) {
-  if (drawer.type === "project") {
-    const project = drawer.item;
+function EditableArea({ value, onSave }) {
+  const [draft, setDraft] = useState(value || "");
 
-    if (drawer.tab === "subprojects") {
-      return (
-        <>
-          <div className="detailHead">
-            <h3>Sub Projects</h3>
-            <button onClick={() => addTask(project.name, "New Sub Project")}>+ Add Sub Project</button>
-          </div>
-          {(project.subProjectList || []).map((name) => {
-            const subTasks = project.tasks.filter((task) => getTaskSubProject(task) === name);
-            return (
-              <button className="detailRow" key={name} onClick={() => addTask(project.name, name)}>
-                <span>{name}</span>
-                <small>{subTasks.length} task{subTasks.length === 1 ? "" : "s"}</small>
-              </button>
-            );
-          })}
-        </>
-      );
-    }
+  useEffect(() => {
+    setDraft(value || "");
+  }, [value]);
 
-    if (drawer.tab === "tasks") {
-      return <DetailTasks tasks={project.tasks} addTask={() => addTask(project.name)} openTask={openTask} />;
-    }
+  return (
+    <textarea
+      className="editableTextarea"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => onSave(draft)}
+    />
+  );
+}
 
-    if (drawer.tab === "files") {
-      return <DrawerBox label="Files" value="Files can be connected to Drive/Supabase next." />;
-    }
+function EditableSelect({ value, options, onSave }) {
+  return (
+    <select className="editableSelect" value={value || options[0]} onChange={(e) => onSave(e.target.value)}>
+      {options.map((option) => <option key={option}>{option}</option>)}
+    </select>
+  );
+}
 
-    if (drawer.tab === "notes") {
-      return <DrawerBox label="Notes" value="Project notes can be added in the next version." />;
-    }
-
-    if (drawer.tab === "activity") {
-      return <DrawerBox label="Activity" value="Activity log can be connected next." />;
-    }
-
+function ProjectDrawer({
+  project,
+  tab,
+  updateProject,
+  addTask,
+  openTask,
+  addManualSubProject,
+  updateManualSubProject,
+  deleteManualSubProject,
+  addProjectDetail,
+  updateProjectDetail,
+  deleteProjectDetail,
+}) {
+  if (tab === "overview") {
     return (
       <>
-        <DrawerBox label="Status" value={project.status} />
-        <DrawerBox label="Open Tasks" value={project.open} />
-        <DrawerBox label="Sub Projects" value={project.subProjectCount} />
-        <DrawerBox label="Overdue" value={project.overdue} />
-        <DrawerBox label="Waiting" value={project.waiting} />
+        <div className="field">
+          <label>Status</label>
+          <EditableSelect value={project.status} options={["On Track", "Waiting", "Needs Attention", "Behind", "At Risk"]} onSave={(value) => updateProject(project.name, { status: value })} />
+        </div>
+        <div className="field">
+          <label>Owner</label>
+          <EditableText value={project.owner || "Nikita"} onSave={(value) => updateProject(project.name, { owner: value })} />
+        </div>
+        <div className="field">
+          <label>Target Date</label>
+          <EditableText value={project.targetDate || ""} onSave={(value) => updateProject(project.name, { targetDate: value })} />
+        </div>
+        <div className="field">
+          <label>Project Note</label>
+          <EditableArea value={project.description || ""} onSave={(value) => updateProject(project.name, { description: value })} />
+        </div>
+        <DrawerBox label="Open Tasks" value={project.openTasks} />
+        <DrawerBox label="Overdue" value={project.overdueTasks} />
+        <DrawerBox label="Waiting" value={project.waitingTasks} />
       </>
     );
   }
 
-  if (drawer.type === "taskList") {
+  if (tab === "subprojects") {
     return (
-      <>
-        {(drawer.item.tasks || []).map((task) => (
-          <button className="detailRow" key={task.id || getTaskTitle(task)} onClick={() => openTask(task)}>
-            <span>{getTaskTitle(task)}</span>
-            <small>{getTaskProject(task)}</small>
-          </button>
-        ))}
-      </>
+      <DetailList
+        title="Sub Projects"
+        items={project.subProjectList}
+        onAdd={() => addManualSubProject(project.name)}
+        primaryKey="name"
+        updateItem={(id, patch) => updateManualSubProject(project.name, id, patch.name)}
+        deleteItem={(id) => deleteManualSubProject(project.name, id)}
+        onOpen={(item) => addTask(project.name, item.name)}
+      />
     );
   }
 
-  if (drawer.type === "task") {
+  if (tab === "tasks") {
+    return <TaskList tasks={project.tasks} onAdd={() => addTask(project.name)} openTask={openTask} />;
+  }
+
+  if (tab === "files") {
     return (
-      <>
-        <DrawerBox label="Project" value={getTaskProject(drawer.item)} />
-        <DrawerBox label="Due" value={getTaskDueDate(drawer.item) || "No due date"} />
-        <DrawerBox label="Priority" value={getTaskPriority(drawer.item)} />
-        <DrawerBox label="Status" value={drawer.item.status || "Open"} />
-      </>
+      <DetailList
+        title="Files"
+        items={project.files}
+        onAdd={() => addProjectDetail(project.name, "files", { id: uid(), name: "New file", type: "File" })}
+        primaryKey="name"
+        secondaryKey="type"
+        updateItem={(id, patch) => updateProjectDetail(project.name, "files", id, patch)}
+        deleteItem={(id) => deleteProjectDetail(project.name, "files", id)}
+      />
     );
   }
 
-  if (drawer.type === "decision") {
+  if (tab === "notes") {
     return (
-      <>
-        <DrawerBox label="Priority" value={drawer.item.priority} />
-        <DrawerBox label="Status" value={drawer.item.status} />
-        <DrawerBox label="Note" value={drawer.item.note || "No note"} />
-      </>
-    );
-  }
-
-  if (drawer.type === "note") {
-    return <DrawerBox label="Note" value={drawer.item.text} />;
-  }
-
-  if (drawer.type === "communication") {
-    return (
-      <>
-        <DrawerBox label="Count" value={drawer.item.count || drawer.item.number || 0} />
-        <DrawerBox label="Details" value={drawer.item.details || "Connect this to Outlook/Dialpad for live data."} />
-        <DrawerBox label="Source" value="Placeholder until Outlook/Dialpad API connection is added" />
-      </>
-    );
-  }
-
-  if (drawer.type === "waiting") {
-    return (
-      <>
-        <DrawerBox label="Count" value={drawer.item.count} />
-        <DrawerBox label="Details" value={drawer.item.details || "No details"} />
-      </>
+      <DetailList
+        title="Notes"
+        items={project.notes}
+        onAdd={() => addProjectDetail(project.name, "notes", { id: uid(), text: "New note" })}
+        primaryKey="text"
+        updateItem={(id, patch) => updateProjectDetail(project.name, "notes", id, patch)}
+        deleteItem={(id) => deleteProjectDetail(project.name, "notes", id)}
+      />
     );
   }
 
   return (
+    <DetailList
+      title="Activity"
+      items={project.activity}
+      onAdd={() => addProjectDetail(project.name, "activity", { id: uid(), text: "New activity", time: "Just now" })}
+      primaryKey="text"
+      secondaryKey="time"
+      updateItem={(id, patch) => updateProjectDetail(project.name, "activity", id, patch)}
+      deleteItem={(id) => deleteProjectDetail(project.name, "activity", id)}
+    />
+  );
+}
+
+function TaskDrawer({ task, updateTask, deleteTask }) {
+  return (
     <>
-      <DrawerBox label="Status" value={drawer.item.note || drawer.item.label || "Live"} />
+      <div className="field"><label>Task</label><EditableText value={getTaskTitle(task)} onSave={(value) => updateTask(task.id, { title: value })} /></div>
+      <div className="field"><label>Project</label><EditableText value={getTaskProject(task)} onSave={(value) => updateTask(task.id, { project: value })} /></div>
+      <div className="field"><label>Sub Project</label><EditableText value={getTaskSubProject(task)} onSave={(value) => updateTask(task.id, { subProject: value })} /></div>
+      <div className="field"><label>Due Date</label><EditableText value={getTaskDueDate(task)} onSave={(value) => updateTask(task.id, { dueDate: value })} /></div>
+      <div className="field"><label>Priority</label><EditableSelect value={getTaskPriority(task)} options={["High", "Medium", "Low"]} onSave={(value) => updateTask(task.id, { priority: value })} /></div>
+      <div className="field"><label>Status</label><EditableSelect value={getTaskStatus(task)} options={["Open", "Waiting", "In Progress", "Complete"]} onSave={(value) => updateTask(task.id, { status: value, completed: value === "Complete" })} /></div>
+      <div className="drawerActions"><button onClick={() => deleteTask(task.id)}>Delete</button></div>
     </>
   );
 }
 
-function DetailTasks({ tasks, addTask, openTask }) {
+function TaskListDrawer({ tasks, openTask }) {
   return (
-    <div>
-      <div className="detailHead">
-        <h3>Tasks Behind This</h3>
-        <button onClick={addTask}>+ Add Task</button>
-      </div>
+    <>
+      {tasks.length === 0 && <EmptyLine text="No tasks here." />}
       {tasks.map((task) => (
         <button className="detailRow" key={task.id || getTaskTitle(task)} onClick={() => openTask(task)}>
           <span>{getTaskTitle(task)}</span>
           <small>{getTaskPriority(task)}</small>
         </button>
       ))}
-    </div>
+    </>
+  );
+}
+
+function DecisionDrawer({ decision, updateDecision, deleteDecision, approveDecision }) {
+  return (
+    <>
+      <div className="field"><label>Decision</label><EditableText value={decision.title} onSave={(value) => updateDecision(decision.id, { title: value })} /></div>
+      <div className="field"><label>Priority</label><EditableSelect value={decision.priority} options={["High", "Medium", "Low"]} onSave={(value) => updateDecision(decision.id, { priority: value })} /></div>
+      <div className="field"><label>Status</label><EditableSelect value={decision.status} options={["Pending", "Approved", "Declined", "Needs Changes"]} onSave={(value) => updateDecision(decision.id, { status: value })} /></div>
+      <div className="field"><label>Note</label><EditableArea value={decision.note || ""} onSave={(value) => updateDecision(decision.id, { note: value })} /></div>
+      <div className="drawerActions">
+        {decision.status !== "Approved" && <button onClick={() => approveDecision(decision)}>Approve</button>}
+        <button onClick={() => deleteDecision(decision.id)}>Delete</button>
+      </div>
+    </>
+  );
+}
+
+function GeneralDrawer({ item, type }) {
+  return (
+    <>
+      <DrawerBox label="Status" value={item.note || item.details || item.label || "Live"} />
+      {item.count !== undefined && <DrawerBox label="Count" value={item.count} />}
+      {type === "communication" && <DrawerBox label="Automation" value="Connect Outlook/Dialpad later for true live counts." />}
+    </>
+  );
+}
+
+function TaskList({ tasks, onAdd, openTask }) {
+  return (
+    <>
+      <div className="detailHead">
+        <h3>Tasks</h3>
+        <button onClick={onAdd}>+ Add Task</button>
+      </div>
+      {tasks.length === 0 && <EmptyLine text="No tasks yet." />}
+      {tasks.map((task) => (
+        <button className="detailRow" key={task.id || getTaskTitle(task)} onClick={() => openTask(task)}>
+          <span>{getTaskTitle(task)}</span>
+          <small>{getTaskPriority(task)}</small>
+        </button>
+      ))}
+    </>
+  );
+}
+
+function DetailList({ title, items, onAdd, primaryKey, secondaryKey, updateItem, deleteItem, onOpen }) {
+  return (
+    <>
+      <div className="detailHead">
+        <h3>{title}</h3>
+        <button onClick={onAdd}>+ Add</button>
+      </div>
+      {items.length === 0 && <EmptyLine text={`No ${title.toLowerCase()} yet.`} />}
+      {items.map((item) => (
+        <div className="detailRow" key={item.id}>
+          <div onClick={() => onOpen?.(item)}>
+            <EditableText value={item[primaryKey] || ""} onSave={(value) => updateItem(item.id, { [primaryKey]: value })} />
+            {secondaryKey && <EditableText value={item[secondaryKey] || ""} onSave={(value) => updateItem(item.id, { [secondaryKey]: value })} />}
+          </div>
+          <div className="detailActions">
+            <button onClick={() => deleteItem(item.id)}>Delete</button>
+          </div>
+        </div>
+      ))}
+    </>
   );
 }
 
@@ -1245,49 +1613,25 @@ function DrawerBox({ label, value }) {
   return (
     <div className="drawerBox">
       <small>{label}</small>
-      <strong>{String(value)}</strong>
+      <strong>{String(value || "—")}</strong>
     </div>
   );
-}
-
-function fieldsForType(type) {
-  if (type === "task") {
-    return [
-      { name: "title", label: "Task Name" },
-      { name: "project", label: "Project" },
-      { name: "dueDate", label: "Due Date", type: "date" },
-      { name: "priority", label: "Priority", type: "select", options: ["High", "Medium", "Low"] },
-      { name: "status", label: "Status", type: "select", options: ["Open", "Waiting", "In Progress", "Complete"] },
-    ];
-  }
-
-  if (type === "decision") {
-    return [
-      { name: "title", label: "Decision" },
-      { name: "priority", label: "Priority", type: "select", options: ["High", "Medium", "Low"] },
-      { name: "status", label: "Status", type: "select", options: ["Pending", "Approved", "Declined", "Needs Changes"] },
-      { name: "note", label: "Note", type: "textarea" },
-    ];
-  }
-
-  if (type === "note") return [{ name: "text", label: "Note", type: "textarea" }];
-
-  return [{ name: "label", label: "Label" }];
 }
 
 function getDrawerTitle(drawer) {
   if (drawer.type === "project") return drawer.item.name;
   if (drawer.type === "task") return getTaskTitle(drawer.item);
   if (drawer.type === "taskList") return drawer.item.title;
-  if (drawer.item?.title) return drawer.item.title;
+  if (drawer.type === "decision") return drawer.item.title;
   if (drawer.item?.label) return drawer.item.label;
   return "Details";
 }
 
 function getDrawerSubtitle(drawer) {
-  if (drawer.type === "project") return "Live project view built from your task list.";
-  if (drawer.type === "task") return "This task is pulled from your main task list.";
-  if (drawer.type === "taskList") return "Tasks filtered live from your task list.";
+  if (drawer.type === "project") return "Project workspace with subprojects and tasks behind it.";
+  if (drawer.type === "task") return "Pulled from your main task list.";
+  if (drawer.type === "taskList") return "Filtered live from your task list.";
+  if (drawer.type === "decision") return "Decision item that can create action for Nikita.";
   return "Live executive status detail.";
 }
 
