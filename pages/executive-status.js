@@ -163,8 +163,15 @@ export default function ExecutiveStatus() {
         </aside>
       )}
 
-      <style jsx>{`
-        .page {
+     <style jsx global>{`
+     * {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+  .page {
           min-height: 100vh;
           padding: 36px;
           background: #fbf8f1;
