@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 const TASKS_KEY = "os-tasks";
 const DECISIONS_KEY = "executive-status-decisions-v1";
 const NOTES_KEY = "executive-status-notes-v1";
+const COMMUNICATIONS_KEY = "executive-status-communications-v1";
 
 const uid = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
@@ -68,11 +69,20 @@ const DEFAULT_NOTES = [
   { id: "n1", text: "This page is pulling live status from your task list." },
 ];
 
+const DEFAULT_COMMUNICATIONS = {
+  unread: 7,
+  needsReview: 3,
+  waitingReply: 9,
+  dialpadMissed: 2,
+  dialpadUnread: 4,
+};
+
 export default function ExecutiveStatus() {
   const [now, setNow] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [decisions, setDecisions] = useState(DEFAULT_DECISIONS);
   const [notes, setNotes] = useState(DEFAULT_NOTES);
+  const [communications, setCommunications] = useState(DEFAULT_COMMUNICATIONS);
   const [drawer, setDrawer] = useState(null);
   const [drawerTab, setDrawerTab] = useState("overview");
   const [editing, setEditing] = useState(false);
@@ -82,6 +92,7 @@ export default function ExecutiveStatus() {
     setTasks(readJSON(TASKS_KEY, []));
     setDecisions(readJSON(DECISIONS_KEY, DEFAULT_DECISIONS));
     setNotes(readJSON(NOTES_KEY, DEFAULT_NOTES));
+    setCommunications(readJSON(COMMUNICATIONS_KEY, DEFAULT_COMMUNICATIONS));
   }
 
   useEffect(() => {
@@ -115,6 +126,11 @@ export default function ExecutiveStatus() {
   function saveNotes(next) {
     setNotes(next);
     writeJSON(NOTES_KEY, next);
+  }
+
+  function saveCommunications(next) {
+    setCommunications(next);
+    writeJSON(COMMUNICATIONS_KEY, next);
   }
 
   const openTasks = tasks.filter((task) => !isTaskComplete(task));
@@ -221,7 +237,6 @@ export default function ExecutiveStatus() {
     { number: waitingGroups.reduce((sum, item) => sum + item.count, 0), label: "Waiting On", note: "From task statuses" },
     { number: decisions.filter((d) => d.status !== "Approved").length, label: "Needs Your Input", note: "Approvals / Decisions" },
     { number: `${Math.max(70, 100 - due.overdue.length * 4)}%`, label: "Operations Health", note: due.overdue.length ? `${due.overdue.length} overdue` : "Everything on track" },
-    { number: "↻", label: "Live Sync", note: "Refreshes every 30 sec" },
   ];
 
   function openDrawer(type, item) {
@@ -334,7 +349,7 @@ export default function ExecutiveStatus() {
 
         <section className="layout">
           <div className="leftStack">
-            <Panel title="Today’s Priorities" onAdd={() => addTask("Priorities")}>
+            <Panel title="Today’s Tasks" onAdd={() => addTask("Priorities")}>
               {due.today.slice(0, 4).map((task, index) => (
                 <button className="priorityRow" key={task.id || index} onClick={() => openDrawer("task", task)}>
                   <span className="number">{index + 1}</span>
@@ -345,6 +360,9 @@ export default function ExecutiveStatus() {
                 </button>
               ))}
               {due.today.length === 0 && <EmptyLine text="No tasks due today." />}
+              <button className="viewAllText" onClick={() => openDrawer("taskList", { title: "All Tasks", tasks: openTasks })}>
+                View full task list →
+              </button>
             </Panel>
 
             <Panel title="Waiting On">
@@ -395,7 +413,7 @@ export default function ExecutiveStatus() {
                     <span>{project.milestone}</span>
                   </div>
                   <div>
-                    <small>Source</small>
+                    <small>Updated</small>
                     <span>{project.updated}</span>
                   </div>
                 </div>
@@ -433,13 +451,22 @@ export default function ExecutiveStatus() {
               ))}
             </Panel>
 
-            <Panel title="Open Task Stream" onAdd={() => addTask()}>
-              {openTasks.slice(0, 6).map((task) => (
-                <button className="streamRow" key={task.id || getTaskTitle(task)} onClick={() => openDrawer("task", task)}>
-                  <span>{getTaskTitle(task)}</span>
-                  <small>{getTaskProject(task)}</small>
-                </button>
-              ))}
+            <Panel title="Inbox + Communication">
+              <button className="commStatusRow" onClick={() => openDrawer("communication", { label: "Unread Messages", count: communications.unread, details: "Unread inbox messages" })}>
+                <span>Unread messages</span><b>{communications.unread}</b>
+              </button>
+              <button className="commStatusRow" onClick={() => openDrawer("communication", { label: "Needs Review", count: communications.needsReview, details: "Messages ready for Mark review" })}>
+                <span>Needs review</span><b>{communications.needsReview}</b>
+              </button>
+              <button className="commStatusRow" onClick={() => openDrawer("communication", { label: "Waiting Reply", count: communications.waitingReply, details: "Messages waiting on replies" })}>
+                <span>Waiting reply</span><b>{communications.waitingReply}</b>
+              </button>
+              <button className="commStatusRow" onClick={() => openDrawer("communication", { label: "Dialpad", count: communications.dialpadMissed + communications.dialpadUnread, details: "Dialpad missed calls and unread texts" })}>
+                <span>Dialpad</span><b>{communications.dialpadMissed + communications.dialpadUnread}</b>
+              </button>
+              <button className="viewAllText" onClick={() => openDrawer("communication", { label: "Communication Center", count: communications.unread + communications.needsReview + communications.waitingReply, details: "Inbox, review, waiting reply, and Dialpad summary" })}>
+                View communication center →
+              </button>
             </Panel>
           </div>
         </section>
@@ -496,7 +523,7 @@ export default function ExecutiveStatus() {
           min-height: 100vh;
           background: #fbf8f1;
           color: #111827;
-          padding: 22px 28px;
+          padding: 24px 30px;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
           overflow: hidden;
         }
@@ -505,7 +532,7 @@ export default function ExecutiveStatus() {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 14px;
+          margin-bottom: 12px;
         }
 
         h1 {
@@ -537,22 +564,31 @@ export default function ExecutiveStatus() {
         }
 
         .board {
-          margin-top: 0;
+          position: relative;
+        }
+
+        .board:after {
+          content: "Live from Tasks · Refreshes every 30 sec";
+          position: absolute;
+          right: 2px;
+          top: -22px;
+          color: #64748b;
+          font-size: 11px;
         }
 
         .metrics {
           display: grid;
-          grid-template-columns: repeat(5, minmax(0, 1fr));
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 12px;
           margin-bottom: 12px;
         }
 
         .metric {
-          min-height: 88px;
+          min-height: 78px;
           background: #fffdf8;
           border: 1px solid #e5dccc;
           border-radius: 12px;
-          padding: 16px 20px;
+          padding: 14px 18px;
           text-align: left;
           cursor: pointer;
         }
@@ -564,15 +600,16 @@ export default function ExecutiveStatus() {
         .timelineRow:hover,
         .decisionRow:hover,
         .streamRow:hover,
-        .noteRow:hover {
+        .noteRow:hover,
+        .commStatusRow:hover {
           background: #faf4e9;
         }
 
         .metric strong {
           display: block;
-          font-size: 26px;
+          font-size: 24px;
           line-height: 1;
-          margin-bottom: 7px;
+          margin-bottom: 6px;
           font-weight: 750;
         }
 
@@ -580,7 +617,7 @@ export default function ExecutiveStatus() {
           display: block;
           font-size: 13px;
           font-weight: 750;
-          margin-bottom: 4px;
+          margin-bottom: 3px;
         }
 
         .metric small {
@@ -592,10 +629,10 @@ export default function ExecutiveStatus() {
 
         .layout {
           display: grid;
-          grid-template-columns: 0.72fr 1.88fr 0.78fr;
+          grid-template-columns: minmax(280px, 23%) minmax(760px, 54%) minmax(280px, 23%);
           gap: 12px;
-          width: 100%;
           align-items: start;
+          width: 100%;
         }
 
         .leftStack,
@@ -603,7 +640,6 @@ export default function ExecutiveStatus() {
           display: flex;
           flex-direction: column;
           gap: 12px;
-          min-height: 0;
         }
 
         .panel {
@@ -612,12 +648,11 @@ export default function ExecutiveStatus() {
           border: 1px solid #e5dccc;
           border-radius: 12px;
           padding: 14px;
-          overflow: hidden;
         }
 
         .projects {
+          min-height: calc(100vh - 230px);
           align-self: start;
-          min-height: 520px;
         }
 
         .panelHead {
@@ -631,7 +666,6 @@ export default function ExecutiveStatus() {
 
         .panelHead b {
           font-size: 14px;
-          font-weight: 750;
         }
 
         .headActions {
@@ -643,6 +677,7 @@ export default function ExecutiveStatus() {
         .headActions span {
           color: #64748b;
           font-size: 12px;
+          cursor: pointer;
         }
 
         .addBtn {
@@ -651,9 +686,13 @@ export default function ExecutiveStatus() {
           border-radius: 999px;
           border: 1px solid #e5dccc;
           background: #fbf8f1;
-          color: #111827;
           cursor: pointer;
-          line-height: 1;
+          opacity: .75;
+        }
+
+        .addBtn:hover {
+          opacity: 1;
+          background: #f1ece3;
         }
 
         button { font: inherit; }
@@ -664,7 +703,8 @@ export default function ExecutiveStatus() {
         .timelineRow,
         .decisionRow,
         .streamRow,
-        .noteRow {
+        .noteRow,
+        .commStatusRow {
           width: 100%;
           border: 0;
           background: transparent;
@@ -677,7 +717,7 @@ export default function ExecutiveStatus() {
           display: grid;
           grid-template-columns: 30px 1fr;
           gap: 12px;
-          padding: 13px 0;
+          padding: 12px 0;
           align-items: center;
         }
 
@@ -697,7 +737,6 @@ export default function ExecutiveStatus() {
         .projectTop strong {
           display: block;
           font-size: 13px;
-          line-height: 1.25;
         }
 
         small {
@@ -705,21 +744,26 @@ export default function ExecutiveStatus() {
           color: #64748b;
           font-size: 11px;
           margin-top: 3px;
-          line-height: 1.25;
         }
 
         .simpleRow,
-        .timelineRow {
+        .timelineRow,
+        .commStatusRow {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 12px 0;
+          padding: 11px 0;
           font-size: 13px;
         }
 
-        .simpleRow b,
         .timelineRow b {
-          font-size: 18px;
+          font-size: 17px;
+        }
+
+        .simpleRow b,
+        .commStatusRow b {
+          font-size: 14px;
+          font-weight: 750;
         }
 
         .projectRow {
@@ -730,7 +774,6 @@ export default function ExecutiveStatus() {
           display: flex;
           justify-content: space-between;
           gap: 12px;
-          align-items: flex-start;
         }
 
         .pill {
@@ -761,11 +804,6 @@ export default function ExecutiveStatus() {
           margin: 10px 0;
         }
 
-        .progressLine b {
-          font-size: 11px;
-          text-align: right;
-        }
-
         .bar {
           height: 5px;
           background: #e4ded4;
@@ -780,7 +818,7 @@ export default function ExecutiveStatus() {
 
         .projectInfo {
           display: grid;
-          grid-template-columns: 1fr 1fr 0.7fr;
+          grid-template-columns: 1fr 1fr;
           gap: 10px;
         }
 
@@ -789,16 +827,19 @@ export default function ExecutiveStatus() {
           padding-left: 10px;
         }
 
+        .projectInfo div:nth-child(3) {
+          display: none;
+        }
+
         .projectInfo span {
           font-size: 12px;
           font-weight: 650;
           display: block;
-          line-height: 1.25;
         }
 
         .decisionItem {
           display: grid;
-          grid-template-columns: 1fr 30px;
+          grid-template-columns: 1fr 28px;
           align-items: center;
           border-bottom: 1px solid #ebe2d4;
         }
@@ -808,22 +849,45 @@ export default function ExecutiveStatus() {
           display: flex;
           justify-content: space-between;
           gap: 10px;
-          padding: 12px 0;
+          padding: 10px 0;
+          font-size: 12px;
+        }
+
+        .decisionRow small {
+          font-size: 11px;
         }
 
         .approve {
           border: 1px solid #d7eadf;
           background: #f2fbf5;
           color: #0f7a4b;
-          border-radius: 8px;
-          height: 24px;
+          border-radius: 7px;
+          height: 22px;
+          width: 22px;
           cursor: pointer;
+          font-size: 12px;
+          padding: 0;
         }
 
         .streamRow,
         .noteRow {
           padding: 10px 0;
           font-size: 12px;
+        }
+
+        .viewAllText {
+          width: 100%;
+          border: 0;
+          background: transparent;
+          text-align: left;
+          color: #475569;
+          font-size: 12px;
+          padding: 10px 0 2px;
+          cursor: pointer;
+        }
+
+        .viewAllText:hover {
+          color: #111827;
         }
 
         .danger {
@@ -1078,6 +1142,16 @@ function DrawerContent({ drawer, addTask, openTask, updateTask }) {
 
   if (drawer.type === "note") {
     return <DrawerBox label="Note" value={drawer.item.text} />;
+  }
+
+  if (drawer.type === "communication") {
+    return (
+      <>
+        <DrawerBox label="Count" value={drawer.item.count || drawer.item.number || 0} />
+        <DrawerBox label="Details" value={drawer.item.details || "Connect this to Outlook/Dialpad for live data."} />
+        <DrawerBox label="Source" value="Placeholder until Outlook/Dialpad API connection is added" />
+      </>
+    );
   }
 
   if (drawer.type === "waiting") {
