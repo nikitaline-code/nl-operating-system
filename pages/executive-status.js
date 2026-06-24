@@ -15,6 +15,10 @@ function getTaskProject(task) {
   return task.project || task.projectName || task.category || task.workspace || "General";
 }
 
+function getTaskSubProject(task) {
+  return task.subProject || task.subproject || task.section || task.area || "General";
+}
+
 function getTaskDueDate(task) {
   return task.dueDate || task.due_date || task.date || "";
 }
@@ -159,11 +163,14 @@ export default function ExecutiveStatus() {
 
     openTasks.forEach((task) => {
       const projectName = getTaskProject(task);
+      const subProject = getTaskSubProject(task);
+
       if (!grouped[projectName]) {
         grouped[projectName] = {
           id: projectName,
           name: projectName,
           tasks: [],
+          subProjects: new Set(),
           open: 0,
           complete: 0,
           overdue: 0,
@@ -173,6 +180,7 @@ export default function ExecutiveStatus() {
       }
 
       grouped[projectName].tasks.push(task);
+      grouped[projectName].subProjects.add(subProject);
       grouped[projectName].open += 1;
 
       if (normalizeDate(getTaskDueDate(task)) && normalizeDate(getTaskDueDate(task)) < todayString()) grouped[projectName].overdue += 1;
@@ -185,19 +193,11 @@ export default function ExecutiveStatus() {
       .slice(0, 8)
       .map((project) => {
         const status = project.overdue > 0 ? "Needs Attention" : project.waiting > 0 ? "Waiting" : "On Track";
-        const progress = Math.max(10, Math.min(95, Math.round(100 - project.open * 6 - project.overdue * 10)));
-        const nextTask = project.tasks
-          .slice()
-          .sort((a, b) => String(getTaskDueDate(a)).localeCompare(String(getTaskDueDate(b))))[0];
-
         return {
           ...project,
           status,
-          progress,
-          phase: `${project.open} open task${project.open === 1 ? "" : "s"}`,
-          waitingOn: project.waiting ? `${project.waiting} waiting item${project.waiting === 1 ? "" : "s"}` : "No current waiting items",
-          milestone: nextTask ? getTaskTitle(nextTask) : "No next task",
-          updated: "Live from Tasks",
+          subProjectCount: Array.from(project.subProjects).filter(Boolean).length,
+          subProjectList: Array.from(project.subProjects).filter(Boolean),
         };
       });
   }, [openTasks]);
@@ -246,11 +246,12 @@ export default function ExecutiveStatus() {
     setDraft({});
   }
 
-  function addTask(projectName = "") {
+  function addTask(projectName = "", subProject = "General") {
     const newTask = {
       id: uid(),
       title: "New task",
       project: projectName || "General",
+      subProject,
       dueDate: todayString(),
       priority: "Medium",
       status: "Open",
@@ -262,6 +263,17 @@ export default function ExecutiveStatus() {
     openDrawer("task", newTask);
     setEditing(true);
     setDraft(newTask);
+  }
+
+  function renameProject(oldName, newName) {
+    const clean = newName.trim();
+    if (!clean || clean === oldName) return;
+
+    const next = tasks.map((task) =>
+      getTaskProject(task) === oldName ? { ...task, project: clean } : task
+    );
+
+    saveTasks(next);
   }
 
   function updateTask(id, patch) {
@@ -387,37 +399,23 @@ export default function ExecutiveStatus() {
             {projects.length === 0 && <EmptyLine text="No projects yet. Add tasks with a project name to populate this section." />}
 
             {projects.map((project) => (
-              <button className="projectRow" key={project.name} onClick={() => openDrawer("project", project)}>
+              <div className="projectRow bigProject" key={project.name} onClick={() => openDrawer("project", project)}>
                 <div className="projectTop">
-                  <div>
-                    <strong>{project.name}</strong>
-                    <small>{project.phase}</small>
-                  </div>
+                  <EditableText
+                    value={project.name}
+                    className="bigProjectName"
+                    onSave={(value) => renameProject(project.name, value)}
+                  />
                   <span className={`pill ${getStatusClass(project.status)}`}>{project.status}</span>
                 </div>
 
-                <div className="progressLine">
-                  <div className="bar">
-                    <div style={{ width: `${project.progress}%` }} />
-                  </div>
-                  <b>{project.progress}%</b>
+                <div className="projectStats">
+                  <span><b>{project.open}</b> Open Tasks</span>
+                  <span><b>{project.subProjectCount}</b> Sub Projects</span>
+                  <span><b>{project.overdue}</b> Overdue</span>
+                  <span><b>{project.waiting}</b> Waiting</span>
                 </div>
-
-                <div className="projectInfo">
-                  <div>
-                    <small>Waiting On</small>
-                    <span>{project.waitingOn}</span>
-                  </div>
-                  <div>
-                    <small>Next</small>
-                    <span>{project.milestone}</span>
-                  </div>
-                  <div>
-                    <small>Updated</small>
-                    <span>{project.updated}</span>
-                  </div>
-                </div>
-              </button>
+              </div>
             ))}
           </Panel>
 
@@ -495,7 +493,7 @@ export default function ExecutiveStatus() {
           </div>
 
           <div className="tabs">
-            {["overview", "tasks", "notes"].map((tab) => (
+            {(drawer.type === "project" ? ["overview", "subprojects", "tasks", "files", "notes", "activity"] : ["overview", "tasks", "notes"]).map((tab) => (
               <button key={tab} className={drawerTab === tab ? "active" : ""} onClick={() => setDrawerTab(tab)}>
                 {tab}
               </button>
@@ -506,7 +504,7 @@ export default function ExecutiveStatus() {
             <InlineEdit type={drawer.type} draft={draft} setDraft={setDraft} />
           ) : (
             <DrawerContent
-              drawer={drawer}
+              drawer={{ ...drawer, tab: drawerTab }}
               addTask={addTask}
               openTask={(task) => openDrawer("task", task)}
               updateTask={updateTask}
@@ -563,19 +561,6 @@ export default function ExecutiveStatus() {
           margin-top: 5px;
         }
 
-        .board {
-          position: relative;
-        }
-
-        .board:after {
-          content: "Live from Tasks · Refreshes every 30 sec";
-          position: absolute;
-          right: 2px;
-          top: -22px;
-          color: #64748b;
-          font-size: 11px;
-        }
-
         .metrics {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -599,9 +584,8 @@ export default function ExecutiveStatus() {
         .projectRow:hover,
         .timelineRow:hover,
         .decisionRow:hover,
-        .streamRow:hover,
-        .noteRow:hover,
-        .commStatusRow:hover {
+        .commStatusRow:hover,
+        .detailRow:hover {
           background: #faf4e9;
         }
 
@@ -624,7 +608,6 @@ export default function ExecutiveStatus() {
           display: block;
           color: #64748b;
           font-size: 11px;
-          line-height: 1.25;
         }
 
         .layout {
@@ -702,8 +685,6 @@ export default function ExecutiveStatus() {
         .projectRow,
         .timelineRow,
         .decisionRow,
-        .streamRow,
-        .noteRow,
         .commStatusRow {
           width: 100%;
           border: 0;
@@ -733,8 +714,7 @@ export default function ExecutiveStatus() {
           font-size: 12px;
         }
 
-        .priorityRow strong,
-        .projectTop strong {
+        .priorityRow strong {
           display: block;
           font-size: 13px;
         }
@@ -766,14 +746,37 @@ export default function ExecutiveStatus() {
           font-weight: 750;
         }
 
-        .projectRow {
-          padding: 15px 0;
+        .bigProject {
+          padding: 20px 0;
         }
 
         .projectTop {
           display: flex;
           justify-content: space-between;
-          gap: 12px;
+          gap: 14px;
+          align-items: flex-start;
+        }
+
+        .bigProjectName {
+          display: block;
+          width: 100%;
+          border: 0;
+          background: transparent;
+          font-family: Georgia, serif;
+          font-size: 28px;
+          font-weight: 400;
+          line-height: 1.05;
+          letter-spacing: -0.03em;
+          color: #111827;
+          padding: 0;
+          margin: 0;
+        }
+
+        .bigProjectName:focus,
+        .editableInput:focus {
+          outline: 1px solid #e5dccc;
+          background: #fffaf0;
+          border-radius: 6px;
         }
 
         .pill {
@@ -796,45 +799,25 @@ export default function ExecutiveStatus() {
           color: #b91c1c;
         }
 
-        .progressLine {
+        .projectStats {
           display: grid;
-          grid-template-columns: 1fr 38px;
+          grid-template-columns: repeat(4, 1fr);
           gap: 10px;
-          align-items: center;
-          margin: 10px 0;
+          margin-top: 14px;
         }
 
-        .bar {
-          height: 5px;
-          background: #e4ded4;
-          border-radius: 999px;
-        }
-
-        .bar div {
-          height: 100%;
-          background: #111827;
-          border-radius: 999px;
-        }
-
-        .projectInfo {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 10px;
-        }
-
-        .projectInfo div {
+        .projectStats span {
           border-left: 1px solid #e5dccc;
           padding-left: 10px;
-        }
-
-        .projectInfo div:nth-child(3) {
-          display: none;
-        }
-
-        .projectInfo span {
+          color: #475569;
           font-size: 12px;
-          font-weight: 650;
+        }
+
+        .projectStats b {
           display: block;
+          color: #111827;
+          font-size: 17px;
+          margin-bottom: 2px;
         }
 
         .decisionItem {
@@ -869,12 +852,6 @@ export default function ExecutiveStatus() {
           padding: 0;
         }
 
-        .streamRow,
-        .noteRow {
-          padding: 10px 0;
-          font-size: 12px;
-        }
-
         .viewAllText {
           width: 100%;
           border: 0;
@@ -903,7 +880,7 @@ export default function ExecutiveStatus() {
         .drawer {
           position: fixed;
           inset: 0 0 0 auto;
-          width: 460px;
+          width: 500px;
           background: #fffdf8;
           border-left: 1px solid #e5dccc;
           box-shadow: -16px 0 40px rgba(0,0,0,.08);
@@ -923,29 +900,9 @@ export default function ExecutiveStatus() {
         h2 {
           font-family: Georgia, serif;
           font-weight: 400;
-          font-size: 26px;
+          font-size: 30px;
           margin: 0 0 8px;
-        }
-
-        .drawerActions {
-          display: flex;
-          gap: 8px;
-          margin: 16px 0;
-        }
-
-        .drawerActions button,
-        .detailHead button {
-          border: 1px solid #e5dccc;
-          background: #fbf8f1;
-          border-radius: 8px;
-          padding: 7px 10px;
-          cursor: pointer;
-        }
-
-        .drawerActions .darkBtn {
-          background: #111827;
-          color: white;
-          border-color: #111827;
+          letter-spacing: -0.03em;
         }
 
         .tabs {
@@ -953,6 +910,7 @@ export default function ExecutiveStatus() {
           gap: 14px;
           border-bottom: 1px solid #e5dccc;
           margin: 20px 0;
+          overflow-x: auto;
         }
 
         .tabs button {
@@ -962,6 +920,7 @@ export default function ExecutiveStatus() {
           text-transform: capitalize;
           cursor: pointer;
           color: #475569;
+          white-space: nowrap;
         }
 
         .tabs button.active {
@@ -984,9 +943,28 @@ export default function ExecutiveStatus() {
           margin-top: 4px;
         }
 
-        .inlineForm {
-          display: grid;
-          gap: 10px;
+        .editableInput,
+        .editableTextarea,
+        .editableSelect {
+          width: 100%;
+          border: 0;
+          background: transparent;
+          font: inherit;
+          color: #111827;
+          padding: 3px;
+        }
+
+        .editableTextarea {
+          resize: vertical;
+          min-height: 60px;
+        }
+
+        .field {
+          border: 1px solid #ebe2d4;
+          background: #fbf8f1;
+          border-radius: 10px;
+          padding: 10px;
+          margin-bottom: 9px;
         }
 
         .field label {
@@ -994,17 +972,6 @@ export default function ExecutiveStatus() {
           color: #64748b;
           font-size: 11px;
           margin-bottom: 4px;
-        }
-
-        .field input,
-        .field textarea,
-        .field select {
-          width: 100%;
-          border: 1px solid #e5dccc;
-          background: #fbf8f1;
-          border-radius: 8px;
-          padding: 9px;
-          font: inherit;
         }
 
         .detailHead {
@@ -1019,11 +986,33 @@ export default function ExecutiveStatus() {
           font-size: 15px;
         }
 
-        .detailRow {
-          display: flex;
-          justify-content: space-between;
-          gap: 12px;
+        .detailHead button,
+        .detailActions button,
+        .drawerActions button {
+          border: 1px solid #e5dccc;
+          background: #fbf8f1;
+          border-radius: 8px;
+          padding: 7px 10px;
           cursor: pointer;
+        }
+
+        .detailRow {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 12px;
+          align-items: center;
+        }
+
+        .detailActions {
+          display: flex;
+          gap: 6px;
+        }
+
+        .drawerActions {
+          display: flex;
+          gap: 8px;
+          margin: 16px 0;
+          flex-wrap: wrap;
         }
 
         @media (max-width: 1200px) {
@@ -1038,6 +1027,10 @@ export default function ExecutiveStatus() {
 
           .projects {
             min-height: auto;
+          }
+
+          .drawer {
+            width: min(500px, 100vw);
           }
         }
       `}</style>
@@ -1091,17 +1084,78 @@ function InlineEdit({ type, draft, setDraft }) {
   );
 }
 
+function EditableText({ value, onSave, className = "" }) {
+  const [draft, setDraft] = useState(value || "");
+
+  useEffect(() => {
+    setDraft(value || "");
+  }, [value]);
+
+  function save() {
+    if (draft !== value) onSave(draft);
+  }
+
+  return (
+    <input
+      className={`editableInput ${className}`}
+      value={draft}
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={save}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+      }}
+    />
+  );
+}
+
 function DrawerContent({ drawer, addTask, openTask, updateTask }) {
   if (drawer.type === "project") {
     const project = drawer.item;
+
+    if (drawer.tab === "subprojects") {
+      return (
+        <>
+          <div className="detailHead">
+            <h3>Sub Projects</h3>
+            <button onClick={() => addTask(project.name, "New Sub Project")}>+ Add Sub Project</button>
+          </div>
+          {(project.subProjectList || []).map((name) => {
+            const subTasks = project.tasks.filter((task) => getTaskSubProject(task) === name);
+            return (
+              <button className="detailRow" key={name} onClick={() => addTask(project.name, name)}>
+                <span>{name}</span>
+                <small>{subTasks.length} task{subTasks.length === 1 ? "" : "s"}</small>
+              </button>
+            );
+          })}
+        </>
+      );
+    }
+
+    if (drawer.tab === "tasks") {
+      return <DetailTasks tasks={project.tasks} addTask={() => addTask(project.name)} openTask={openTask} />;
+    }
+
+    if (drawer.tab === "files") {
+      return <DrawerBox label="Files" value="Files can be connected to Drive/Supabase next." />;
+    }
+
+    if (drawer.tab === "notes") {
+      return <DrawerBox label="Notes" value="Project notes can be added in the next version." />;
+    }
+
+    if (drawer.tab === "activity") {
+      return <DrawerBox label="Activity" value="Activity log can be connected next." />;
+    }
 
     return (
       <>
         <DrawerBox label="Status" value={project.status} />
         <DrawerBox label="Open Tasks" value={project.open} />
-        <DrawerBox label="Waiting On" value={project.waitingOn} />
-        <DrawerBox label="Next" value={project.milestone} />
-        <DetailTasks tasks={project.tasks} addTask={() => addTask(project.name)} openTask={openTask} />
+        <DrawerBox label="Sub Projects" value={project.subProjectCount} />
+        <DrawerBox label="Overdue" value={project.overdue} />
+        <DrawerBox label="Waiting" value={project.waiting} />
       </>
     );
   }
