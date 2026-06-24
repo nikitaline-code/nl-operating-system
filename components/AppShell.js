@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 
 const navItems = [
   { label: "Operations", href: "/executive-status" },
-   { label: "Daily Huddle", href: "/daily-huddle" },
+  { label: "Daily Huddle", href: "/daily-huddle" },
   { label: "Tasks", href: "/tasks" },
   { label: "Meetings", href: "/meetings" },
   { label: "Executive Flow", href: "/executive-flow" },
