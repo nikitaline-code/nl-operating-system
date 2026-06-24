@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 
+const STORE_KEY = "ea-executive-status-v4";
+
 const uid = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 const DEFAULT_DATA = {
   priorities: [
-    { id: "p1", title: "Dealer Pricing Approval", note: "Decision needed", owner: "Nikita", status: "Open" },
-    { id: "p2", title: "July Event Catering", note: "Costco quote pending", owner: "Nikita", status: "Open" },
-    { id: "p3", title: "Inventory Review", note: "Reports ready", owner: "Nikita", status: "Open" },
+    { id: "p1", title: "Dealer Pricing Approval", note: "Decision needed" },
+    { id: "p2", title: "July Event Catering", note: "Costco quote pending" },
+    { id: "p3", title: "Inventory Review", note: "Reports ready" },
   ],
   projects: [
     {
@@ -18,24 +20,37 @@ const DEFAULT_DATA = {
       waitingOn: "Costco Quote, AV Quote, Dealer Numbers",
       milestone: "Final Catering Order · Jun 25",
       updated: "27 mins ago",
-      tasks: ["Confirm dealer numbers", "Finalize catering order", "Send final agenda"],
-      files: ["Dealer Agenda.pdf", "Catering Quote.pdf"],
-      notes: ["Costco quote expected today.", "AV confirmation still pending."],
-      activity: ["Status updated 27 mins ago", "Task added from meeting"],
+      tasks: [
+        { id: "pt1", title: "Confirm dealer numbers", status: "Open" },
+        { id: "pt2", title: "Finalize catering order", status: "Open" },
+        { id: "pt3", title: "Send final agenda", status: "Open" },
+      ],
+      files: [
+        { id: "pf1", name: "Dealer Agenda.pdf", type: "PDF" },
+        { id: "pf2", name: "Catering Quote.pdf", type: "PDF" },
+      ],
+      notes: [
+        { id: "pn1", text: "Costco quote expected today." },
+        { id: "pn2", text: "AV confirmation still pending." },
+      ],
+      activity: [
+        { id: "pa1", text: "Project status updated", time: "27 mins ago" },
+        { id: "pa2", text: "Task added from meeting", time: "1 hour ago" },
+      ],
     },
     {
       id: "proj2",
       name: "Seminole Expansion",
-      status: "Waiting on Alex",
+      status: "Waiting",
       progress: 65,
       phase: "Drawings & Specs",
       waitingOn: "Drawings & Specs",
       milestone: "Presentation Draft · Jun 30",
       updated: "1 hour ago",
-      tasks: ["Review drawings", "Prepare internal summary"],
-      files: ["Arena Notes.pdf"],
-      notes: ["Waiting on drawings before next review."],
-      activity: ["Follow-up logged", "Meeting created"],
+      tasks: [{ id: "pt4", title: "Review drawings", status: "Open" }],
+      files: [{ id: "pf3", name: "Arena Notes.pdf", type: "PDF" }],
+      notes: [{ id: "pn3", text: "Waiting on drawings before next review." }],
+      activity: [{ id: "pa3", text: "Follow-up logged", time: "1 hour ago" }],
     },
     {
       id: "proj3",
@@ -46,17 +61,17 @@ const DEFAULT_DATA = {
       waitingOn: "Content from Marketing",
       milestone: "Design Finalization · Jul 2",
       updated: "2 hours ago",
-      tasks: ["Review dashboard layout", "Update task view"],
-      files: ["Dashboard Mockup.png"],
-      notes: ["Keep styling clean and not too colourful."],
-      activity: ["Mockup updated"],
+      tasks: [{ id: "pt5", title: "Review dashboard layout", status: "Open" }],
+      files: [{ id: "pf4", name: "Dashboard Mockup.png", type: "Image" }],
+      notes: [{ id: "pn4", text: "Keep styling clean and not too colourful." }],
+      activity: [{ id: "pa4", text: "Mockup updated", time: "2 hours ago" }],
     },
   ],
   timeline: [
-    { id: "t1", label: "Overdue", count: 3 },
-    { id: "t2", label: "Today", count: 5 },
-    { id: "t3", label: "Tomorrow", count: 4 },
-    { id: "t4", label: "This Week", count: 11 },
+    { id: "tl1", label: "Overdue", count: 3 },
+    { id: "tl2", label: "Today", count: 5 },
+    { id: "tl3", label: "Tomorrow", count: 4 },
+    { id: "tl4", label: "This Week", count: 11 },
   ],
   waiting: [
     { id: "w1", label: "Mark", count: 2, details: "Pricing approval, dealer event final agenda" },
@@ -75,35 +90,29 @@ const DEFAULT_DATA = {
   ],
 };
 
-const STORAGE_KEY = "executive-status-board-v2";
-
 export default function ExecutiveStatus() {
   const [now, setNow] = useState(null);
   const [data, setData] = useState(DEFAULT_DATA);
   const [drawer, setDrawer] = useState(null);
   const [drawerTab, setDrawerTab] = useState("overview");
-  const [editing, setEditing] = useState(null);
-  const [quickAdd, setQuickAdd] = useState(null);
+  const [draft, setDraft] = useState(null);
 
   useEffect(() => {
     setNow(new Date());
-    const saved = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
-    if (saved) {
-      try {
-        setData(JSON.parse(saved));
-      } catch {
-        setData(DEFAULT_DATA);
-      }
-    }
+
+    try {
+      const saved = localStorage.getItem(STORE_KEY);
+      if (saved) setData(JSON.parse(saved));
+    } catch {}
 
     const timer = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    }
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(data));
+    } catch {}
   }, [data]);
 
   const greeting = useMemo(() => {
@@ -129,109 +138,187 @@ export default function ExecutiveStatus() {
     : "";
 
   const metrics = [
-    {
-      number: data.projects.length,
-      label: "Active Projects",
-      note: `${data.projects.filter((p) => p.status === "On Track").length} on track`,
-    },
-    {
-      number: data.waiting.reduce((sum, item) => sum + Number(item.count || 0), 0),
-      label: "Waiting On",
-      note: "Items currently stalled",
-    },
-    {
-      number: data.decisions.filter((d) => d.status !== "Approved").length,
-      label: "Needs Your Input",
-      note: "Approvals / Decisions",
-    },
+    { number: data.projects.length, label: "Active Projects", note: `${data.projects.filter(p => p.status === "On Track").length} on track` },
+    { number: data.waiting.reduce((sum, x) => sum + Number(x.count || 0), 0), label: "Waiting On", note: "Items currently stalled" },
+    { number: data.decisions.filter(x => x.status !== "Approved").length, label: "Needs Your Input", note: "Approvals / Decisions" },
     { number: "97%", label: "Operations Health", note: "Everything on track" },
     { number: "✓", label: "On Track", note: "Dealer Event · Friday" },
   ];
 
+  function saveData(next) {
+    setData(next);
+  }
+
+  function updateCollection(key, updater) {
+    saveData({ ...data, [key]: updater(data[key]) });
+  }
+
   function openDrawer(type, item) {
     setDrawer({ type, item });
     setDrawerTab("overview");
-    setEditing(null);
-    setQuickAdd(null);
+    setDraft(null);
   }
 
-  function refreshDrawer(type, id) {
-    const key = getCollectionKey(type);
-    if (!key) return;
-    const updated = data[key].find((item) => item.id === id);
-    if (updated) setDrawer({ type, item: updated });
+  function refreshDrawer(key, id, nextData = data) {
+    const item = nextData[key]?.find((x) => x.id === id);
+    if (item) setDrawer({ type: singularFromKey(key), item });
   }
 
-  function addItem(type, payload) {
-    const key = getCollectionKey(type);
-    if (!key) return;
-
-    const item = buildNewItem(type, payload);
-    setData((prev) => ({ ...prev, [key]: [...prev[key], item] }));
-    setQuickAdd(null);
+  function addPriority() {
+    const item = { id: uid(), title: "New priority", note: "Add details" };
+    updateCollection("priorities", (items) => [...items, item]);
+    openDrawer("priority", item);
+    setDraft({ ...item });
   }
 
-  function updateItem(type, id, changes) {
-    const key = getCollectionKey(type);
-    if (!key) return;
-
-    setData((prev) => {
-      const updatedCollection = prev[key].map((item) =>
-        item.id === id ? { ...item, ...changes, updated: "Just now" } : item
-      );
-
-      const next = { ...prev, [key]: updatedCollection };
-
-      if (drawer?.item?.id === id) {
-        const updatedDrawerItem = updatedCollection.find((item) => item.id === id);
-        setDrawer({ type, item: updatedDrawerItem });
-      }
-
-      return next;
-    });
-
-    setEditing(null);
+  function addProject() {
+    const item = {
+      id: uid(),
+      name: "New Project",
+      status: "On Track",
+      progress: 0,
+      phase: "New phase",
+      waitingOn: "Not set",
+      milestone: "Not set",
+      updated: "Just now",
+      tasks: [],
+      files: [],
+      notes: [],
+      activity: [{ id: uid(), text: "Project created", time: "Just now" }],
+    };
+    updateCollection("projects", (items) => [...items, item]);
+    openDrawer("project", item);
+    setDraft({ ...item });
   }
 
-  function deleteItem(type, id) {
-    const key = getCollectionKey(type);
-    if (!key) return;
+  function addWaiting() {
+    const item = { id: uid(), label: "New waiting item", count: 1, details: "Add details" };
+    updateCollection("waiting", (items) => [...items, item]);
+    openDrawer("waiting", item);
+    setDraft({ ...item });
+  }
 
-    setData((prev) => ({ ...prev, [key]: prev[key].filter((item) => item.id !== id) }));
+  function addDecision() {
+    const item = { id: uid(), title: "New decision", priority: "Medium", status: "Pending", note: "Add background" };
+    updateCollection("decisions", (items) => [...items, item]);
+    openDrawer("decision", item);
+    setDraft({ ...item });
+  }
+
+  function addCommunication() {
+    const item = { id: uid(), number: 1, label: "New", details: "Add details" };
+    updateCollection("communications", (items) => [...items, item]);
+    openDrawer("communication", item);
+    setDraft({ ...item });
+  }
+
+  function addTimeline() {
+    const item = { id: uid(), label: "New", count: 1 };
+    updateCollection("timeline", (items) => [...items, item]);
+    openDrawer("timeline", item);
+    setDraft({ ...item });
+  }
+
+  function deleteItem(key, id) {
+    const next = { ...data, [key]: data[key].filter((x) => x.id !== id) };
+    saveData(next);
     if (drawer?.item?.id === id) setDrawer(null);
   }
 
+  function startEdit(item) {
+    setDraft(JSON.parse(JSON.stringify(item)));
+  }
+
+  function cancelEdit() {
+    setDraft(null);
+  }
+
+  function saveDraft(type, id) {
+    const key = collectionForType(type);
+    if (!key || !draft) return;
+
+    const next = {
+      ...data,
+      [key]: data[key].map((x) => (x.id === id ? { ...x, ...draft, updated: "Just now" } : x)),
+    };
+
+    saveData(next);
+    setDraft(null);
+    refreshDrawer(key, id, next);
+  }
+
   function approveDecision(decision) {
-    updateItem("decision", decision.id, { status: "Approved" });
-    addItem("priority", {
+    const nextDecisions = data.decisions.map((x) =>
+      x.id === decision.id ? { ...x, status: "Approved" } : x
+    );
+
+    const newPriority = {
+      id: uid(),
       title: `Approved: ${decision.title}`,
       note: "Action created for Nikita",
-      owner: "Nikita",
-      status: "Open",
+    };
+
+    saveData({ ...data, decisions: nextDecisions, priorities: [...data.priorities, newPriority] });
+
+    if (drawer?.item?.id === decision.id) {
+      setDrawer({ type: "decision", item: { ...decision, status: "Approved" } });
+    }
+  }
+
+  function addProjectDetail(field) {
+    if (!drawer || drawer.type !== "project") return;
+
+    const newItem =
+      field === "tasks"
+        ? { id: uid(), title: "New task", status: "Open" }
+        : field === "files"
+        ? { id: uid(), name: "New file", type: "File" }
+        : field === "notes"
+        ? { id: uid(), text: "New note" }
+        : { id: uid(), text: "New activity", time: "Just now" };
+
+    const nextProjects = data.projects.map((project) => {
+      if (project.id !== drawer.item.id) return project;
+      return { ...project, [field]: [...(project[field] || []), newItem], updated: "Just now" };
     });
+
+    const next = { ...data, projects: nextProjects };
+    saveData(next);
+    refreshDrawer("projects", drawer.item.id, next);
   }
 
-  function addDrawerListItem(field) {
+  function updateProjectDetail(field, detailId, patch) {
     if (!drawer || drawer.type !== "project") return;
-    const value = prompt(`Add ${field.slice(0, -1)}:`);
-    if (!value) return;
 
-    const existing = Array.isArray(drawer.item[field]) ? drawer.item[field] : [];
-    updateItem("project", drawer.item.id, { [field]: [...existing, value] });
+    const nextProjects = data.projects.map((project) => {
+      if (project.id !== drawer.item.id) return project;
+      return {
+        ...project,
+        [field]: (project[field] || []).map((item) => (item.id === detailId ? { ...item, ...patch } : item)),
+        updated: "Just now",
+      };
+    });
+
+    const next = { ...data, projects: nextProjects };
+    saveData(next);
+    refreshDrawer("projects", drawer.item.id, next);
   }
 
-  function editDrawerListItem(field, index, value) {
+  function deleteProjectDetail(field, detailId) {
     if (!drawer || drawer.type !== "project") return;
-    const existing = Array.isArray(drawer.item[field]) ? drawer.item[field] : [];
-    const next = existing.map((item, i) => (i === index ? value : item));
-    updateItem("project", drawer.item.id, { [field]: next });
-  }
 
-  function removeDrawerListItem(field, index) {
-    if (!drawer || drawer.type !== "project") return;
-    const existing = Array.isArray(drawer.item[field]) ? drawer.item[field] : [];
-    const next = existing.filter((_, i) => i !== index);
-    updateItem("project", drawer.item.id, { [field]: next });
+    const nextProjects = data.projects.map((project) => {
+      if (project.id !== drawer.item.id) return project;
+      return {
+        ...project,
+        [field]: (project[field] || []).filter((item) => item.id !== detailId),
+        updated: "Just now",
+      };
+    });
+
+    const next = { ...data, projects: nextProjects };
+    saveData(next);
+    refreshDrawer("projects", drawer.item.id, next);
   }
 
   return (
@@ -259,43 +346,37 @@ export default function ExecutiveStatus() {
 
       <section className="layout">
         <div className="leftStack">
-          <Panel title="Today’s Priorities" onAdd={() => setQuickAdd({ type: "priority" })}>
-            {data.priorities.map((priority, index) => (
-              <EditableRow
-                key={priority.id}
-                type="priority"
-                item={priority}
-                onOpen={() => openDrawer("priority", priority)}
-                onEdit={() => setEditing({ type: "priority", item: priority })}
-                onDelete={() => deleteItem("priority", priority.id)}
+          <Panel title="Today’s Priorities" onAdd={addPriority}>
+            {data.priorities.map((item, index) => (
+              <CleanRow
+                key={item.id}
+                onOpen={() => openDrawer("priority", item)}
+                onDelete={() => deleteItem("priorities", item.id)}
               >
                 <span className="number">{index + 1}</span>
                 <div>
-                  <strong>{priority.title}</strong>
-                  <small>{priority.note}</small>
+                  <strong>{item.title}</strong>
+                  <small>{item.note}</small>
                 </div>
-              </EditableRow>
+              </CleanRow>
             ))}
           </Panel>
 
-          <Panel title="Waiting On" onAdd={() => setQuickAdd({ type: "waiting" })}>
+          <Panel title="Waiting On" onAdd={addWaiting}>
             {data.waiting.map((item) => (
-              <EditableRow
+              <CleanRow
                 key={item.id}
-                type="waiting"
-                item={item}
-                onOpen={() => openDrawer("waiting", item)}
-                onEdit={() => setEditing({ type: "waiting", item })}
-                onDelete={() => deleteItem("waiting", item.id)}
                 compact
+                onOpen={() => openDrawer("waiting", item)}
+                onDelete={() => deleteItem("waiting", item.id)}
               >
                 <span>{item.label}</span>
                 <b>{item.count}</b>
-              </EditableRow>
+              </CleanRow>
             ))}
           </Panel>
 
-          <Panel title="Communication Pipeline" onAdd={() => setQuickAdd({ type: "communication" })}>
+          <Panel title="Communication Pipeline" onAdd={addCommunication}>
             <div className="communicationGrid">
               {data.communications.map((item) => (
                 <button className="commItem" key={item.id} onClick={() => openDrawer("communication", item)}>
@@ -307,7 +388,7 @@ export default function ExecutiveStatus() {
           </Panel>
         </div>
 
-        <Panel title="Active Projects" className="projects" onAdd={() => setQuickAdd({ type: "project" })}>
+        <Panel title="Active Projects" className="projects" onAdd={addProject}>
           {data.projects.map((project) => (
             <div className="projectShell" key={project.id}>
               <button className="projectRow" onClick={() => openDrawer("project", project)}>
@@ -341,47 +422,38 @@ export default function ExecutiveStatus() {
                   </div>
                 </div>
               </button>
-
-              <div className="inlineActions">
-                <button onClick={() => setEditing({ type: "project", item: project })}>Edit</button>
-                <button onClick={() => deleteItem("project", project.id)}>Delete</button>
-              </div>
+              <button className="ghostDelete" onClick={() => deleteItem("projects", project.id)}>Delete</button>
             </div>
           ))}
         </Panel>
 
         <div className="rightStack">
-          <Panel title="Task Timeline" onAdd={() => setQuickAdd({ type: "timeline" })}>
+          <Panel title="Task Timeline" onAdd={addTimeline}>
             {data.timeline.map((item) => (
-              <EditableRow
+              <CleanRow
                 key={item.id}
-                type="timeline"
-                item={item}
-                onOpen={() => openDrawer("timeline", item)}
-                onEdit={() => setEditing({ type: "timeline", item })}
-                onDelete={() => deleteItem("timeline", item.id)}
                 compact
+                onOpen={() => openDrawer("timeline", item)}
+                onDelete={() => deleteItem("timeline", item.id)}
               >
                 <span>{item.label}</span>
                 <b className={item.label === "Overdue" ? "danger" : ""}>{item.count}</b>
-              </EditableRow>
+              </CleanRow>
             ))}
           </Panel>
 
-          <Panel title="Needs Your Decision" onAdd={() => setQuickAdd({ type: "decision" })}>
-            {data.decisions.map((decision) => (
-              <div className="decisionWrap" key={decision.id}>
-                <button className="decisionRow" onClick={() => openDrawer("decision", decision)}>
-                  <span>{decision.title}</span>
-                  <small className={decision.priority === "High" ? "danger" : ""}>
-                    {decision.status === "Approved" ? "Approved" : decision.priority}
+          <Panel title="Needs Your Decision" onAdd={addDecision}>
+            {data.decisions.map((item) => (
+              <div className="decisionItem" key={item.id}>
+                <button className="decisionRow" onClick={() => openDrawer("decision", item)}>
+                  <span>{item.title}</span>
+                  <small className={item.priority === "High" ? "danger" : ""}>
+                    {item.status === "Approved" ? "Approved" : item.priority}
                   </small>
                 </button>
-                <div className="miniActions">
-                  {decision.status !== "Approved" && (
-                    <button onClick={() => approveDecision(decision)}>✓</button>
-                  )}
-                  <button onClick={() => setEditing({ type: "decision", item: decision })}>Edit</button>
+                <div className="decisionActions">
+                  {item.status !== "Approved" && <button onClick={() => approveDecision(item)}>✓</button>}
+                  <button onClick={() => deleteItem("decisions", item.id)}>×</button>
                 </div>
               </div>
             ))}
@@ -389,37 +461,26 @@ export default function ExecutiveStatus() {
         </div>
       </section>
 
-      {quickAdd && (
-        <Modal title={`Add ${labelForType(quickAdd.type)}`} onClose={() => setQuickAdd(null)}>
-          <ItemForm
-            type={quickAdd.type}
-            onCancel={() => setQuickAdd(null)}
-            onSave={(payload) => addItem(quickAdd.type, payload)}
-          />
-        </Modal>
-      )}
-
-      {editing && (
-        <Modal title={`Edit ${labelForType(editing.type)}`} onClose={() => setEditing(null)}>
-          <ItemForm
-            type={editing.type}
-            initial={editing.item}
-            onCancel={() => setEditing(null)}
-            onSave={(payload) => updateItem(editing.type, editing.item.id, payload)}
-          />
-        </Modal>
-      )}
-
       {drawer && (
         <aside className="drawer">
           <button className="close" onClick={() => setDrawer(null)}>×</button>
 
-          <h2>{getDrawerTitle(drawer)}</h2>
-          <p>Click into each tab to update details, tasks, files, notes, and activity.</p>
+          <div className="drawerHeader">
+            <div>
+              <h2>{getDrawerTitle(drawer)}</h2>
+              <p>Update details directly here. No popups.</p>
+            </div>
+          </div>
 
-          <div className="drawerTopActions">
-            {drawer.type !== "metric" && (
-              <button onClick={() => setEditing({ type: drawer.type, item: drawer.item })}>Edit Main Item</button>
+          <div className="drawerActions">
+            {drawer.type !== "metric" && !draft && (
+              <button onClick={() => startEdit(drawer.item)}>Edit Details</button>
+            )}
+            {draft && (
+              <>
+                <button onClick={cancelEdit}>Cancel</button>
+                <button className="darkBtn" onClick={() => saveDraft(drawer.type, drawer.item.id)}>Save</button>
+              </>
             )}
             {drawer.type === "decision" && drawer.item.status !== "Approved" && (
               <button onClick={() => approveDecision(drawer.item)}>Approve</button>
@@ -444,58 +505,67 @@ export default function ExecutiveStatus() {
 
           {drawerTab === "overview" && (
             <>
-              <DrawerBox label="Status" value={getItemStatus(drawer)} />
-              <DrawerBox label="Owner" value="Nikita" />
-              <DrawerBox label="Next Action" value={getNextAction(drawer)} />
-              {drawer.type === "project" && (
-                <>
-                  <DrawerBox label="Progress" value={`${drawer.item.progress}%`} />
-                  <DrawerBox label="Waiting On" value={drawer.item.waitingOn} />
-                  <DrawerBox label="Next Milestone" value={drawer.item.milestone} />
-                  <DrawerBox label="Last Updated" value={drawer.item.updated} />
-                </>
+              {draft ? (
+                <InlineEditor type={drawer.type} draft={draft} setDraft={setDraft} />
+              ) : (
+                <Overview drawer={drawer} />
               )}
             </>
           )}
 
-          {drawerTab === "tasks" && (
-            <EditableList
+          {drawerTab === "tasks" && drawer.type === "project" && (
+            <DetailList
               title="Tasks"
-              items={drawer.type === "project" ? drawer.item.tasks || [] : ["Review item", "Update status"]}
-              onAdd={() => addDrawerListItem("tasks")}
-              onEdit={(index, value) => editDrawerListItem("tasks", index, value)}
-              onRemove={(index) => removeDrawerListItem("tasks", index)}
+              items={drawer.item.tasks || []}
+              field="tasks"
+              addItem={addProjectDetail}
+              updateItem={updateProjectDetail}
+              deleteItem={deleteProjectDetail}
+              primaryKey="title"
+              secondaryKey="status"
             />
           )}
 
-          {drawerTab === "files" && (
-            <EditableList
+          {drawerTab === "files" && drawer.type === "project" && (
+            <DetailList
               title="Files"
-              items={drawer.type === "project" ? drawer.item.files || [] : []}
-              onAdd={() => addDrawerListItem("files")}
-              onEdit={(index, value) => editDrawerListItem("files", index, value)}
-              onRemove={(index) => removeDrawerListItem("files", index)}
+              items={drawer.item.files || []}
+              field="files"
+              addItem={addProjectDetail}
+              updateItem={updateProjectDetail}
+              deleteItem={deleteProjectDetail}
+              primaryKey="name"
+              secondaryKey="type"
             />
           )}
 
-          {drawerTab === "notes" && (
-            <EditableList
+          {drawerTab === "notes" && drawer.type === "project" && (
+            <DetailList
               title="Notes"
-              items={drawer.type === "project" ? drawer.item.notes || [] : [drawer.item.note || drawer.item.details || ""]}
-              onAdd={() => addDrawerListItem("notes")}
-              onEdit={(index, value) => editDrawerListItem("notes", index, value)}
-              onRemove={(index) => removeDrawerListItem("notes", index)}
+              items={drawer.item.notes || []}
+              field="notes"
+              addItem={addProjectDetail}
+              updateItem={updateProjectDetail}
+              deleteItem={deleteProjectDetail}
+              primaryKey="text"
             />
           )}
 
-          {drawerTab === "activity" && (
-            <EditableList
+          {drawerTab === "activity" && drawer.type === "project" && (
+            <DetailList
               title="Activity"
-              items={drawer.type === "project" ? drawer.item.activity || [] : ["Item opened"]}
-              onAdd={() => addDrawerListItem("activity")}
-              onEdit={(index, value) => editDrawerListItem("activity", index, value)}
-              onRemove={(index) => removeDrawerListItem("activity", index)}
+              items={drawer.item.activity || []}
+              field="activity"
+              addItem={addProjectDetail}
+              updateItem={updateProjectDetail}
+              deleteItem={deleteProjectDetail}
+              primaryKey="text"
+              secondaryKey="time"
             />
+          )}
+
+          {drawer.type !== "project" && drawerTab !== "overview" && (
+            <div className="emptyState">Detailed {drawerTab} can be added for this item later.</div>
           )}
 
           <button className="primary">Open Workspace →</button>
@@ -569,12 +639,10 @@ export default function ExecutiveStatus() {
         }
 
         .metric:hover,
-        .priorityRow:hover,
+        .rowMain:hover,
         .projectRow:hover,
-        .simpleRow:hover,
         .decisionRow:hover,
-        .commItem:hover,
-        .timelineRow:hover {
+        .commItem:hover {
           background: #faf4e9;
         }
 
@@ -601,7 +669,7 @@ export default function ExecutiveStatus() {
 
         .layout {
           display: grid;
-          grid-template-columns: minmax(260px, 23%) minmax(720px, 54%) minmax(260px, 23%);
+          grid-template-columns: minmax(270px, 23%) minmax(760px, 54%) minmax(270px, 23%);
           gap: 12px;
           width: 100%;
           align-items: start;
@@ -666,65 +734,48 @@ export default function ExecutiveStatus() {
 
         button { font: inherit; }
 
-        .priorityRow,
-        .projectRow,
-        .simpleRow,
-        .decisionRow,
-        .timelineRow,
-        .commItem {
+        .cleanRow {
+          display: grid;
+          grid-template-columns: 1fr 24px;
+          align-items: center;
+          border-bottom: 1px solid #ebe2d4;
+        }
+
+        .rowMain {
           border: 0;
           background: transparent;
-          width: 100%;
-          text-align: left;
-          cursor: pointer;
-        }
-
-        .editableRow {
-          display: grid;
-          grid-template-columns: 1fr auto;
-          border-bottom: 1px solid #ebe2d4;
-          align-items: center;
-        }
-
-        .rowContent {
           display: grid;
           grid-template-columns: 28px 1fr;
           gap: 12px;
           align-items: center;
           padding: 13px 0;
-          border: 0;
-          background: transparent;
           text-align: left;
           cursor: pointer;
+          width: 100%;
         }
 
-        .editableRow.compact .rowContent {
+        .cleanRow.compact .rowMain {
           display: flex;
           justify-content: space-between;
-          padding: 12px 0;
           font-size: 13px;
         }
 
-        .rowActions,
-        .inlineActions,
-        .miniActions {
-          display: flex;
-          gap: 6px;
-          justify-content: flex-end;
-          align-items: center;
-        }
-
-        .rowActions button,
-        .inlineActions button,
-        .miniActions button,
-        .drawerTopActions button,
-        .listActions button {
+        .deleteMini,
+        .ghostDelete,
+        .decisionActions button {
+          opacity: 0;
           border: 1px solid #e5dccc;
           background: #fbf8f1;
           border-radius: 7px;
-          padding: 4px 7px;
-          font-size: 11px;
+          padding: 3px 6px;
           cursor: pointer;
+          color: #64748b;
+        }
+
+        .cleanRow:hover .deleteMini,
+        .projectShell:hover .ghostDelete,
+        .decisionItem:hover .decisionActions button {
+          opacity: 1;
         }
 
         .number {
@@ -739,7 +790,7 @@ export default function ExecutiveStatus() {
           font-size: 12px;
         }
 
-        .rowContent strong,
+        .rowMain strong,
         .projectTop strong {
           display: block;
           font-size: 13px;
@@ -758,10 +809,22 @@ export default function ExecutiveStatus() {
           border-bottom: 1px solid #ebe2d4;
           padding-bottom: 8px;
           margin-bottom: 8px;
+          position: relative;
         }
 
         .projectRow {
           padding: 14px 0 8px;
+          border: 0;
+          background: transparent;
+          width: 100%;
+          text-align: left;
+          cursor: pointer;
+        }
+
+        .ghostDelete {
+          position: absolute;
+          right: 0;
+          bottom: 8px;
         }
 
         .projectTop {
@@ -834,39 +897,34 @@ export default function ExecutiveStatus() {
           color: #b91c1c;
         }
 
-        .timelineRow,
-        .simpleRow,
-        .decisionRow {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 12px 0;
-          border-bottom: 1px solid #ebe2d4;
-          font-size: 13px;
-        }
-
-        .timelineRow b,
-        .simpleRow b {
-          font-size: 18px;
-        }
-
         .danger {
           color: #dc2626 !important;
         }
 
-        .decisionWrap {
+        .decisionItem {
           display: grid;
           grid-template-columns: 1fr auto;
-          border-bottom: 1px solid #ebe2d4;
           align-items: center;
+          border-bottom: 1px solid #ebe2d4;
         }
 
-        .decisionWrap .decisionRow {
-          border-bottom: 0;
+        .decisionRow {
+          border: 0;
+          background: transparent;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 10px;
+          padding: 12px 0;
+          font-size: 13px;
+          text-align: left;
+          cursor: pointer;
+          width: 100%;
         }
 
-        .decisionRow small {
-          font-size: 12px;
+        .decisionActions {
+          display: flex;
+          gap: 5px;
         }
 
         .communicationGrid {
@@ -875,9 +933,12 @@ export default function ExecutiveStatus() {
         }
 
         .commItem {
+          border: 0;
+          background: transparent;
           text-align: center;
           border-right: 1px solid #e5dccc;
           padding: 8px 4px;
+          cursor: pointer;
         }
 
         .commItem:last-child {
@@ -901,7 +962,7 @@ export default function ExecutiveStatus() {
           top: 0;
           right: 0;
           bottom: 0;
-          width: 430px;
+          width: 460px;
           background: #fffdf8;
           border-left: 1px solid #e5dccc;
           padding: 24px;
@@ -925,15 +986,33 @@ export default function ExecutiveStatus() {
           margin: 0 0 8px;
         }
 
-        .drawerPill {
-          display: inline-block;
-          margin-top: 8px;
-        }
-
-        .drawerTopActions {
+        .drawerActions {
           display: flex;
           gap: 8px;
           margin-top: 16px;
+          flex-wrap: wrap;
+        }
+
+        .drawerActions button,
+        .detailHead button,
+        .detailActions button {
+          border: 1px solid #e5dccc;
+          background: #fbf8f1;
+          border-radius: 8px;
+          padding: 7px 10px;
+          cursor: pointer;
+          font-size: 12px;
+        }
+
+        .drawerActions .darkBtn {
+          background: #111827;
+          color: white;
+          border-color: #111827;
+        }
+
+        .drawerPill {
+          display: inline-block;
+          margin-top: 10px;
         }
 
         .tabs {
@@ -960,7 +1039,8 @@ export default function ExecutiveStatus() {
         }
 
         .drawerBox,
-        .drawerLine {
+        .detailRow,
+        .emptyState {
           border: 1px solid #ebe2d4;
           background: #fbf8f1;
           border-radius: 10px;
@@ -968,11 +1048,76 @@ export default function ExecutiveStatus() {
           margin-bottom: 9px;
         }
 
-        .drawerLine {
+        .drawerBox strong {
+          display: block;
+          margin-top: 4px;
+        }
+
+        .inlineForm {
+          display: grid;
+          gap: 10px;
+        }
+
+        .field label {
+          display: block;
+          color: #64748b;
+          font-size: 11px;
+          margin-bottom: 4px;
+        }
+
+        .field input,
+        .field textarea,
+        .field select {
+          width: 100%;
+          border: 1px solid #e5dccc;
+          background: #fbf8f1;
+          border-radius: 8px;
+          padding: 9px;
+          font: inherit;
+        }
+
+        .detailHead {
           display: flex;
           justify-content: space-between;
-          gap: 12px;
-          font-size: 13px;
+          align-items: center;
+          margin-bottom: 10px;
+        }
+
+        .detailHead h3 {
+          margin: 0;
+          font-size: 15px;
+        }
+
+        .detailRow {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 10px;
+          align-items: center;
+        }
+
+        .detailRow input {
+          border: 0;
+          background: transparent;
+          width: 100%;
+          font: inherit;
+        }
+
+        .detailRow input:focus {
+          outline: 1px solid #e5dccc;
+          background: #fffdf8;
+          border-radius: 6px;
+          padding: 4px;
+        }
+
+        .detailSub {
+          color: #64748b;
+          font-size: 11px;
+          margin-top: 3px;
+        }
+
+        .detailActions {
+          display: flex;
+          gap: 6px;
         }
 
         .primary {
@@ -986,82 +1131,6 @@ export default function ExecutiveStatus() {
           cursor: pointer;
         }
 
-        .modalOverlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(17, 24, 39, 0.35);
-          z-index: 2000;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .modal {
-          width: 430px;
-          max-width: calc(100vw - 30px);
-          background: #fffdf8;
-          border: 1px solid #e5dccc;
-          border-radius: 14px;
-          padding: 18px;
-          box-shadow: 0 20px 80px rgba(0, 0, 0, 0.18);
-        }
-
-        .modalHead {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 14px;
-        }
-
-        .modalHead h3 {
-          margin: 0;
-          font-size: 18px;
-        }
-
-        .formGrid {
-          display: grid;
-          gap: 10px;
-        }
-
-        .field label {
-          display: block;
-          font-size: 11px;
-          color: #64748b;
-          margin-bottom: 4px;
-        }
-
-        .field input,
-        .field select,
-        .field textarea {
-          width: 100%;
-          border: 1px solid #e5dccc;
-          border-radius: 9px;
-          background: #fbf8f1;
-          padding: 9px;
-          font: inherit;
-        }
-
-        .formActions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 8px;
-          margin-top: 12px;
-        }
-
-        .formActions button {
-          border: 1px solid #e5dccc;
-          background: #fbf8f1;
-          border-radius: 9px;
-          padding: 9px 12px;
-          cursor: pointer;
-        }
-
-        .formActions button.save {
-          background: #111827;
-          color: white;
-          border-color: #111827;
-        }
-
         @media (max-width: 1200px) {
           .opsPage {
             overflow: auto;
@@ -1071,6 +1140,10 @@ export default function ExecutiveStatus() {
           .layout {
             grid-template-columns: 1fr;
             height: auto;
+          }
+
+          .drawer {
+            width: min(460px, 100vw);
           }
         }
       `}</style>
@@ -1084,11 +1157,7 @@ function Panel({ title, children, className = "", onAdd }) {
       <div className="panelHead">
         <b>{title}</b>
         <div className="headActions">
-          {onAdd && (
-            <button className="addBtn" onClick={onAdd} aria-label={`Add ${title}`}>
-              +
-            </button>
-          )}
+          {onAdd && <button className="addBtn" onClick={onAdd}>+</button>}
           <span>View all →</span>
         </div>
       </div>
@@ -1097,100 +1166,98 @@ function Panel({ title, children, className = "", onAdd }) {
   );
 }
 
-function EditableRow({ children, onOpen, onEdit, onDelete, compact }) {
+function CleanRow({ children, onOpen, onDelete, compact }) {
   return (
-    <div className={`editableRow ${compact ? "compact" : ""}`}>
-      <button className="rowContent" onClick={onOpen}>
-        {children}
-      </button>
-      <div className="rowActions">
-        <button onClick={onEdit}>Edit</button>
-        <button onClick={onDelete}>×</button>
-      </div>
+    <div className={`cleanRow ${compact ? "compact" : ""}`}>
+      <button className="rowMain" onClick={onOpen}>{children}</button>
+      <button className="deleteMini" onClick={onDelete}>×</button>
     </div>
   );
 }
 
-function Modal({ title, children, onClose }) {
-  return (
-    <div className="modalOverlay">
-      <div className="modal">
-        <div className="modalHead">
-          <h3>{title}</h3>
-          <button onClick={onClose}>×</button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function ItemForm({ type, initial = {}, onSave, onCancel }) {
-  const [form, setForm] = useState(() => normalizeInitial(type, initial));
-
-  function update(field, value) {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  }
-
-  function submit(e) {
-    e.preventDefault();
-    onSave(form);
-  }
+function InlineEditor({ type, draft, setDraft }) {
+  const fields = fieldsForType(type);
 
   return (
-    <form className="formGrid" onSubmit={submit}>
-      {getFields(type).map((field) => (
+    <div className="inlineForm">
+      {fields.map((field) => (
         <div className="field" key={field.name}>
           <label>{field.label}</label>
-          {field.type === "select" ? (
-            <select value={form[field.name] || ""} onChange={(e) => update(field.name, e.target.value)}>
-              {field.options.map((option) => (
-                <option key={option}>{option}</option>
-              ))}
+          {field.type === "textarea" ? (
+            <textarea
+              rows={3}
+              value={draft[field.name] || ""}
+              onChange={(e) => setDraft({ ...draft, [field.name]: e.target.value })}
+            />
+          ) : field.type === "select" ? (
+            <select
+              value={draft[field.name] || field.options[0]}
+              onChange={(e) => setDraft({ ...draft, [field.name]: e.target.value })}
+            >
+              {field.options.map((option) => <option key={option}>{option}</option>)}
             </select>
-          ) : field.type === "textarea" ? (
-            <textarea rows={3} value={form[field.name] || ""} onChange={(e) => update(field.name, e.target.value)} />
           ) : (
             <input
               type={field.type || "text"}
-              value={form[field.name] || ""}
-              onChange={(e) => update(field.name, field.type === "number" ? Number(e.target.value) : e.target.value)}
+              value={draft[field.name] ?? ""}
+              onChange={(e) => setDraft({ ...draft, [field.name]: field.type === "number" ? Number(e.target.value) : e.target.value })}
             />
           )}
         </div>
       ))}
-
-      <div className="formActions">
-        <button type="button" onClick={onCancel}>Cancel</button>
-        <button className="save" type="submit">Save</button>
-      </div>
-    </form>
+    </div>
   );
 }
 
-function EditableList({ title, items, onAdd, onEdit, onRemove }) {
+function Overview({ drawer }) {
   return (
     <>
-      <div className="panelHead">
-        <b>{title}</b>
-        <button className="addBtn" onClick={onAdd}>+</button>
+      <DrawerBox label="Status" value={getItemStatus(drawer)} />
+      <DrawerBox label="Owner" value="Nikita" />
+      <DrawerBox label="Next Action" value={getNextAction(drawer)} />
+      {drawer.type === "project" && (
+        <>
+          <DrawerBox label="Progress" value={`${drawer.item.progress}%`} />
+          <DrawerBox label="Waiting On" value={drawer.item.waitingOn} />
+          <DrawerBox label="Next Milestone" value={drawer.item.milestone} />
+          <DrawerBox label="Last Updated" value={drawer.item.updated} />
+        </>
+      )}
+    </>
+  );
+}
+
+function DetailList({ title, items, field, addItem, updateItem, deleteItem, primaryKey, secondaryKey }) {
+  return (
+    <div>
+      <div className="detailHead">
+        <h3>{title}</h3>
+        <button onClick={() => addItem(field)}>+ Add</button>
       </div>
 
-      {items.length === 0 && <div className="drawerBox">Nothing added yet.</div>}
+      {items.length === 0 && <div className="emptyState">Nothing added yet.</div>}
 
-      {items.map((item, index) => (
-        <div className="drawerLine" key={`${item}-${index}`}>
-          <span>{item}</span>
-          <div className="listActions">
-            <button onClick={() => {
-              const value = prompt("Update item:", item);
-              if (value) onEdit(index, value);
-            }}>Edit</button>
-            <button onClick={() => onRemove(index)}>×</button>
+      {items.map((item) => (
+        <div className="detailRow" key={item.id}>
+          <div>
+            <input
+              value={item[primaryKey] || ""}
+              onChange={(e) => updateItem(field, item.id, { [primaryKey]: e.target.value })}
+            />
+            {secondaryKey && (
+              <input
+                className="detailSub"
+                value={item[secondaryKey] || ""}
+                onChange={(e) => updateItem(field, item.id, { [secondaryKey]: e.target.value })}
+              />
+            )}
+          </div>
+          <div className="detailActions">
+            <button onClick={() => deleteItem(field, item.id)}>Delete</button>
           </div>
         </div>
       ))}
-    </>
+    </div>
   );
 }
 
@@ -1203,65 +1270,11 @@ function DrawerBox({ label, value }) {
   );
 }
 
-function getCollectionKey(type) {
-  return {
-    priority: "priorities",
-    project: "projects",
-    timeline: "timeline",
-    waiting: "waiting",
-    decision: "decisions",
-    communication: "communications",
-  }[type];
-}
-
-function buildNewItem(type, payload) {
-  const id = `${type}-${uid()}`;
-
-  if (type === "project") {
-    return {
-      id,
-      name: payload.name || "New Project",
-      status: payload.status || "On Track",
-      progress: Number(payload.progress || 0),
-      phase: payload.phase || "New project",
-      waitingOn: payload.waitingOn || "Not set",
-      milestone: payload.milestone || "Not set",
-      updated: "Just now",
-      tasks: [],
-      files: [],
-      notes: [],
-      activity: ["Project created"],
-    };
-  }
-
-  if (type === "priority") {
-    return { id, title: payload.title || "New Priority", note: payload.note || "", owner: "Nikita", status: "Open" };
-  }
-
-  if (type === "decision") {
-    return { id, title: payload.title || "New Decision", priority: payload.priority || "Medium", status: payload.status || "Pending", note: payload.note || "" };
-  }
-
-  if (type === "waiting") {
-    return { id, label: payload.label || "Waiting", count: Number(payload.count || 1), details: payload.details || "" };
-  }
-
-  if (type === "communication") {
-    return { id, label: payload.label || "Communication", number: Number(payload.number || 1), details: payload.details || "" };
-  }
-
-  if (type === "timeline") {
-    return { id, label: payload.label || "Today", count: Number(payload.count || 1) };
-  }
-
-  return { id, ...payload };
-}
-
-function getFields(type) {
+function fieldsForType(type) {
   if (type === "project") {
     return [
       { name: "name", label: "Project Name" },
-      { name: "status", label: "Status", type: "select", options: ["On Track", "Waiting on Alex", "Behind", "At Risk", "Planning"] },
+      { name: "status", label: "Status", type: "select", options: ["On Track", "Waiting", "Behind", "At Risk", "Planning"] },
       { name: "progress", label: "Progress %", type: "number" },
       { name: "phase", label: "Current Phase" },
       { name: "waitingOn", label: "Waiting On", type: "textarea" },
@@ -1270,44 +1283,33 @@ function getFields(type) {
   }
 
   if (type === "priority") return [{ name: "title", label: "Title" }, { name: "note", label: "Note" }];
-  if (type === "decision") return [{ name: "title", label: "Decision" }, { name: "priority", label: "Priority", type: "select", options: ["High", "Medium", "Low"] }, { name: "note", label: "Note" }];
   if (type === "waiting") return [{ name: "label", label: "Waiting On" }, { name: "count", label: "Count", type: "number" }, { name: "details", label: "Details", type: "textarea" }];
+  if (type === "decision") return [{ name: "title", label: "Decision" }, { name: "priority", label: "Priority", type: "select", options: ["High", "Medium", "Low"] }, { name: "status", label: "Status", type: "select", options: ["Pending", "Approved", "Declined", "Needs Changes"] }, { name: "note", label: "Note", type: "textarea" }];
   if (type === "communication") return [{ name: "label", label: "Category" }, { name: "number", label: "Count", type: "number" }, { name: "details", label: "Details", type: "textarea" }];
   if (type === "timeline") return [{ name: "label", label: "Label" }, { name: "count", label: "Count", type: "number" }];
-
-  return [{ name: "title", label: "Title" }];
+  return [{ name: "label", label: "Label" }];
 }
 
-function normalizeInitial(type, initial) {
-  if (type === "project") {
-    return {
-      name: initial.name || "",
-      status: initial.status || "On Track",
-      progress: initial.progress || 0,
-      phase: initial.phase || "",
-      waitingOn: initial.waitingOn || "",
-      milestone: initial.milestone || "",
-    };
-  }
-
-  if (type === "priority") return { title: initial.title || "", note: initial.note || "" };
-  if (type === "decision") return { title: initial.title || "", priority: initial.priority || "Medium", note: initial.note || "", status: initial.status || "Pending" };
-  if (type === "waiting") return { label: initial.label || "", count: initial.count || 1, details: initial.details || "" };
-  if (type === "communication") return { label: initial.label || "", number: initial.number || 1, details: initial.details || "" };
-  if (type === "timeline") return { label: initial.label || "", count: initial.count || 1 };
-
-  return initial;
-}
-
-function labelForType(type) {
+function collectionForType(type) {
   return {
-    priority: "Priority",
-    project: "Project",
-    decision: "Decision",
-    waiting: "Waiting Item",
-    communication: "Communication",
-    timeline: "Timeline Item",
-  }[type] || "Item";
+    priority: "priorities",
+    project: "projects",
+    waiting: "waiting",
+    decision: "decisions",
+    communication: "communications",
+    timeline: "timeline",
+  }[type];
+}
+
+function singularFromKey(key) {
+  return {
+    priorities: "priority",
+    projects: "project",
+    waiting: "waiting",
+    decisions: "decision",
+    communications: "communication",
+    timeline: "timeline",
+  }[key];
 }
 
 function getDrawerTitle(drawer) {
@@ -1323,6 +1325,7 @@ function getItemStatus(drawer) {
   if (drawer.item?.status) return drawer.item.status;
   if (drawer.item?.priority) return drawer.item.priority;
   if (drawer.item?.note) return drawer.item.note;
+  if (drawer.item?.details) return drawer.item.details;
   return "Open";
 }
 
@@ -1335,8 +1338,7 @@ function getNextAction(drawer) {
 }
 
 function getStatusClass(status) {
-  if (status === "Behind") return "behind";
+  if (status === "Behind" || status === "At Risk") return "behind";
   if (status?.includes("Waiting")) return "waiting";
-  if (status === "At Risk") return "behind";
   return "";
 }
