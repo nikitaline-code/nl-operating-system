@@ -14,7 +14,6 @@ const navItems = [
   { label: "Dealer Offboarding", href: "/dealer-offboarding" },
   { label: "AQ Culture", href: "/culture" },
   { label: "PLAUD Notes", href: "/plaud" },
-  
 ];
 
 export default function AppShell({ children }) {
@@ -33,7 +32,9 @@ export default function AppShell({ children }) {
 
         <nav>
           {navItems.map((item) => {
-            const active = router.pathname === item.href;
+            const active =
+              router.pathname === item.href ||
+              router.pathname.startsWith(`${item.href}/`);
 
             return (
               <Link
@@ -56,6 +57,7 @@ export default function AppShell({ children }) {
           background: #f5f6f8;
           color: #111827;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          overflow-x: hidden;
         }
 
         .sidebar {
@@ -69,12 +71,22 @@ export default function AppShell({ children }) {
           padding: 18px 10px;
           z-index: 100;
           overflow-y: auto;
+          box-sizing: border-box;
         }
 
         .content {
           margin-left: 205px;
           min-height: 100vh;
+          width: calc(100% - 205px);
+          max-width: calc(100vw - 205px);
           min-width: 0;
+          overflow-x: hidden;
+          box-sizing: border-box;
+        }
+
+        .content :global(*) {
+          box-sizing: border-box;
+          max-width: 100%;
         }
 
         .brand {
@@ -141,13 +153,15 @@ export default function AppShell({ children }) {
         @media (max-width: 900px) {
           .sidebar {
             position: static;
-            width: auto;
+            width: 100%;
             border-right: 0;
             border-bottom: 1px solid #e5e7eb;
           }
 
           .content {
             margin-left: 0;
+            width: 100%;
+            max-width: 100vw;
           }
 
           nav {
