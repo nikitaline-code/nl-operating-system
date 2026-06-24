@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
 const TASKS_KEY = "os-tasks";
-const PROJECT_META_KEY = "executive-project-meta-clean-v1";
-const DECISIONS_KEY = "executive-decisions-clean-v1";
-const COMMUNICATION_KEY = "executive-communication-clean-v1";
+const PROJECT_META_KEY = "executive-project-meta-notion-v1";
+const DECISIONS_KEY = "executive-decisions-notion-v1";
+const COMMUNICATION_KEY = "executive-communication-notion-v1";
 
 const uid = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
@@ -626,36 +626,37 @@ export default function ExecutiveStatus() {
           min-height: 100vh;
           background: #fbf8f1;
           color: #111827;
-          padding: 24px 30px;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          padding: 18px 24px;
+          font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
           overflow: hidden;
+          font-size: 12px;
         }
 
         .hero {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 12px;
+          margin-bottom: 10px;
         }
 
         h1 {
           font-family: Georgia, serif;
-          font-size: 30px;
+          font-size: 24px;
           font-weight: 400;
-          margin: 0 0 4px;
+          margin: 0 0 3px;
           letter-spacing: -0.02em;
         }
 
         p {
           margin: 0;
           color: #475569;
-          font-size: 13px;
+          font-size: 11px;
           line-height: 1.35;
         }
 
         .dateBlock {
           text-align: right;
-          font-size: 12px;
+          font-size: 10px;
           color: #0f172a;
           line-height: 1.35;
         }
@@ -663,22 +664,23 @@ export default function ExecutiveStatus() {
         .dateBlock small {
           display: block;
           color: #64748b;
-          margin-top: 5px;
+          margin-top: 4px;
+          font-size: 10px;
         }
 
         .metrics {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 12px;
-          margin-bottom: 12px;
+          gap: 10px;
+          margin-bottom: 10px;
         }
 
         .metric {
-          min-height: 78px;
+          min-height: 66px;
           background: #fffdf8;
           border: 1px solid #e5dccc;
-          border-radius: 12px;
-          padding: 14px 18px;
+          border-radius: 10px;
+          padding: 11px 14px;
           text-align: left;
           cursor: pointer;
         }
@@ -696,29 +698,29 @@ export default function ExecutiveStatus() {
 
         .metric strong {
           display: block;
-          font-size: 24px;
+          font-size: 20px;
           line-height: 1;
-          margin-bottom: 6px;
+          margin-bottom: 4px;
           font-weight: 750;
         }
 
         .metric span {
           display: block;
-          font-size: 13px;
+          font-size: 11px;
           font-weight: 750;
-          margin-bottom: 3px;
+          margin-bottom: 2px;
         }
 
         .metric small {
           display: block;
           color: #64748b;
-          font-size: 11px;
+          font-size: 10px;
         }
 
         .layout {
           display: grid;
-          grid-template-columns: minmax(280px, 23%) minmax(760px, 54%) minmax(280px, 23%);
-          gap: 12px;
+          grid-template-columns: minmax(270px, 23%) minmax(740px, 54%) minmax(270px, 23%);
+          gap: 10px;
           align-items: start;
           width: 100%;
         }
@@ -727,19 +729,19 @@ export default function ExecutiveStatus() {
         .rightStack {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 10px;
         }
 
         .panel {
           width: 100%;
           background: #fffdf8;
           border: 1px solid #e5dccc;
-          border-radius: 12px;
-          padding: 14px;
+          border-radius: 10px;
+          padding: 11px;
         }
 
         .projects {
-          min-height: calc(100vh - 230px);
+          min-height: calc(100vh - 188px);
           align-self: start;
         }
 
@@ -748,34 +750,35 @@ export default function ExecutiveStatus() {
           justify-content: space-between;
           align-items: center;
           border-bottom: 1px solid #ebe2d4;
-          padding-bottom: 9px;
-          margin-bottom: 8px;
+          padding-bottom: 7px;
+          margin-bottom: 6px;
         }
 
         .panelHead b {
-          font-size: 14px;
+          font-size: 12px;
         }
 
         .headActions {
           display: flex;
-          gap: 8px;
+          gap: 7px;
           align-items: center;
         }
 
         .headActions span {
           color: #64748b;
-          font-size: 12px;
+          font-size: 10px;
           cursor: pointer;
         }
 
         .addBtn {
-          width: 22px;
-          height: 22px;
+          width: 20px;
+          height: 20px;
           border-radius: 999px;
           border: 1px solid #e5dccc;
           background: #fbf8f1;
           cursor: pointer;
           opacity: .75;
+          font-size: 11px;
         }
 
         .addBtn:hover {
@@ -801,35 +804,35 @@ export default function ExecutiveStatus() {
 
         .priorityRow {
           display: grid;
-          grid-template-columns: 30px 1fr;
-          gap: 12px;
-          padding: 12px 0;
+          grid-template-columns: 25px 1fr;
+          gap: 9px;
+          padding: 9px 0;
           align-items: center;
         }
 
         .number {
-          width: 28px;
-          height: 28px;
+          width: 23px;
+          height: 23px;
           background: #f1ece3;
           border-radius: 999px;
           display: flex;
           align-items: center;
           justify-content: center;
           font-weight: 750;
-          font-size: 12px;
+          font-size: 10px;
         }
 
         .priorityRow strong,
         .projectTop strong {
           display: block;
-          font-size: 13px;
+          font-size: 12px;
         }
 
         small {
           display: block;
           color: #64748b;
-          font-size: 11px;
-          margin-top: 3px;
+          font-size: 10px;
+          margin-top: 2px;
         }
 
         .simpleRow,
@@ -838,22 +841,19 @@ export default function ExecutiveStatus() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 11px 0;
-          font-size: 13px;
+          padding: 8px 0;
+          font-size: 12px;
         }
 
-        .timelineRow b {
-          font-size: 17px;
-        }
-
+        .timelineRow b,
         .simpleRow b,
         .commStatusRow b {
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 750;
         }
 
         .projectRow {
-          padding: 16px 0;
+          padding: 11px 0;
         }
 
         .projectTop {
@@ -867,8 +867,8 @@ export default function ExecutiveStatus() {
           background: #e7f3eb;
           color: #0f7a4b;
           border-radius: 999px;
-          padding: 4px 9px;
-          font-size: 11px;
+          padding: 3px 7px;
+          font-size: 10px;
           height: fit-content;
           white-space: nowrap;
         }
@@ -885,20 +885,20 @@ export default function ExecutiveStatus() {
 
         .projectBar {
           display: flex;
-          gap: 16px;
+          gap: 12px;
           color: #64748b;
-          font-size: 12px;
-          margin-top: 10px;
+          font-size: 10px;
+          margin-top: 7px;
         }
 
         .projectBar span {
           border-left: 1px solid #e5dccc;
-          padding-left: 10px;
+          padding-left: 9px;
         }
 
         .decisionItem {
           display: grid;
-          grid-template-columns: 1fr 28px;
+          grid-template-columns: 1fr 24px;
           align-items: center;
           border-bottom: 1px solid #ebe2d4;
         }
@@ -908,12 +908,12 @@ export default function ExecutiveStatus() {
           display: flex;
           justify-content: space-between;
           gap: 10px;
-          padding: 10px 0;
-          font-size: 12px;
+          padding: 8px 0;
+          font-size: 11px;
         }
 
         .decisionRow small {
-          font-size: 11px;
+          font-size: 10px;
         }
 
         .approve {
@@ -921,10 +921,10 @@ export default function ExecutiveStatus() {
           background: #f2fbf5;
           color: #0f7a4b;
           border-radius: 7px;
-          height: 22px;
-          width: 22px;
+          height: 20px;
+          width: 20px;
           cursor: pointer;
-          font-size: 12px;
+          font-size: 10px;
           padding: 0;
         }
 
@@ -934,8 +934,8 @@ export default function ExecutiveStatus() {
           background: transparent;
           text-align: left;
           color: #475569;
-          font-size: 12px;
-          padding: 10px 0 2px;
+          font-size: 10px;
+          padding: 8px 0 2px;
           cursor: pointer;
         }
 
@@ -949,18 +949,18 @@ export default function ExecutiveStatus() {
 
         .emptyLine {
           color: #64748b;
-          padding: 14px 0;
-          font-size: 12px;
+          padding: 10px 0;
+          font-size: 10px;
         }
 
         .drawer {
           position: fixed;
           inset: 0 0 0 auto;
-          width: 500px;
+          width: 480px;
           background: #fffdf8;
           border-left: 1px solid #e5dccc;
           box-shadow: -16px 0 40px rgba(0,0,0,.08);
-          padding: 24px;
+          padding: 22px;
           z-index: 1000;
           overflow-y: auto;
         }
@@ -969,34 +969,39 @@ export default function ExecutiveStatus() {
           float: right;
           border: 0;
           background: transparent;
-          font-size: 26px;
+          font-size: 22px;
           cursor: pointer;
         }
 
         h2 {
           font-family: Georgia, serif;
           font-weight: 400;
-          font-size: 30px;
-          margin: 0 0 8px;
+          font-size: 24px;
+          margin: 0 0 6px;
           letter-spacing: -0.03em;
+        }
+
+        .drawer p {
+          font-size: 11px;
         }
 
         .tabs {
           display: flex;
           gap: 14px;
           border-bottom: 1px solid #e5dccc;
-          margin: 20px 0;
+          margin: 18px 0 16px;
           overflow-x: auto;
         }
 
         .tabs button {
           border: 0;
           background: transparent;
-          padding: 8px 0;
+          padding: 7px 0;
           text-transform: capitalize;
           cursor: pointer;
           color: #475569;
           white-space: nowrap;
+          font-size: 12px;
         }
 
         .tabs button.active {
@@ -1009,44 +1014,58 @@ export default function ExecutiveStatus() {
         .detailRow {
           border: 1px solid #ebe2d4;
           background: #fbf8f1;
-          border-radius: 10px;
-          padding: 12px;
-          margin-bottom: 9px;
+          border-radius: 8px;
+          padding: 10px;
+          margin-bottom: 7px;
         }
 
         .drawerBox strong {
           display: block;
           margin-top: 4px;
+          font-size: 12px;
         }
 
         .editableInput,
         .editableTextarea,
         .editableSelect {
           width: 100%;
-          border: 0;
-          background: transparent;
+          border: 0 !important;
+          outline: 0;
+          background: transparent !important;
           font: inherit;
           color: #111827;
-          padding: 3px;
+          padding: 0;
+          font-size: 13px;
+          line-height: 1.35;
+        }
+
+        .editableInput:focus,
+        .editableTextarea:focus,
+        .editableSelect:focus {
+          outline: 0 !important;
+          background: #fffaf0 !important;
+          border-radius: 4px;
+          box-shadow: inset 0 -1px 0 #111827;
         }
 
         .editableTextarea {
           resize: vertical;
-          min-height: 60px;
+          min-height: 44px;
         }
 
         .field {
-          border: 1px solid #ebe2d4;
-          background: #fbf8f1;
-          border-radius: 10px;
-          padding: 10px;
-          margin-bottom: 9px;
+          border: 0;
+          border-bottom: 1px solid #ebe2d4;
+          background: transparent;
+          border-radius: 0;
+          padding: 9px 0;
+          margin-bottom: 0;
         }
 
         .field label {
           display: block;
           color: #64748b;
-          font-size: 11px;
+          font-size: 10px;
           margin-bottom: 4px;
         }
 
@@ -1059,7 +1078,7 @@ export default function ExecutiveStatus() {
 
         .detailHead h3 {
           margin: 0;
-          font-size: 15px;
+          font-size: 13px;
         }
 
         .detailHead button,
@@ -1067,9 +1086,10 @@ export default function ExecutiveStatus() {
         .drawerActions button {
           border: 1px solid #e5dccc;
           background: #fbf8f1;
-          border-radius: 8px;
-          padding: 7px 10px;
+          border-radius: 7px;
+          padding: 6px 9px;
           cursor: pointer;
+          font-size: 11px;
         }
 
         .detailRow {
@@ -1087,247 +1107,9 @@ export default function ExecutiveStatus() {
         .drawerActions {
           display: flex;
           gap: 8px;
-          margin: 16px 0;
+          margin: 14px 0;
           flex-wrap: wrap;
         }
-
-
-        /* ---- Cleaner compact polish ---- */
-        .opsPage {
-          padding: 18px 24px;
-          font-size: 12px;
-        }
-
-        h1 {
-          font-size: 24px;
-          margin-bottom: 3px;
-        }
-
-        .hero {
-          margin-bottom: 10px;
-        }
-
-        .dateBlock {
-          font-size: 11px;
-        }
-
-        .dateBlock small {
-          font-size: 10px;
-        }
-
-        .metrics {
-          gap: 10px;
-          margin-bottom: 10px;
-        }
-
-        .metric {
-          min-height: 66px;
-          padding: 11px 14px;
-          border-radius: 10px;
-        }
-
-        .metric strong {
-          font-size: 20px;
-          margin-bottom: 4px;
-        }
-
-        .metric span {
-          font-size: 11px;
-        }
-
-        .metric small {
-          font-size: 10px;
-        }
-
-        .layout {
-          gap: 10px;
-          grid-template-columns: minmax(280px, 23%) minmax(760px, 54%) minmax(280px, 23%);
-        }
-
-        .leftStack,
-        .rightStack {
-          gap: 10px;
-        }
-
-        .panel {
-          padding: 11px;
-          border-radius: 10px;
-        }
-
-        .panelHead {
-          padding-bottom: 7px;
-          margin-bottom: 6px;
-        }
-
-        .panelHead b {
-          font-size: 12px;
-        }
-
-        .headActions span {
-          font-size: 10px;
-        }
-
-        .addBtn {
-          width: 20px;
-          height: 20px;
-        }
-
-        .priorityRow {
-          padding: 9px 0;
-          grid-template-columns: 25px 1fr;
-          gap: 9px;
-        }
-
-        .number {
-          width: 23px;
-          height: 23px;
-          font-size: 10px;
-        }
-
-        .priorityRow strong,
-        .projectTop strong {
-          font-size: 12px;
-        }
-
-        small {
-          font-size: 10px;
-          margin-top: 2px;
-        }
-
-        .simpleRow,
-        .timelineRow,
-        .commStatusRow {
-          padding: 8px 0;
-          font-size: 12px;
-        }
-
-        .simpleRow b,
-        .commStatusRow b,
-        .timelineRow b {
-          font-size: 13px;
-        }
-
-        .projectRow {
-          padding: 11px 0;
-        }
-
-        .projectBar {
-          margin-top: 7px;
-          gap: 12px;
-          font-size: 10px;
-        }
-
-        .pill {
-          font-size: 10px;
-          padding: 3px 7px;
-        }
-
-        .decisionRow {
-          padding: 8px 0;
-          font-size: 11px;
-        }
-
-        .decisionRow small {
-          font-size: 10px;
-        }
-
-        .approve {
-          width: 20px;
-          height: 20px;
-          font-size: 10px;
-        }
-
-        .drawer {
-          width: 480px;
-          padding: 22px;
-        }
-
-        h2 {
-          font-size: 24px;
-          margin-bottom: 6px;
-        }
-
-        .drawer p {
-          font-size: 12px;
-        }
-
-        .tabs {
-          margin: 18px 0 16px;
-          gap: 14px;
-        }
-
-        .tabs button {
-          font-size: 12px;
-          padding: 7px 0;
-        }
-
-        /* Make drawer editing feel like clean inline editing, not a form */
-        .field {
-          border: 0;
-          border-bottom: 1px solid #ebe2d4;
-          background: transparent;
-          border-radius: 0;
-          padding: 9px 0;
-          margin-bottom: 0;
-        }
-
-        .field label {
-          font-size: 10px;
-          color: #64748b;
-          margin-bottom: 4px;
-        }
-
-        .editableInput,
-        .editableTextarea,
-        .editableSelect {
-          border: 0 !important;
-          outline: 0;
-          background: transparent !important;
-          padding: 0;
-          font-size: 13px;
-          line-height: 1.35;
-          color: #111827;
-          width: 100%;
-        }
-
-        .editableInput:focus,
-        .editableTextarea:focus,
-        .editableSelect:focus {
-          outline: 0 !important;
-          background: #fffaf0 !important;
-          border-radius: 4px;
-          box-shadow: inset 0 -1px 0 #111827;
-        }
-
-        .editableTextarea {
-          min-height: 44px;
-          resize: vertical;
-        }
-
-        .drawerActions {
-          margin-top: 14px;
-          gap: 6px;
-        }
-
-        .drawerActions button,
-        .detailHead button,
-        .detailActions button {
-          font-size: 11px;
-          padding: 6px 9px;
-          border-radius: 7px;
-        }
-
-        .drawerActions button {
-          color: #64748b;
-        }
-
-        .detailRow,
-        .drawerBox {
-          border-radius: 8px;
-          padding: 10px;
-          margin-bottom: 7px;
-        }
-
 
         @media (max-width: 1200px) {
           .opsPage {
@@ -1344,7 +1126,7 @@ export default function ExecutiveStatus() {
           }
 
           .drawer {
-            width: min(500px, 100vw);
+            width: min(480px, 100vw);
           }
         }
       `}</style>
@@ -1434,22 +1216,10 @@ function ProjectDrawer({
   if (tab === "overview") {
     return (
       <>
-        <div className="field">
-          <label>Status</label>
-          <EditableSelect value={project.status} options={["On Track", "Waiting", "Needs Attention", "Behind", "At Risk"]} onSave={(value) => updateProject(project.name, { status: value })} />
-        </div>
-        <div className="field">
-          <label>Owner</label>
-          <EditableText value={project.owner || "Nikita"} onSave={(value) => updateProject(project.name, { owner: value })} />
-        </div>
-        <div className="field">
-          <label>Target Date</label>
-          <EditableText value={project.targetDate || ""} onSave={(value) => updateProject(project.name, { targetDate: value })} />
-        </div>
-        <div className="field">
-          <label>Project Note</label>
-          <EditableArea value={project.description || ""} onSave={(value) => updateProject(project.name, { description: value })} />
-        </div>
+        <div className="field"><label>Status</label><EditableSelect value={project.status} options={["On Track", "Waiting", "Needs Attention", "Behind", "At Risk"]} onSave={(value) => updateProject(project.name, { status: value })} /></div>
+        <div className="field"><label>Owner</label><EditableText value={project.owner || "Nikita"} onSave={(value) => updateProject(project.name, { owner: value })} /></div>
+        <div className="field"><label>Target Date</label><EditableText value={project.targetDate || ""} onSave={(value) => updateProject(project.name, { targetDate: value })} /></div>
+        <div className="field"><label>Project Note</label><EditableArea value={project.description || ""} onSave={(value) => updateProject(project.name, { description: value })} /></div>
         <DrawerBox label="Open Tasks" value={project.openTasks} />
         <DrawerBox label="Overdue" value={project.overdueTasks} />
         <DrawerBox label="Waiting" value={project.waitingTasks} />
@@ -1459,59 +1229,26 @@ function ProjectDrawer({
 
   if (tab === "subprojects") {
     return (
-      <DetailList
-        title="Sub Projects"
-        items={project.subProjectList}
-        onAdd={() => addManualSubProject(project.name)}
-        primaryKey="name"
-        updateItem={(id, patch) => updateManualSubProject(project.name, id, patch.name)}
-        deleteItem={(id) => deleteManualSubProject(project.name, id)}
-        onOpen={(item) => addTask(project.name, item.name)}
-      />
+      <DetailList title="Sub Projects" items={project.subProjectList} onAdd={() => addManualSubProject(project.name)} primaryKey="name" updateItem={(id, patch) => updateManualSubProject(project.name, id, patch.name)} deleteItem={(id) => deleteManualSubProject(project.name, id)} onOpen={(item) => addTask(project.name, item.name)} />
     );
   }
 
-  if (tab === "tasks") {
-    return <TaskList tasks={project.tasks} onAdd={() => addTask(project.name)} openTask={openTask} />;
-  }
+  if (tab === "tasks") return <TaskList tasks={project.tasks} onAdd={() => addTask(project.name)} openTask={openTask} />;
 
   if (tab === "files") {
     return (
-      <DetailList
-        title="Files"
-        items={project.files}
-        onAdd={() => addProjectDetail(project.name, "files", { id: uid(), name: "New file", type: "File" })}
-        primaryKey="name"
-        secondaryKey="type"
-        updateItem={(id, patch) => updateProjectDetail(project.name, "files", id, patch)}
-        deleteItem={(id) => deleteProjectDetail(project.name, "files", id)}
-      />
+      <DetailList title="Files" items={project.files} onAdd={() => addProjectDetail(project.name, "files", { id: uid(), name: "New file", type: "File" })} primaryKey="name" secondaryKey="type" updateItem={(id, patch) => updateProjectDetail(project.name, "files", id, patch)} deleteItem={(id) => deleteProjectDetail(project.name, "files", id)} />
     );
   }
 
   if (tab === "notes") {
     return (
-      <DetailList
-        title="Notes"
-        items={project.notes}
-        onAdd={() => addProjectDetail(project.name, "notes", { id: uid(), text: "New note" })}
-        primaryKey="text"
-        updateItem={(id, patch) => updateProjectDetail(project.name, "notes", id, patch)}
-        deleteItem={(id) => deleteProjectDetail(project.name, "notes", id)}
-      />
+      <DetailList title="Notes" items={project.notes} onAdd={() => addProjectDetail(project.name, "notes", { id: uid(), text: "New note" })} primaryKey="text" updateItem={(id, patch) => updateProjectDetail(project.name, "notes", id, patch)} deleteItem={(id) => deleteProjectDetail(project.name, "notes", id)} />
     );
   }
 
   return (
-    <DetailList
-      title="Activity"
-      items={project.activity}
-      onAdd={() => addProjectDetail(project.name, "activity", { id: uid(), text: "New activity", time: "Just now" })}
-      primaryKey="text"
-      secondaryKey="time"
-      updateItem={(id, patch) => updateProjectDetail(project.name, "activity", id, patch)}
-      deleteItem={(id) => deleteProjectDetail(project.name, "activity", id)}
-    />
+    <DetailList title="Activity" items={project.activity} onAdd={() => addProjectDetail(project.name, "activity", { id: uid(), text: "New activity", time: "Just now" })} primaryKey="text" secondaryKey="time" updateItem={(id, patch) => updateProjectDetail(project.name, "activity", id, patch)} deleteItem={(id) => deleteProjectDetail(project.name, "activity", id)} />
   );
 }
 
