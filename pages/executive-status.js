@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
 
 const metrics = [
-  { number: "14", label: "Active Projects", note: "12 On Track  •  2 At Risk" },
+  { number: "14", label: "Active Projects", note: "12 On Track · 2 At Risk" },
   { number: "8", label: "Waiting On", note: "From 5 people" },
   { number: "3", label: "Needs Your Input", note: "Approvals / Decisions" },
   { number: "97%", label: "Operations Health", note: "Everything on track" },
-  { number: "✓", label: "Everything On Track", note: "Next milestone: Dealer Event  •  Friday" },
+  { number: "✓", label: "On Track", note: "Dealer Event · Friday" },
 ];
 
 const priorities = [
   { title: "Dealer Pricing Approval", note: "Decision needed" },
-  { title: "July Dealer Event Catering", note: "Costco quote pending" },
-  { title: "Inventory Review", note: "Reports ready for review" },
+  { title: "July Event Catering", note: "Costco quote pending" },
+  { title: "Inventory Review", note: "Reports ready" },
 ];
 
 const projects = [
@@ -61,25 +61,25 @@ const timeline = [
 ];
 
 const waitingOn = [
-  { label: "Waiting on Mark", count: 2 },
-  { label: "Waiting on Dane", count: 1 },
-  { label: "Waiting on Dealer", count: 8 },
-  { label: "Waiting on Vendor", count: 3 },
-  { label: "Waiting on Finance", count: 2 },
+  { label: "Mark", count: 2 },
+  { label: "Dane", count: 1 },
+  { label: "Dealer", count: 8 },
+  { label: "Vendor", count: 3 },
+  { label: "Finance", count: 2 },
 ];
 
 const decisions = [
-  { title: "Approve Pricing Exception – MBJ Ranch", priority: "High" },
-  { title: "Dealer Approval – Seminole Event", priority: "Medium" },
-  { title: "Travel Approval – July 7–9", priority: "Low" },
+  { title: "Pricing Exception – MBJ Ranch", priority: "High" },
+  { title: "Dealer Approval – Seminole", priority: "Medium" },
+  { title: "Travel Approval – July 7-9", priority: "Low" },
 ];
 
 const communications = [
-  { number: 12, label: "Waiting on Dealer" },
-  { number: 4, label: "Waiting on Vendor" },
-  { number: 3, label: "Waiting on Internal" },
-  { number: 2, label: "Ready for Review" },
-  { number: 5, label: "Ready to Send" },
+  { number: 12, label: "Dealer" },
+  { number: 4, label: "Vendor" },
+  { number: 3, label: "Internal" },
+  { number: 2, label: "Review" },
+  { number: 5, label: "Ready" },
 ];
 
 export default function ExecutiveStatus() {
@@ -101,7 +101,7 @@ export default function ExecutiveStatus() {
   const currentDateTime = now
     ? now.toLocaleString("en-CA", {
         weekday: "long",
-        month: "long",
+        month: "short",
         day: "numeric",
         year: "numeric",
         hour: "numeric",
@@ -124,7 +124,15 @@ export default function ExecutiveStatus() {
 
         <div className="dateBlock">
           <div>{currentDateTime}</div>
-          <small>↻ Updated {now ? now.toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit" }) : ""}</small>
+          <small>
+            Updated{" "}
+            {now
+              ? now.toLocaleTimeString("en-CA", {
+                  hour: "numeric",
+                  minute: "2-digit",
+                })
+              : ""}
+          </small>
         </div>
       </header>
 
@@ -153,13 +161,19 @@ export default function ExecutiveStatus() {
 
         <Card title="Active Projects" className="projects">
           {projects.map((project) => (
-            <button className="projectRow" key={project.name} onClick={() => openProject(project)}>
+            <button
+              className="projectRow"
+              key={project.name}
+              onClick={() => openProject(project)}
+            >
               <div className="projectTop">
                 <div>
                   <strong>{project.name}</strong>
                   <small>{project.phase}</small>
                 </div>
-                <span className={`pill ${getStatusClass(project.status)}`}>{project.status}</span>
+                <span className={`pill ${getStatusClass(project.status)}`}>
+                  {project.status}
+                </span>
               </div>
 
               <div className="progressLine">
@@ -175,7 +189,7 @@ export default function ExecutiveStatus() {
                   <span>{project.waitingOn}</span>
                 </div>
                 <div>
-                  <small>Next Milestone</small>
+                  <small>Next</small>
                   <span>{project.milestone}</span>
                 </div>
                 <div>
@@ -191,7 +205,9 @@ export default function ExecutiveStatus() {
           {timeline.map((item) => (
             <button className="timelineRow" key={item.label}>
               <span>{item.label}</span>
-              <b className={item.label === "Overdue" ? "danger" : ""}>{item.count}</b>
+              <b className={item.label === "Overdue" ? "danger" : ""}>
+                {item.count}
+              </b>
             </button>
           ))}
         </Card>
@@ -209,7 +225,9 @@ export default function ExecutiveStatus() {
           {decisions.map((item) => (
             <button className="decisionRow" key={item.title}>
               <span>{item.title}</span>
-              <small className={item.priority === "High" ? "danger" : ""}>{item.priority}</small>
+              <small className={item.priority === "High" ? "danger" : ""}>
+                {item.priority}
+              </small>
             </button>
           ))}
         </Card>
@@ -228,10 +246,14 @@ export default function ExecutiveStatus() {
 
       {selectedProject && (
         <aside className="drawer">
-          <button className="close" onClick={() => setSelectedProject(null)}>×</button>
+          <button className="close" onClick={() => setSelectedProject(null)}>
+            ×
+          </button>
 
           <h2>{selectedProject.name}</h2>
-          <span className={`pill ${getStatusClass(selectedProject.status)}`}>{selectedProject.status}</span>
+          <span className={`pill ${getStatusClass(selectedProject.status)}`}>
+            {selectedProject.status}
+          </span>
 
           <div className="tabs">
             {["overview", "tasks", "files", "notes", "activity"].map((tab) => (
@@ -248,7 +270,10 @@ export default function ExecutiveStatus() {
           {activeTab === "overview" && (
             <>
               <h3>Overview</h3>
-              <p>Live project status, current blockers, next milestone, and items needing attention.</p>
+              <p>
+                Live project status, blockers, next milestone, and items needing
+                attention.
+              </p>
               <DrawerBox label="Progress" value={`${selectedProject.progress}%`} />
               <DrawerBox label="Waiting On" value={selectedProject.waitingOn} />
               <DrawerBox label="Next Milestone" value={selectedProject.milestone} />
@@ -276,8 +301,12 @@ export default function ExecutiveStatus() {
           {activeTab === "notes" && (
             <>
               <h3>Notes</h3>
-              <div className="drawerBox">Waiting on final confirmation before moving to the next step.</div>
-              <div className="drawerBox">Mark may need to approve if this is still pending tomorrow.</div>
+              <div className="drawerBox">
+                Waiting on final confirmation before moving to the next step.
+              </div>
+              <div className="drawerBox">
+                Mark may need to approve if this is still pending tomorrow.
+              </div>
             </>
           )}
 
@@ -295,101 +324,108 @@ export default function ExecutiveStatus() {
       )}
 
       <style jsx global>{`
-        * { box-sizing: border-box; }
-        body { margin: 0; }
+        * {
+          box-sizing: border-box;
+        }
+
+        body {
+          margin: 0;
+        }
 
         .page {
           min-height: 100vh;
           background: #fbf8f1;
           color: #111827;
-          padding: 16px 24px;
+          padding: 12px 18px;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
           overflow: hidden;
+          font-size: 11px;
         }
 
         .header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 12px;
+          margin-bottom: 8px;
         }
 
         h1 {
           font-family: Georgia, serif;
-          font-size: 29px;
+          font-size: 24px;
           font-weight: 400;
-          margin: 0 0 4px;
+          margin: 0 0 2px;
         }
 
         p {
           margin: 0;
           color: #475569;
-          font-size: 13px;
-          line-height: 1.35;
+          font-size: 11px;
+          line-height: 1.25;
         }
 
         .dateBlock {
           text-align: right;
-          font-size: 12px;
+          font-size: 10px;
           color: #0f172a;
-          line-height: 1.4;
+          line-height: 1.3;
         }
 
         .dateBlock small {
           display: block;
-          margin-top: 8px;
+          margin-top: 4px;
           color: #64748b;
+          font-size: 10px;
         }
 
         .metrics {
           display: grid;
           grid-template-columns: repeat(5, 1fr);
-          gap: 10px;
-          margin-bottom: 10px;
+          gap: 8px;
+          margin-bottom: 8px;
         }
 
         .metric {
           background: #fffdf8;
           border: 1px solid #e5dccc;
-          border-radius: 10px;
-          padding: 14px 18px;
-          min-height: 82px;
+          border-radius: 9px;
+          padding: 10px 13px;
+          min-height: 66px;
         }
 
         .metric strong {
           display: block;
-          font-size: 25px;
+          font-size: 20px;
           line-height: 1;
-          margin-bottom: 7px;
+          margin-bottom: 4px;
           font-weight: 750;
         }
 
         .metric span {
           display: block;
-          font-size: 13px;
+          font-size: 11px;
           font-weight: 750;
-          margin-bottom: 5px;
+          margin-bottom: 2px;
         }
 
         .metric small {
           color: #475569;
-          font-size: 12px;
-          line-height: 1.25;
+          font-size: 10px;
+          line-height: 1.15;
         }
 
         .layout {
           display: grid;
-          grid-template-columns: 0.72fr 1.7fr 0.78fr;
+          grid-template-columns: 0.68fr 1.9fr 0.72fr;
           grid-template-rows: 1fr auto auto;
-          gap: 10px;
-          height: calc(100vh - 145px);
+          gap: 8px;
+          height: calc(100vh - 106px);
         }
 
         .card {
           background: #fffdf8;
           border: 1px solid #e5dccc;
-          border-radius: 10px;
-          padding: 14px;
+          border-radius: 9px;
+          padding: 10px;
           min-height: 0;
           overflow: hidden;
         }
@@ -412,17 +448,17 @@ export default function ExecutiveStatus() {
           justify-content: space-between;
           align-items: center;
           border-bottom: 1px solid #ebe2d4;
-          padding-bottom: 9px;
-          margin-bottom: 8px;
+          padding-bottom: 7px;
+          margin-bottom: 6px;
         }
 
         .cardHead b {
-          font-size: 14px;
+          font-size: 12px;
           font-weight: 750;
         }
 
         .cardHead span {
-          font-size: 11px;
+          font-size: 10px;
           color: #64748b;
         }
 
@@ -445,67 +481,67 @@ export default function ExecutiveStatus() {
 
         .priorityRow {
           display: grid;
-          grid-template-columns: 28px 1fr;
-          gap: 12px;
+          grid-template-columns: 24px 1fr;
+          gap: 9px;
           align-items: center;
-          padding: 12px 0;
+          padding: 8px 0;
           border-bottom: 1px solid #ebe2d4;
         }
 
         .number {
-          width: 28px;
-          height: 28px;
+          width: 23px;
+          height: 23px;
           background: #f1ece3;
           border-radius: 999px;
           display: flex;
           align-items: center;
           justify-content: center;
           font-weight: 750;
-          font-size: 13px;
+          font-size: 10px;
         }
 
         .priorityRow strong,
         .projectTop strong {
           display: block;
-          font-size: 13px;
-          line-height: 1.25;
+          font-size: 11px;
+          line-height: 1.2;
         }
 
         small {
           display: block;
           color: #64748b;
-          font-size: 11px;
-          margin-top: 3px;
-          line-height: 1.25;
+          font-size: 9.5px;
+          margin-top: 2px;
+          line-height: 1.2;
         }
 
         .projectRow {
-          padding: 12px 0;
+          padding: 9px 0;
           border-bottom: 1px solid #ebe2d4;
         }
 
         .projectTop {
           display: flex;
           justify-content: space-between;
-          gap: 12px;
+          gap: 10px;
           align-items: flex-start;
         }
 
         .progressLine {
           display: grid;
-          grid-template-columns: 1fr 38px;
-          gap: 10px;
+          grid-template-columns: 1fr 32px;
+          gap: 8px;
           align-items: center;
-          margin: 10px 0;
+          margin: 7px 0;
         }
 
         .progressLine b {
-          font-size: 12px;
+          font-size: 10px;
           text-align: right;
         }
 
         .bar {
-          height: 5px;
+          height: 4px;
           background: #e4ded4;
           border-radius: 99px;
         }
@@ -518,28 +554,28 @@ export default function ExecutiveStatus() {
 
         .projectInfo {
           display: grid;
-          grid-template-columns: 1fr 1fr 0.68fr;
-          gap: 12px;
+          grid-template-columns: 1fr 1fr 0.65fr;
+          gap: 9px;
         }
 
         .projectInfo div {
           border-left: 1px solid #e5dccc;
-          padding-left: 10px;
+          padding-left: 8px;
         }
 
         .projectInfo span {
           display: block;
-          font-size: 12px;
+          font-size: 10.5px;
           font-weight: 650;
-          line-height: 1.25;
+          line-height: 1.2;
         }
 
         .pill {
           background: #e7f3eb;
           color: #0f7a4b;
           border-radius: 999px;
-          padding: 4px 8px;
-          font-size: 11px;
+          padding: 3px 7px;
+          font-size: 9.5px;
           line-height: 1;
           white-space: nowrap;
         }
@@ -560,14 +596,14 @@ export default function ExecutiveStatus() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 11px 0;
+          padding: 8px 0;
           border-bottom: 1px solid #ebe2d4;
-          font-size: 13px;
+          font-size: 11px;
         }
 
         .timelineRow b,
         .simpleRow b {
-          font-size: 18px;
+          font-size: 15px;
         }
 
         .danger {
@@ -575,23 +611,23 @@ export default function ExecutiveStatus() {
         }
 
         .decisionRow small {
-          font-size: 12px;
+          font-size: 10px;
         }
 
         .communication {
-          max-height: 150px;
+          max-height: 118px;
         }
 
         .communicationGrid {
           display: grid;
           grid-template-columns: repeat(5, 1fr);
-          padding-top: 6px;
+          padding-top: 4px;
         }
 
         .commItem {
           text-align: center;
           border-right: 1px solid #e5dccc;
-          padding: 8px 4px;
+          padding: 6px 3px;
         }
 
         .commItem:last-child {
@@ -599,14 +635,14 @@ export default function ExecutiveStatus() {
         }
 
         .commItem strong {
-          font-size: 20px;
+          font-size: 17px;
           display: block;
-          margin-bottom: 4px;
+          margin-bottom: 3px;
         }
 
         .commItem span {
-          font-size: 11px;
-          line-height: 1.2;
+          font-size: 9.5px;
+          line-height: 1.15;
           display: block;
         }
 
@@ -615,11 +651,11 @@ export default function ExecutiveStatus() {
           top: 0;
           right: 0;
           bottom: 0;
-          width: 420px;
+          width: 390px;
           background: #fffdf8;
           border-left: 1px solid #e5dccc;
-          padding: 24px;
-          box-shadow: -16px 0 40px rgba(0,0,0,.08);
+          padding: 22px;
+          box-shadow: -16px 0 40px rgba(0, 0, 0, 0.08);
           z-index: 1000;
           overflow-y: auto;
         }
@@ -628,32 +664,32 @@ export default function ExecutiveStatus() {
           float: right;
           border: 0;
           background: transparent;
-          font-size: 26px;
+          font-size: 24px;
           cursor: pointer;
         }
 
         h2 {
           font-family: Georgia, serif;
-          font-size: 27px;
+          font-size: 24px;
           font-weight: 400;
-          margin: 0 0 8px;
+          margin: 0 0 7px;
         }
 
         .tabs {
           display: flex;
-          gap: 14px;
+          gap: 12px;
           border-bottom: 1px solid #e5dccc;
-          margin: 20px 0;
+          margin: 18px 0;
         }
 
         .tabs button {
           border: 0;
           background: transparent;
-          padding: 8px 0;
+          padding: 7px 0;
           text-transform: capitalize;
           cursor: pointer;
           color: #475569;
-          font-size: 13px;
+          font-size: 12px;
         }
 
         .tabs button.active {
@@ -663,24 +699,24 @@ export default function ExecutiveStatus() {
         }
 
         h3 {
-          margin: 16px 0 8px;
-          font-size: 16px;
+          margin: 14px 0 7px;
+          font-size: 14px;
         }
 
         .drawerBox,
         .drawerLine {
           border: 1px solid #ebe2d4;
           background: #fbf8f1;
-          border-radius: 10px;
-          padding: 12px;
-          margin-bottom: 9px;
+          border-radius: 9px;
+          padding: 10px;
+          margin-bottom: 8px;
         }
 
         .drawerLine {
           display: flex;
           justify-content: space-between;
-          gap: 12px;
-          font-size: 13px;
+          gap: 10px;
+          font-size: 12px;
         }
 
         .primary {
@@ -688,9 +724,9 @@ export default function ExecutiveStatus() {
           background: #111827;
           color: white;
           border: 0;
-          border-radius: 10px;
-          padding: 13px;
-          margin-top: 16px;
+          border-radius: 9px;
+          padding: 11px;
+          margin-top: 14px;
           cursor: pointer;
         }
 
