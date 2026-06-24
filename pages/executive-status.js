@@ -1,20 +1,12 @@
 import { useEffect, useState } from "react";
 
-const metrics = [
-  { number: "14", label: "Active Projects", note: "12 On Track · 2 At Risk" },
-  { number: "8", label: "Waiting On", note: "From 5 people" },
-  { number: "3", label: "Needs Your Input", note: "Approvals / Decisions" },
-  { number: "97%", label: "Operations Health", note: "Everything on track" },
-  { number: "✓", label: "On Track", note: "Dealer Event · Friday" },
-];
-
-const priorities = [
+const startingPriorities = [
   { title: "Dealer Pricing Approval", note: "Decision needed" },
   { title: "July Event Catering", note: "Costco quote pending" },
   { title: "Inventory Review", note: "Reports ready" },
 ];
 
-const projects = [
+const startingProjects = [
   {
     name: "July Dealer Event",
     status: "On Track",
@@ -42,50 +34,35 @@ const projects = [
     milestone: "Design Finalization · Jul 2",
     updated: "2 hours ago",
   },
-  {
-    name: "MBJ Transfer",
-    status: "Behind",
-    progress: 28,
-    phase: "Pricing Review",
-    waitingOn: "Pricing Exception Approval",
-    milestone: "Ownership Transfer · Jul 10",
-    updated: "Yesterday",
-  },
 ];
 
-const timeline = [
-  { label: "Overdue", count: 3 },
-  { label: "Today", count: 5 },
-  { label: "Tomorrow", count: 4 },
-  { label: "This Week", count: 11 },
-];
-
-const waitingOn = [
-  { label: "Mark", count: 2 },
-  { label: "Dane", count: 1 },
-  { label: "Dealer", count: 8 },
-  { label: "Vendor", count: 3 },
-  { label: "Finance", count: 2 },
-];
-
-const decisions = [
+const startingDecisions = [
   { title: "Pricing Exception – MBJ Ranch", priority: "High" },
   { title: "Dealer Approval – Seminole", priority: "Medium" },
-  { title: "Travel Approval – July 7-9", priority: "Low" },
 ];
 
-const communications = [
+const startingWaiting = [
+  { label: "Mark", count: 2 },
+  { label: "Dealer", count: 8 },
+  { label: "Vendor", count: 3 },
+];
+
+const startingComms = [
   { number: 12, label: "Dealer" },
   { number: 4, label: "Vendor" },
-  { number: 3, label: "Internal" },
   { number: 2, label: "Review" },
   { number: 5, label: "Ready" },
 ];
 
 export default function ExecutiveStatus() {
   const [now, setNow] = useState(null);
-  const [selectedProject, setSelectedProject] = useState(null);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [drawer, setDrawer] = useState(null);
+
+  const [priorities, setPriorities] = useState(startingPriorities);
+  const [projects, setProjects] = useState(startingProjects);
+  const [decisions, setDecisions] = useState(startingDecisions);
+  const [waiting, setWaiting] = useState(startingWaiting);
+  const [comms, setComms] = useState(startingComms);
 
   useEffect(() => {
     setNow(new Date());
@@ -94,7 +71,6 @@ export default function ExecutiveStatus() {
   }, []);
 
   const hour = now ? now.getHours() : 9;
-
   const greeting =
     hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
@@ -109,10 +85,55 @@ export default function ExecutiveStatus() {
       })
     : "";
 
-  function openProject(project) {
-    setSelectedProject(project);
-    setActiveTab("overview");
+  function addPriority() {
+    const title = prompt("Priority title:");
+    if (!title) return;
+    const note = prompt("Short note:") || "";
+    setPriorities([...priorities, { title, note }]);
   }
+
+  function addProject() {
+    const name = prompt("Project name:");
+    if (!name) return;
+    setProjects([
+      ...projects,
+      {
+        name,
+        status: "On Track",
+        progress: 0,
+        phase: "New project",
+        waitingOn: "Not set",
+        milestone: "Not set",
+        updated: "Just now",
+      },
+    ]);
+  }
+
+  function addDecision() {
+    const title = prompt("Decision needed:");
+    if (!title) return;
+    setDecisions([...decisions, { title, priority: "Medium" }]);
+  }
+
+  function addWaiting() {
+    const label = prompt("Waiting on who/what:");
+    if (!label) return;
+    setWaiting([...waiting, { label, count: 1 }]);
+  }
+
+  function addCommunication() {
+    const label = prompt("Communication category:");
+    if (!label) return;
+    setComms([...comms, { label, number: 1 }]);
+  }
+
+  const metrics = [
+    { number: projects.length, label: "Active Projects", note: "Live project count" },
+    { number: waiting.reduce((a, b) => a + Number(b.count), 0), label: "Waiting On", note: "Items currently stalled" },
+    { number: decisions.length, label: "Needs Your Input", note: "Approvals / Decisions" },
+    { number: "97%", label: "Operations Health", note: "Everything on track" },
+    { number: "✓", label: "On Track", note: "Dealer Event · Friday" },
+  ];
 
   return (
     <div className="page">
@@ -121,59 +142,66 @@ export default function ExecutiveStatus() {
           <h1>{greeting}, Mark.</h1>
           <p>Here’s where everything stands.</p>
         </div>
-
         <div className="dateBlock">
           <div>{currentDateTime}</div>
-          <small>
-            Updated{" "}
-            {now
-              ? now.toLocaleTimeString("en-CA", {
-                  hour: "numeric",
-                  minute: "2-digit",
-                })
-              : ""}
-          </small>
+          <small>Updated {now ? now.toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit" }) : ""}</small>
         </div>
       </header>
 
       <section className="metrics">
         {metrics.map((item) => (
-          <div className="metric" key={item.label}>
+          <button className="metric" key={item.label} onClick={() => setDrawer({ type: "metric", item })}>
             <strong>{item.number}</strong>
             <span>{item.label}</span>
             <small>{item.note}</small>
-          </div>
+          </button>
         ))}
       </section>
 
       <section className="layout">
-        <Card title="Today’s Priorities" className="left priorities">
-          {priorities.map((item, index) => (
-            <button className="priorityRow" key={item.title}>
-              <span className="number">{index + 1}</span>
-              <div>
-                <strong>{item.title}</strong>
-                <small>{item.note}</small>
-              </div>
-            </button>
-          ))}
-        </Card>
+        <div className="leftStack">
+          <Card title="Today’s Priorities" onAdd={addPriority}>
+            {priorities.map((item, index) => (
+              <button className="priorityRow" key={item.title} onClick={() => setDrawer({ type: "priority", item })}>
+                <span className="number">{index + 1}</span>
+                <div>
+                  <strong>{item.title}</strong>
+                  <small>{item.note}</small>
+                </div>
+              </button>
+            ))}
+          </Card>
 
-        <Card title="Active Projects" className="projects">
+          <Card title="Waiting On" onAdd={addWaiting}>
+            {waiting.map((item) => (
+              <button className="simpleRow" key={item.label} onClick={() => setDrawer({ type: "waiting", item })}>
+                <span>{item.label}</span>
+                <b>{item.count}</b>
+              </button>
+            ))}
+          </Card>
+
+          <Card title="Communication Pipeline" onAdd={addCommunication}>
+            <div className="communicationGrid">
+              {comms.map((item) => (
+                <button className="commItem" key={item.label} onClick={() => setDrawer({ type: "communication", item })}>
+                  <strong>{item.number}</strong>
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </Card>
+        </div>
+
+        <Card title="Active Projects" className="projects" onAdd={addProject}>
           {projects.map((project) => (
-            <button
-              className="projectRow"
-              key={project.name}
-              onClick={() => openProject(project)}
-            >
+            <button className="projectRow" key={project.name} onClick={() => setDrawer({ type: "project", item: project })}>
               <div className="projectTop">
                 <div>
                   <strong>{project.name}</strong>
                   <small>{project.phase}</small>
                 </div>
-                <span className={`pill ${getStatusClass(project.status)}`}>
-                  {project.status}
-                </span>
+                <span className={`pill ${getStatusClass(project.status)}`}>{project.status}</span>
               </div>
 
               <div className="progressLine">
@@ -201,136 +229,66 @@ export default function ExecutiveStatus() {
           ))}
         </Card>
 
-        <Card title="Task Timeline" className="right">
-          {timeline.map((item) => (
-            <button className="timelineRow" key={item.label}>
-              <span>{item.label}</span>
-              <b className={item.label === "Overdue" ? "danger" : ""}>
-                {item.count}
-              </b>
-            </button>
-          ))}
-        </Card>
-
-        <Card title="Waiting On" className="left waiting">
-          {waitingOn.map((item) => (
-            <button className="simpleRow" key={item.label}>
-              <span>{item.label}</span>
-              <b>{item.count}</b>
-            </button>
-          ))}
-        </Card>
-
-        <Card title="Needs Your Decision" className="right decisions">
-          {decisions.map((item) => (
-            <button className="decisionRow" key={item.title}>
-              <span>{item.title}</span>
-              <small className={item.priority === "High" ? "danger" : ""}>
-                {item.priority}
-              </small>
-            </button>
-          ))}
-        </Card>
-
-        <Card title="Communication Pipeline" className="left communication">
-          <div className="communicationGrid">
-            {communications.map((item) => (
-              <button className="commItem" key={item.label}>
-                <strong>{item.number}</strong>
-                <span>{item.label}</span>
+        <div className="rightStack">
+          <Card title="Task Timeline">
+            {[
+              ["Overdue", 3],
+              ["Today", 5],
+              ["Tomorrow", 4],
+              ["This Week", 11],
+            ].map(([label, count]) => (
+              <button className="timelineRow" key={label} onClick={() => setDrawer({ type: "task", item: { label, count } })}>
+                <span>{label}</span>
+                <b className={label === "Overdue" ? "danger" : ""}>{count}</b>
               </button>
             ))}
-          </div>
-        </Card>
+          </Card>
+
+          <Card title="Needs Your Decision" onAdd={addDecision}>
+            {decisions.map((item) => (
+              <button className="decisionRow" key={item.title} onClick={() => setDrawer({ type: "decision", item })}>
+                <span>{item.title}</span>
+                <small className={item.priority === "High" ? "danger" : ""}>{item.priority}</small>
+              </button>
+            ))}
+          </Card>
+        </div>
       </section>
 
-      {selectedProject && (
+      {drawer && (
         <aside className="drawer">
-          <button className="close" onClick={() => setSelectedProject(null)}>
-            ×
-          </button>
+          <button className="close" onClick={() => setDrawer(null)}>×</button>
 
-          <h2>{selectedProject.name}</h2>
-          <span className={`pill ${getStatusClass(selectedProject.status)}`}>
-            {selectedProject.status}
-          </span>
+          <h2>{getDrawerTitle(drawer)}</h2>
+          <p>Details behind this item. This is where approvals, notes, files, tasks, status history, and next actions can live.</p>
 
-          <div className="tabs">
-            {["overview", "tasks", "files", "notes", "activity"].map((tab) => (
-              <button
-                key={tab}
-                className={activeTab === tab ? "active" : ""}
-                onClick={() => setActiveTab(tab)}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          {activeTab === "overview" && (
+          {drawer.type === "project" && (
             <>
-              <h3>Overview</h3>
-              <p>
-                Live project status, blockers, next milestone, and items needing
-                attention.
-              </p>
-              <DrawerBox label="Progress" value={`${selectedProject.progress}%`} />
-              <DrawerBox label="Waiting On" value={selectedProject.waitingOn} />
-              <DrawerBox label="Next Milestone" value={selectedProject.milestone} />
+              <span className={`pill ${getStatusClass(drawer.item.status)}`}>{drawer.item.status}</span>
+              <Tabs />
+              <DrawerBox label="Progress" value={`${drawer.item.progress}%`} />
+              <DrawerBox label="Waiting On" value={drawer.item.waitingOn} />
+              <DrawerBox label="Next Milestone" value={drawer.item.milestone} />
+              <DrawerBox label="Last Updated" value={drawer.item.updated} />
             </>
           )}
 
-          {activeTab === "tasks" && (
+          {drawer.type !== "project" && (
             <>
-              <h3>Tasks</h3>
-              <DrawerLine text="Finalize next milestone" note="High" />
-              <DrawerLine text="Confirm outstanding items" note="Medium" />
-              <DrawerLine text="Send status update" note="Today" />
+              <Tabs />
+              <DrawerBox label="Current Status" value={drawer.item.note || drawer.item.priority || drawer.item.label || "Open"} />
+              <DrawerBox label="Owner" value="Nikita" />
+              <DrawerBox label="Next Action" value="Review and update status" />
             </>
           )}
 
-          {activeTab === "files" && (
-            <>
-              <h3>Files</h3>
-              <DrawerLine text="Pricing Sheet.xlsx" note="Open" />
-              <DrawerLine text="Dealer Agenda.pdf" note="Open" />
-              <DrawerLine text="Project Notes.docx" note="Open" />
-            </>
-          )}
-
-          {activeTab === "notes" && (
-            <>
-              <h3>Notes</h3>
-              <div className="drawerBox">
-                Waiting on final confirmation before moving to the next step.
-              </div>
-              <div className="drawerBox">
-                Mark may need to approve if this is still pending tomorrow.
-              </div>
-            </>
-          )}
-
-          {activeTab === "activity" && (
-            <>
-              <h3>Activity</h3>
-              <DrawerLine text="Project status updated" note="27 mins ago" />
-              <DrawerLine text="New task added" note="1 hour ago" />
-              <DrawerLine text="File uploaded" note="Yesterday" />
-            </>
-          )}
-
-          <button className="primary">Open Project Workspace →</button>
+          <button className="primary">Open Workspace →</button>
         </aside>
       )}
 
       <style jsx global>{`
-        * {
-          box-sizing: border-box;
-        }
-
-        body {
-          margin: 0;
-        }
+        * { box-sizing: border-box; }
+        body { margin: 0; }
 
         .page {
           min-height: 100vh;
@@ -338,20 +296,19 @@ export default function ExecutiveStatus() {
           color: #111827;
           padding: 12px 18px;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-          overflow: hidden;
           font-size: 11px;
+          overflow: hidden;
         }
 
         .header {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
           margin-bottom: 8px;
         }
 
         h1 {
           font-family: Georgia, serif;
-          font-size: 24px;
+          font-size: 23px;
           font-weight: 400;
           margin: 0 0 2px;
         }
@@ -360,87 +317,82 @@ export default function ExecutiveStatus() {
           margin: 0;
           color: #475569;
           font-size: 11px;
-          line-height: 1.25;
+          line-height: 1.3;
         }
 
         .dateBlock {
           text-align: right;
           font-size: 10px;
           color: #0f172a;
-          line-height: 1.3;
         }
 
         .dateBlock small {
           display: block;
-          margin-top: 4px;
           color: #64748b;
-          font-size: 10px;
+          margin-top: 4px;
         }
 
         .metrics {
           display: grid;
           grid-template-columns: repeat(5, 1fr);
-          gap: 8px;
+          gap: 7px;
           margin-bottom: 8px;
         }
 
         .metric {
           background: #fffdf8;
           border: 1px solid #e5dccc;
-          border-radius: 9px;
-          padding: 10px 13px;
-          min-height: 66px;
+          border-radius: 8px;
+          padding: 9px 12px;
+          min-height: 58px;
+          text-align: left;
+          cursor: pointer;
         }
 
         .metric strong {
           display: block;
-          font-size: 20px;
+          font-size: 18px;
           line-height: 1;
-          margin-bottom: 4px;
-          font-weight: 750;
+          margin-bottom: 3px;
         }
 
         .metric span {
           display: block;
-          font-size: 11px;
+          font-size: 10.5px;
           font-weight: 750;
-          margin-bottom: 2px;
         }
 
         .metric small {
-          color: #475569;
-          font-size: 10px;
-          line-height: 1.15;
+          color: #64748b;
+          font-size: 9.5px;
         }
 
         .layout {
           display: grid;
-          grid-template-columns: 0.68fr 1.9fr 0.72fr;
-          grid-template-rows: 1fr auto auto;
+          grid-template-columns: 0.64fr 1.95fr 0.7fr;
           gap: 8px;
-          height: calc(100vh - 106px);
+          height: calc(100vh - 95px);
+          align-items: start;
+        }
+
+        .leftStack,
+        .rightStack {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
         }
 
         .card {
           background: #fffdf8;
           border: 1px solid #e5dccc;
-          border-radius: 9px;
-          padding: 10px;
-          min-height: 0;
+          border-radius: 8px;
+          padding: 9px;
           overflow: hidden;
         }
 
         .projects {
-          grid-column: 2;
-          grid-row: 1 / 4;
-        }
-
-        .left {
-          grid-column: 1;
-        }
-
-        .right {
-          grid-column: 3;
+          height: auto;
+          align-self: start;
         }
 
         .cardHead {
@@ -448,13 +400,18 @@ export default function ExecutiveStatus() {
           justify-content: space-between;
           align-items: center;
           border-bottom: 1px solid #ebe2d4;
-          padding-bottom: 7px;
-          margin-bottom: 6px;
+          padding-bottom: 6px;
+          margin-bottom: 5px;
         }
 
         .cardHead b {
-          font-size: 12px;
-          font-weight: 750;
+          font-size: 11.5px;
+        }
+
+        .headActions {
+          display: flex;
+          gap: 8px;
+          align-items: center;
         }
 
         .cardHead span {
@@ -462,9 +419,17 @@ export default function ExecutiveStatus() {
           color: #64748b;
         }
 
-        button {
-          font: inherit;
+        .addBtn {
+          border: 1px solid #e5dccc;
+          background: #fbf8f1;
+          border-radius: 999px;
+          width: 20px;
+          height: 20px;
+          cursor: pointer;
+          line-height: 1;
         }
+
+        button { font: inherit; }
 
         .priorityRow,
         .projectRow,
@@ -481,91 +446,89 @@ export default function ExecutiveStatus() {
 
         .priorityRow {
           display: grid;
-          grid-template-columns: 24px 1fr;
-          gap: 9px;
+          grid-template-columns: 22px 1fr;
+          gap: 8px;
           align-items: center;
-          padding: 8px 0;
+          padding: 7px 0;
           border-bottom: 1px solid #ebe2d4;
         }
 
         .number {
-          width: 23px;
-          height: 23px;
-          background: #f1ece3;
+          width: 22px;
+          height: 22px;
           border-radius: 999px;
+          background: #f1ece3;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-weight: 750;
           font-size: 10px;
+          font-weight: 750;
         }
 
         .priorityRow strong,
         .projectTop strong {
           display: block;
-          font-size: 11px;
+          font-size: 10.5px;
           line-height: 1.2;
         }
 
         small {
           display: block;
           color: #64748b;
-          font-size: 9.5px;
+          font-size: 9px;
           margin-top: 2px;
-          line-height: 1.2;
         }
 
         .projectRow {
-          padding: 9px 0;
+          padding: 8px 0;
           border-bottom: 1px solid #ebe2d4;
         }
 
         .projectTop {
           display: flex;
           justify-content: space-between;
-          gap: 10px;
-          align-items: flex-start;
+          gap: 8px;
         }
 
         .progressLine {
           display: grid;
-          grid-template-columns: 1fr 32px;
-          gap: 8px;
+          grid-template-columns: 1fr 28px;
+          gap: 7px;
           align-items: center;
-          margin: 7px 0;
+          margin: 6px 0;
         }
 
         .progressLine b {
-          font-size: 10px;
+          font-size: 9.5px;
           text-align: right;
         }
 
         .bar {
           height: 4px;
-          background: #e4ded4;
           border-radius: 99px;
+          background: #e4ded4;
         }
 
         .bar div {
           height: 100%;
-          background: #111827;
           border-radius: 99px;
+          background: #111827;
         }
 
         .projectInfo {
           display: grid;
           grid-template-columns: 1fr 1fr 0.65fr;
-          gap: 9px;
+          gap: 7px;
         }
 
         .projectInfo div {
           border-left: 1px solid #e5dccc;
-          padding-left: 8px;
+          padding-left: 7px;
         }
 
         .projectInfo span {
           display: block;
-          font-size: 10.5px;
+          font-size: 9.5px;
           font-weight: 650;
           line-height: 1.2;
         }
@@ -575,8 +538,7 @@ export default function ExecutiveStatus() {
           color: #0f7a4b;
           border-radius: 999px;
           padding: 3px 7px;
-          font-size: 9.5px;
-          line-height: 1;
+          font-size: 9px;
           white-space: nowrap;
         }
 
@@ -595,15 +557,14 @@ export default function ExecutiveStatus() {
         .decisionRow {
           display: flex;
           justify-content: space-between;
-          align-items: center;
-          padding: 8px 0;
+          padding: 7px 0;
           border-bottom: 1px solid #ebe2d4;
-          font-size: 11px;
+          font-size: 10.5px;
         }
 
         .timelineRow b,
         .simpleRow b {
-          font-size: 15px;
+          font-size: 13px;
         }
 
         .danger {
@@ -611,23 +572,18 @@ export default function ExecutiveStatus() {
         }
 
         .decisionRow small {
-          font-size: 10px;
-        }
-
-        .communication {
-          max-height: 118px;
+          font-size: 9.5px;
         }
 
         .communicationGrid {
           display: grid;
           grid-template-columns: repeat(5, 1fr);
-          padding-top: 4px;
         }
 
         .commItem {
           text-align: center;
           border-right: 1px solid #e5dccc;
-          padding: 6px 3px;
+          padding: 5px 2px;
         }
 
         .commItem:last-child {
@@ -635,27 +591,24 @@ export default function ExecutiveStatus() {
         }
 
         .commItem strong {
-          font-size: 17px;
           display: block;
-          margin-bottom: 3px;
+          font-size: 15px;
         }
 
         .commItem span {
-          font-size: 9.5px;
-          line-height: 1.15;
           display: block;
+          font-size: 8.5px;
+          line-height: 1.15;
         }
 
         .drawer {
           position: fixed;
-          top: 0;
-          right: 0;
-          bottom: 0;
+          inset: 0 0 0 auto;
           width: 390px;
           background: #fffdf8;
           border-left: 1px solid #e5dccc;
           padding: 22px;
-          box-shadow: -16px 0 40px rgba(0, 0, 0, 0.08);
+          box-shadow: -16px 0 40px rgba(0,0,0,.08);
           z-index: 1000;
           overflow-y: auto;
         }
@@ -670,9 +623,9 @@ export default function ExecutiveStatus() {
 
         h2 {
           font-family: Georgia, serif;
-          font-size: 24px;
           font-weight: 400;
-          margin: 0 0 7px;
+          font-size: 24px;
+          margin: 0 0 8px;
         }
 
         .tabs {
@@ -682,25 +635,16 @@ export default function ExecutiveStatus() {
           margin: 18px 0;
         }
 
-        .tabs button {
-          border: 0;
-          background: transparent;
-          padding: 7px 0;
-          text-transform: capitalize;
-          cursor: pointer;
-          color: #475569;
+        .tabs span {
+          padding-bottom: 7px;
           font-size: 12px;
+          color: #475569;
         }
 
-        .tabs button.active {
+        .tabs span:first-child {
           color: #111827;
           font-weight: 750;
           border-bottom: 2px solid #111827;
-        }
-
-        h3 {
-          margin: 14px 0 7px;
-          font-size: 14px;
         }
 
         .drawerBox,
@@ -712,13 +656,6 @@ export default function ExecutiveStatus() {
           margin-bottom: 8px;
         }
 
-        .drawerLine {
-          display: flex;
-          justify-content: space-between;
-          gap: 10px;
-          font-size: 12px;
-        }
-
         .primary {
           width: 100%;
           background: #111827;
@@ -727,50 +664,41 @@ export default function ExecutiveStatus() {
           border-radius: 9px;
           padding: 11px;
           margin-top: 14px;
-          cursor: pointer;
         }
 
         @media (max-width: 1200px) {
-          .page {
-            overflow: auto;
-          }
-
-          .metrics,
-          .layout {
-            grid-template-columns: 1fr;
-            height: auto;
-          }
-
-          .projects,
-          .left,
-          .right {
-            grid-column: auto;
-            grid-row: auto;
-          }
-
-          .communicationGrid {
-            grid-template-columns: 1fr;
-          }
-
-          .commItem {
-            border-right: 0;
-            border-bottom: 1px solid #e5dccc;
-          }
+          .page { overflow: auto; }
+          .metrics, .layout { grid-template-columns: 1fr; height: auto; }
         }
       `}</style>
     </div>
   );
 }
 
-function Card({ title, children, className = "" }) {
+function Card({ title, children, className = "", onAdd }) {
   return (
     <section className={`card ${className}`}>
       <div className="cardHead">
         <b>{title}</b>
-        <span>View all →</span>
+        <div className="headActions">
+          {onAdd && <button className="addBtn" onClick={onAdd}>+</button>}
+          <span>View all →</span>
+        </div>
       </div>
       {children}
     </section>
+  );
+}
+
+function Tabs() {
+  return (
+    <div className="tabs">
+      <span>Overview</span>
+      <span>Tasks</span>
+      <span>Files</span>
+      <span>Notes</span>
+      <span>Activity</span>
+    </div>
   );
 }
 
@@ -783,17 +711,15 @@ function DrawerBox({ label, value }) {
   );
 }
 
-function DrawerLine({ text, note }) {
-  return (
-    <div className="drawerLine">
-      <span>{text}</span>
-      <small>{note}</small>
-    </div>
-  );
+function getDrawerTitle(drawer) {
+  if (drawer.type === "project") return drawer.item.name;
+  if (drawer.item.title) return drawer.item.title;
+  if (drawer.item.label) return drawer.item.label;
+  return "Details";
 }
 
 function getStatusClass(status) {
   if (status === "Behind") return "behind";
-  if (status.includes("Waiting")) return "waiting";
+  if (status?.includes("Waiting")) return "waiting";
   return "";
 }
