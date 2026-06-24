@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
 const TASKS_KEY = "os-tasks";
-const PROJECT_META_KEY = "executive-project-meta-v2";
-const DECISIONS_KEY = "executive-decisions-v2";
-const COMMUNICATION_KEY = "executive-communication-v2";
+const PROJECT_META_KEY = "executive-project-meta-clean-v1";
+const DECISIONS_KEY = "executive-decisions-clean-v1";
+const COMMUNICATION_KEY = "executive-communication-clean-v1";
 
 const uid = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
@@ -170,9 +170,7 @@ export default function ExecutiveStatus() {
         };
       }
 
-      if (!map[name].subProjects[sub]) {
-        map[name].subProjects[sub] = [];
-      }
+      if (!map[name].subProjects[sub]) map[name].subProjects[sub] = [];
 
       map[name].tasks.push(task);
       map[name].subProjects[sub].push(task);
@@ -201,7 +199,7 @@ export default function ExecutiveStatus() {
     return Object.values(map)
       .map((project) => {
         const meta = projectMeta[project.name] || {};
-        const subProjectList = Object.entries(project.subProjects).map(([name, subTasks]) => ({
+        const taskSubs = Object.entries(project.subProjects).map(([name, subTasks]) => ({
           id: name,
           name,
           tasks: subTasks,
@@ -210,9 +208,9 @@ export default function ExecutiveStatus() {
         }));
 
         const manualSubs = meta.subProjects || [];
-        const combinedSubs = [
-          ...subProjectList,
-          ...manualSubs.filter((manual) => !subProjectList.some((sub) => sub.name === manual.name)),
+        const subProjectList = [
+          ...taskSubs,
+          ...manualSubs.filter((manual) => !taskSubs.some((sub) => sub.name === manual.name)),
         ];
 
         const status =
@@ -228,7 +226,8 @@ export default function ExecutiveStatus() {
           status,
           owner: meta.owner || "Nikita",
           targetDate: meta.targetDate || "",
-          subProjectList: combinedSubs,
+          description: meta.description || "",
+          subProjectList,
           files: meta.files || [],
           notes: meta.notes || [],
           activity: meta.activity || [],
@@ -267,11 +266,12 @@ export default function ExecutiveStatus() {
       })
     : "";
 
+  const health = Math.max(70, 100 - due.overdue.length * 4);
   const metrics = [
     { number: projects.length, label: "Active Projects", note: "Grouped from Tasks" },
     { number: waitingGroups.reduce((sum, item) => sum + item.count, 0), label: "Waiting On", note: "From task statuses" },
     { number: decisions.filter((d) => d.status !== "Approved").length, label: "Needs Your Input", note: "Approvals / Decisions" },
-    { number: `${Math.max(70, 100 - due.overdue.length * 4)}%`, label: "Operations Health", note: due.overdue.length ? `${due.overdue.length} overdue` : "Everything on track" },
+    { number: `${health}%`, label: "Operations Health", note: due.overdue.length ? `${due.overdue.length} overdue` : "Everything on track" },
   ];
 
   function openDrawer(type, item, startingTab = "overview") {
@@ -348,6 +348,7 @@ export default function ExecutiveStatus() {
       [name]: {
         status: "On Track",
         owner: "Nikita",
+        description: "",
         subProjects: [],
         files: [],
         notes: [],
@@ -359,13 +360,38 @@ export default function ExecutiveStatus() {
       id: name,
       name,
       status: "On Track",
+      owner: "Nikita",
+      description: "",
       openTasks: 0,
       overdueTasks: 0,
       waitingTasks: 0,
+      highTasks: 0,
       subProjectList: [],
+      tasks: [],
       files: [],
       notes: [],
       activity: [],
+    }, "overview");
+  }
+
+  function addManualSubProject(projectName) {
+    const meta = projectMeta[projectName] || {};
+    updateProject(projectName, {
+      subProjects: [...(meta.subProjects || []), { id: uid(), name: "New Sub Project", tasks: [] }],
+    });
+  }
+
+  function updateManualSubProject(projectName, id, name) {
+    const meta = projectMeta[projectName] || {};
+    updateProject(projectName, {
+      subProjects: (meta.subProjects || []).map((item) => (item.id === id ? { ...item, name } : item)),
+    });
+  }
+
+  function deleteManualSubProject(projectName, id) {
+    const meta = projectMeta[projectName] || {};
+    updateProject(projectName, {
+      subProjects: (meta.subProjects || []).filter((item) => item.id !== id),
     });
   }
 
@@ -387,27 +413,6 @@ export default function ExecutiveStatus() {
     const meta = projectMeta[projectName] || {};
     updateProject(projectName, {
       [field]: (meta[field] || []).filter((item) => item.id !== id),
-    });
-  }
-
-  function addManualSubProject(projectName) {
-    const meta = projectMeta[projectName] || {};
-    updateProject(projectName, {
-      subProjects: [...(meta.subProjects || []), { id: uid(), name: "New Sub Project", tasks: [] }],
-    });
-  }
-
-  function updateManualSubProject(projectName, id, name) {
-    const meta = projectMeta[projectName] || {};
-    updateProject(projectName, {
-      subProjects: (meta.subProjects || []).map((item) => (item.id === id ? { ...item, name } : item)),
-    });
-  }
-
-  function deleteManualSubProject(projectName, id) {
-    const meta = projectMeta[projectName] || {};
-    updateProject(projectName, {
-      subProjects: (meta.subProjects || []).filter((item) => item.id !== id),
     });
   }
 
@@ -506,23 +511,19 @@ export default function ExecutiveStatus() {
           {projects.length === 0 && <EmptyLine text="No projects yet. Add tasks with a project name to populate this section." />}
 
           {projects.map((project) => (
-            <button className="projectRow" key={project.name} onClick={() => openDrawer("project", project, "subprojects")}>
+            <button className="projectRow" key={project.name} onClick={() => openDrawer("project", project, "overview")}>
               <div className="projectTop">
-                <div className="projectTitleWrap">
-                  <EditableText
-                    value={project.name}
-                    className="projectName"
-                    onSave={(value) => renameProject(project.name, value)}
-                  />
-                  <small>{project.openTasks} open tasks · {project.subProjectList.length} sub projects</small>
+                <div>
+                  <strong>{project.name}</strong>
+                  <small>{project.subProjectList.slice(0, 3).map((sub) => sub.name).join(" · ") || "No sub projects yet"}</small>
                 </div>
                 <span className={`pill ${getStatusClass(project.status)}`}>{project.status}</span>
               </div>
 
-              <div className="projectMetaLine">
+              <div className="projectBar">
+                <span>{project.openTasks} tasks</span>
+                <span>{project.subProjectList.length} sub projects</span>
                 <span>{project.overdueTasks} overdue</span>
-                <span>{project.waitingTasks} waiting</span>
-                <span>{project.highTasks} high priority</span>
               </div>
             </button>
           ))}
@@ -818,7 +819,8 @@ export default function ExecutiveStatus() {
           font-size: 12px;
         }
 
-        .priorityRow strong {
+        .priorityRow strong,
+        .projectTop strong {
           display: block;
           font-size: 13px;
         }
@@ -851,42 +853,14 @@ export default function ExecutiveStatus() {
         }
 
         .projectRow {
-          padding: 18px 0;
+          padding: 16px 0;
         }
 
         .projectTop {
           display: flex;
           justify-content: space-between;
-          gap: 14px;
+          gap: 12px;
           align-items: flex-start;
-        }
-
-        .projectTitleWrap {
-          width: 100%;
-        }
-
-        .projectName {
-          display: block;
-          width: 100%;
-          border: 0;
-          background: transparent;
-          font-family: Georgia, serif;
-          font-size: 28px;
-          font-weight: 400;
-          line-height: 1.05;
-          letter-spacing: -0.03em;
-          color: #111827;
-          padding: 0;
-          margin: 0;
-        }
-
-        .projectName:focus,
-        .editableInput:focus,
-        .editableTextarea:focus,
-        .editableSelect:focus {
-          outline: 1px solid #e5dccc;
-          background: #fffaf0;
-          border-radius: 6px;
         }
 
         .pill {
@@ -909,15 +883,15 @@ export default function ExecutiveStatus() {
           color: #b91c1c;
         }
 
-        .projectMetaLine {
+        .projectBar {
           display: flex;
-          gap: 18px;
+          gap: 16px;
           color: #64748b;
           font-size: 12px;
-          margin-top: 12px;
+          margin-top: 10px;
         }
 
-        .projectMetaLine span {
+        .projectBar span {
           border-left: 1px solid #e5dccc;
           padding-left: 10px;
         }
@@ -1159,7 +1133,7 @@ function EmptyLine({ text }) {
   return <div className="emptyLine">{text}</div>;
 }
 
-function EditableText({ value, onSave, className = "" }) {
+function EditableText({ value, onSave }) {
   const [draft, setDraft] = useState(value || "");
 
   useEffect(() => {
@@ -1168,9 +1142,8 @@ function EditableText({ value, onSave, className = "" }) {
 
   return (
     <input
-      className={`editableInput ${className}`}
+      className="editableInput"
       value={draft}
-      onClick={(e) => e.stopPropagation()}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={() => {
         if (draft !== value) onSave(draft);
@@ -1225,11 +1198,7 @@ function ProjectDrawer({
       <>
         <div className="field">
           <label>Status</label>
-          <EditableSelect
-            value={project.status}
-            options={["On Track", "Waiting", "Needs Attention", "Behind", "At Risk"]}
-            onSave={(value) => updateProject(project.name, { status: value })}
-          />
+          <EditableSelect value={project.status} options={["On Track", "Waiting", "Needs Attention", "Behind", "At Risk"]} onSave={(value) => updateProject(project.name, { status: value })} />
         </div>
         <div className="field">
           <label>Owner</label>
@@ -1238,6 +1207,10 @@ function ProjectDrawer({
         <div className="field">
           <label>Target Date</label>
           <EditableText value={project.targetDate || ""} onSave={(value) => updateProject(project.name, { targetDate: value })} />
+        </div>
+        <div className="field">
+          <label>Project Note</label>
+          <EditableArea value={project.description || ""} onSave={(value) => updateProject(project.name, { description: value })} />
         </div>
         <DrawerBox label="Open Tasks" value={project.openTasks} />
         <DrawerBox label="Overdue" value={project.overdueTasks} />
@@ -1261,9 +1234,7 @@ function ProjectDrawer({
   }
 
   if (tab === "tasks") {
-    return (
-      <TaskList tasks={project.tasks} onAdd={() => addTask(project.name)} openTask={openTask} />
-    );
+    return <TaskList tasks={project.tasks} onAdd={() => addTask(project.name)} openTask={openTask} />;
   }
 
   if (tab === "files") {
@@ -1309,33 +1280,13 @@ function ProjectDrawer({
 function TaskDrawer({ task, updateTask, deleteTask }) {
   return (
     <>
-      <div className="field">
-        <label>Task</label>
-        <EditableText value={getTaskTitle(task)} onSave={(value) => updateTask(task.id, { title: value })} />
-      </div>
-      <div className="field">
-        <label>Project</label>
-        <EditableText value={getTaskProject(task)} onSave={(value) => updateTask(task.id, { project: value })} />
-      </div>
-      <div className="field">
-        <label>Sub Project</label>
-        <EditableText value={getTaskSubProject(task)} onSave={(value) => updateTask(task.id, { subProject: value })} />
-      </div>
-      <div className="field">
-        <label>Due Date</label>
-        <EditableText value={getTaskDueDate(task)} onSave={(value) => updateTask(task.id, { dueDate: value })} />
-      </div>
-      <div className="field">
-        <label>Priority</label>
-        <EditableSelect value={getTaskPriority(task)} options={["High", "Medium", "Low"]} onSave={(value) => updateTask(task.id, { priority: value })} />
-      </div>
-      <div className="field">
-        <label>Status</label>
-        <EditableSelect value={getTaskStatus(task)} options={["Open", "Waiting", "In Progress", "Complete"]} onSave={(value) => updateTask(task.id, { status: value, completed: value === "Complete" })} />
-      </div>
-      <div className="drawerActions">
-        <button onClick={() => deleteTask(task.id)}>Delete Task</button>
-      </div>
+      <div className="field"><label>Task</label><EditableText value={getTaskTitle(task)} onSave={(value) => updateTask(task.id, { title: value })} /></div>
+      <div className="field"><label>Project</label><EditableText value={getTaskProject(task)} onSave={(value) => updateTask(task.id, { project: value })} /></div>
+      <div className="field"><label>Sub Project</label><EditableText value={getTaskSubProject(task)} onSave={(value) => updateTask(task.id, { subProject: value })} /></div>
+      <div className="field"><label>Due Date</label><EditableText value={getTaskDueDate(task)} onSave={(value) => updateTask(task.id, { dueDate: value })} /></div>
+      <div className="field"><label>Priority</label><EditableSelect value={getTaskPriority(task)} options={["High", "Medium", "Low"]} onSave={(value) => updateTask(task.id, { priority: value })} /></div>
+      <div className="field"><label>Status</label><EditableSelect value={getTaskStatus(task)} options={["Open", "Waiting", "In Progress", "Complete"]} onSave={(value) => updateTask(task.id, { status: value, completed: value === "Complete" })} /></div>
+      <div className="drawerActions"><button onClick={() => deleteTask(task.id)}>Delete Task</button></div>
     </>
   );
 }
@@ -1357,22 +1308,10 @@ function TaskListDrawer({ tasks, openTask }) {
 function DecisionDrawer({ decision, updateDecision, deleteDecision, approveDecision }) {
   return (
     <>
-      <div className="field">
-        <label>Decision</label>
-        <EditableText value={decision.title} onSave={(value) => updateDecision(decision.id, { title: value })} />
-      </div>
-      <div className="field">
-        <label>Priority</label>
-        <EditableSelect value={decision.priority} options={["High", "Medium", "Low"]} onSave={(value) => updateDecision(decision.id, { priority: value })} />
-      </div>
-      <div className="field">
-        <label>Status</label>
-        <EditableSelect value={decision.status} options={["Pending", "Approved", "Declined", "Needs Changes"]} onSave={(value) => updateDecision(decision.id, { status: value })} />
-      </div>
-      <div className="field">
-        <label>Note</label>
-        <EditableArea value={decision.note || ""} onSave={(value) => updateDecision(decision.id, { note: value })} />
-      </div>
+      <div className="field"><label>Decision</label><EditableText value={decision.title} onSave={(value) => updateDecision(decision.id, { title: value })} /></div>
+      <div className="field"><label>Priority</label><EditableSelect value={decision.priority} options={["High", "Medium", "Low"]} onSave={(value) => updateDecision(decision.id, { priority: value })} /></div>
+      <div className="field"><label>Status</label><EditableSelect value={decision.status} options={["Pending", "Approved", "Declined", "Needs Changes"]} onSave={(value) => updateDecision(decision.id, { status: value })} /></div>
+      <div className="field"><label>Note</label><EditableArea value={decision.note || ""} onSave={(value) => updateDecision(decision.id, { note: value })} /></div>
       <div className="drawerActions">
         {decision.status !== "Approved" && <button onClick={() => approveDecision(decision)}>Approve</button>}
         <button onClick={() => deleteDecision(decision.id)}>Delete Decision</button>
@@ -1421,9 +1360,7 @@ function DetailList({ title, items, onAdd, primaryKey, secondaryKey, updateItem,
         <div className="detailRow" key={item.id}>
           <div onClick={() => onOpen?.(item)}>
             <EditableText value={item[primaryKey] || ""} onSave={(value) => updateItem(item.id, { [primaryKey]: value })} />
-            {secondaryKey && (
-              <EditableText value={item[secondaryKey] || ""} onSave={(value) => updateItem(item.id, { [secondaryKey]: value })} />
-            )}
+            {secondaryKey && <EditableText value={item[secondaryKey] || ""} onSave={(value) => updateItem(item.id, { [secondaryKey]: value })} />}
           </div>
           <div className="detailActions">
             <button onClick={() => deleteItem(item.id)}>Delete</button>
@@ -1453,7 +1390,7 @@ function getDrawerTitle(drawer) {
 }
 
 function getDrawerSubtitle(drawer) {
-  if (drawer.type === "project") return "Project workspace with sub projects and tasks behind it.";
+  if (drawer.type === "project") return "Project workspace with subprojects and tasks behind it.";
   if (drawer.type === "task") return "Pulled from your main task list.";
   if (drawer.type === "taskList") return "Filtered live from your task list.";
   if (drawer.type === "decision") return "Decision item that can create action for Nikita.";
